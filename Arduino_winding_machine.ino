@@ -1,8 +1,8 @@
 /* Name: Winding machine    
    Description: Arduino ATmega 328P + Stepper motor control CNC Shield v3 + 2004 LCD + Encoder KY-040
    Author:      TDA
-   Ver:         2.0a
-   Date:        07/10/2019
+   Ver:         2.1b
+   Date:        25/10/2019
 
        Arduino pinout diagram:
           _______________
@@ -32,7 +32,6 @@
 #define ShaftStep 50 // ShaftStep = Шаг резьбы*50
 
 //**************************************************************
-
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -79,13 +78,16 @@ volatile uint32_t NSteps;
 volatile uint32_t Temp;
 int V;
 volatile int NTurn;
-
+uint8_t run_btn;
  
 uint8_t MicroSteps = 16;
 long SteppersPositions[2];
 int Pitch = 1;
 int8_t Steppers_Dir = 1;
 int16_t SpeedIncrease, SpeedDecrease;
+
+volatile int X,Y;
+volatile int Set_Speed_INT;
 
 enum menu_states {Autowinding, PosControl, TurnsSet, StepSet, SpeedSet, LaySet, Direction, Start, Cancel, Empty, ShaftPos, LayPos, StepMul, PosCancel}; // Нумерованный список строк экрана
 
@@ -145,6 +147,7 @@ digitalWrite(EN_STEP, HIGH); // Запрет управления двигате
 //digitalWrite(ENC_CLK,HIGH);  // Вкл. подтягивающие резисторы к VDD 
 //digitalWrite(ENC_SW, HIGH);   
 //digitalWrite(ENC_DT, HIGH);    
+digitalWrite(STOP_BT, HIGH);   
   
 // lcd.init(); 
   
@@ -167,7 +170,6 @@ digitalWrite(EN_STEP, HIGH); // Запрет управления двигате
   sprintf(Str_Buffer, Menu[1].format);
   lcd.print(Str_Buffer);                                                        // Выводим вторую строку на экран
   PrintSymbol(0,0,0x3E);                                                        // Выводим символ ">" на 0,0 LCD
- 
   sei();} 
 
 void loop() {
@@ -199,7 +201,7 @@ if (Push_Button == true) {                                                     /
     case Direction:    Push_Button=false; if (Steppers_Dir == 1) Steppers_Dir = -1; else Steppers_Dir = 1;       
                        if (Steppers_Dir == 1) {PrintSymbol(12,0,0x3E); PrintSymbol(13,0,0x3E); PrintSymbol(14,0,0x3E);} 
                        else if (Steppers_Dir == -1) {PrintSymbol(12,0,0x3C); PrintSymbol(13,0,0x3C); PrintSymbol(14,0,0x3C);}                  break;                          
-    case Start:        Push_Button = false; AutoWindStart = true;  AutoWindingPrg(); AutoWindStart = false; lcd.clear();                       break; 
+    case Start:        Push_Button = false; Var_Set=false; AutoWindStart = true; AutoWindingPrg(); AutoWindStart = false; lcd.clear();         break; 
     case Cancel:       Menu_Index = Autowinding;                                                                                               break;
     case ShaftPos:     SetQuote(9,14); Push_Button=false; Var_Set=true; digitalWrite(EN_STEP, LOW); Motor_Num = 1; OCR1A = 200000/Step_Mult;
                        while(!Push_Button){LCD_Print_Var(); ActualShaftPos=MotorMove(*Menu[Menu_Index].param * MicroSteps, ActualShaftPos);} 
@@ -210,24 +212,6 @@ if (Push_Button == true) {                                                     /
     case StepMul:      SetQuote(9,13);Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,13);  break;    
     case PosCancel:    Menu_Index = Autowinding; Shaft_Pos = 0; Lay_Pos = 0; Step_Mult = 1; ActualShaftPos = 0; ActualLayerPos = 0;            break;}
     Push_Button = false; PrintScreen();}}
-
-ISR(INT0_vect) {  // Вектор прерывания от энкодера
-static byte Enc_Temp, Enc_Temp_prev;    // Временная переменная для хранения состояния порта
-Enc_Temp = PIND & 0b00100100;                                                                                             // Маскируем все пины порта D кроме PD2 и PD5
-     if (Enc_Temp==0b00000100 && Enc_Temp_prev==0b00100000) {Encoder_Dir = -1;}                                           // -1 - шаг против часовой
-else if (Enc_Temp==0b00100100 && Enc_Temp_prev==0b00000000) {Encoder_Dir =  1;}                                           // +1 - шаг по часовой 
-Enc_Temp_prev = Enc_Temp;
-     if (Var_Set == true && Encoder_Dir != 0) {                                                                            // Если находимся в режиме изменения переменной 
-        *Menu[Menu_Index].param += Encoder_Dir; Encoder_Dir = 0;                                                           // то меняем ее сразу и
-        *Menu[Menu_Index].param = constrain(*Menu[Menu_Index].param, Menu[Menu_Index].var_Min, Menu[Menu_Index].var_Max);} // ограничиваем в диапазоне var_Min ÷ var_Max
-     if (AutoWindStart == true && Encoder_Dir != 0) {Set_Speed = constrain(Set_Speed + Encoder_Dir, 1, 100);}}             // Если повернуть энкодер во время автонамотки 
-                                                                                                                           // то меняем значение скорости
-ISR(INT1_vect)
-  {                               // Вектор прерывания от кнопки энкодера
- Push_Button = true;
- if (AutoWindStart == true) {Pause = true;}  // Если нажать кнопку энкодера во время автонамотки то выставляем флаг паузы 
- else return;
-  }
 
 void PrintScreen() {                          // Подпрограмма: Выводим экран на LCD
   static byte Prev_Screen;
@@ -285,40 +269,65 @@ void PrintWendingScreen() { // Подпрограмма вывода экран�
   lcd.print(Str_Buffer);  }
 
 void AutoWindingPrg() {                                             // Подпрограмма автоматической намотки
-
+   
   digitalWrite(EN_STEP, LOW);   // Разрешение управления двигателями
   digitalWrite(DIR_Z, HIGH);  
   if (Steppers_Dir == 1) PORTB &= 0b11011111; 
   else if (Steppers_Dir == -1) PORTB |= 0b00100000;
   PrintWendingScreen();
   Push_Button = false; 
+  Var_Set = false;
+  Set_Speed_INT = Set_Speed;
+
   while (Actual_Layer < Set_Layers)                                 // Пока текущее кол-во слоев меньше заданного проверяем сколько сейчас витков
     {
           OCR1A = 65535;
           OCR1A_NOM = 4800000 / (Set_Speed*MicroSteps); 
-          TIMSK1=2;
+
       while (Actual_Turn < Set_Turns)                               // Пока текущее кол-во витков меньше заданного продолжаем мотать
-        {           
-          if (Pause == true)                                                // Проверяем не нужно ли сделать паузу
+        {     
+       run_btn = PINB & 0b00001000;
+       while (run_btn)
+        {
+          TIMSK1=0; 
+          run_btn = PINB & 0b00001000;   
+          EIMSK = 0b00000010;
+          Set_Speed = Set_Speed_INT;
+          EIMSK = 0b00000011;
+          
+          lcd.setCursor(2, 1); 
+          sprintf(Str_Buffer, "%03d", Set_Speed);
+          lcd.print(Str_Buffer);
+          OCR1A_NOM = 4800000 / (Set_Speed*MicroSteps); 
+          
+          if (Pause == true)
             {
-              TIMSK1=0;
-              Push_Button = false; 
+              static boolean EN_D;
+              Push_Button = false;
               Pause = false;
-              lcd.setCursor(0, 1); 
-              sprintf(Str_Buffer, "PRESS CONTINUE  ");                         // "PRESS CONTINUE  "
-              lcd.print(Str_Buffer); 
-              while (!Push_Button){} 
-              lcd.setCursor(0, 1); 
-              sprintf(Str_Buffer, Menu[15].format, Set_Speed, Set_Step*ShaftStep); // "SPXXX ST0.XXXX  "
-              lcd.print(Str_Buffer);           
-              Push_Button = false; 
-              Pause = false;
-              TIMSK1=2;
-            }
-          sprintf(Str_Buffer, "%03d", Actual_Turn); 
-          lcd.setCursor(1, 0); 
-          lcd.print(Str_Buffer);    
+              if (EN_D) digitalWrite(EN_STEP, HIGH);
+              else digitalWrite(EN_STEP, LOW);
+              EN_D = !EN_D;
+            }   
         }
+       digitalWrite(EN_STEP, LOW);
+       TIMSK1=2;                
+       sprintf(Str_Buffer, "%03d", Actual_Turn); 
+       lcd.setCursor(1, 0); 
+       lcd.print(Str_Buffer); 
+       
+       EIMSK = 0b00000010;
+       Set_Speed = Set_Speed_INT;
+       EIMSK = 0b00000011;
+       
+       if (Actual_Turn > 1)
+      {
+        lcd.setCursor(2, 1); 
+        sprintf(Str_Buffer, "%03d", Set_Speed);
+        lcd.print(Str_Buffer);
+        OCR1A_NOM = 4800000/(Set_Speed*MicroSteps);
+      }
+          }   
       TIMSK1=0;
       
       sprintf(Str_Buffer, "%03d", Actual_Turn); 
@@ -354,8 +363,8 @@ void AutoWindingPrg() {                                             // Подп�
       lcd.print(Str_Buffer);
       TIMSK1=2;        
      }
+     
     digitalWrite(EN_STEP, HIGH);
-    
     lcd.setCursor(0, 1); 
     sprintf(Str_Buffer, "AUTOWINDING DONE");                             // "AUTOWINDING DONE"
     lcd.print(Str_Buffer);
@@ -379,20 +388,36 @@ long Rotation;
             else     TIMSK1 = 0; i = 0; DC = false; break;}                    
 return Actual_Rot;}
 
-/*
-void MotorStep(int StepQuant, int Dir) {                          // Подпрограмма: Движение шагового двигателя на заданное число шагов
-int Temp_Step = 0;
-  switch(Motor_Num) {
-    case 1:      if (Dir == 1)  {PORTD |= 0b10000000;} 
-            else if (Dir == -1) {PORTD &= 0b01111111;}  
-    case 2:      if (Dir == 1)  {PORTB |= 0b00100000;}  
-            else if (Dir == -1) {PORTB &= 0b11011111;}}                           
-while (Temp_Step < StepQuant) {i=0; TCNT1=0; TIMSK1=2; while(i<2){} TIMSK1=0; TCNT1=0; DC=false; Temp_Step++;}}
-*/
+ISR(INT0_vect) {  // Вектор прерывания от энкодера
+static byte Enc_Temp, Enc_Temp_prev;    // Временная переменная для хранения состояния порта
+Enc_Temp = PIND & 0b00100100;                                                                                                // Маскируем все пины порта D кроме PD2 и PD5      
 
+     if (Enc_Temp==0b00100000 && Enc_Temp_prev==0b00000100) {Encoder_Dir = -1;} // -1 - шаг против часовой
+else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00100100) {Encoder_Dir =  1;} // +1 - шаг по часовой
+else if (Enc_Temp==0b00100000 && Enc_Temp_prev==0b00100100) {Encoder_Dir = -1;}
+else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00000100) {Encoder_Dir =  1;}
 
-ISR(TIMER1_COMPA_vect) {                      // Вектор прерывания от таймера/счетчика 1
-  
+     Enc_Temp_prev = Enc_Temp;
+     
+     if (AutoWindStart == true && Encoder_Dir != 0)                                                                        // Если повернуть энкодер во время автонамотки 
+     {
+      Set_Speed_INT += Encoder_Dir; Encoder_Dir = 0; Set_Speed_INT = constrain(Set_Speed_INT, 1, 300);                     // то меняем значение скорости
+     }
+                                           
+     if (Var_Set == true && Encoder_Dir != 0) 
+     {                                                                                                                      // Если находимся в режиме изменения переменной 
+      *Menu[Menu_Index].param += Encoder_Dir; Encoder_Dir = 0;                                                              // то меняем ее сразу и
+      *Menu[Menu_Index].param = constrain(*Menu[Menu_Index].param, Menu[Menu_Index].var_Min, Menu[Menu_Index].var_Max);}    // ограничиваем в диапазоне var_Min ÷ var_Max
+     } 
+                                                                                                                          
+ISR(INT1_vect)                               // Вектор прерывания от кнопки энкодера
+  {                               
+ Push_Button = true;
+ if (AutoWindStart == true) {Pause = true;}  // Если нажать кнопку энкодера во время автонамотки то выставляем флаг паузы 
+ else return;
+  }
+
+ISR(TIMER1_COMPA_vect) {                      // Вектор прерывания от таймера/счетчика 1 
  if (AutoWindStart) 
  {
   Motor_Num = 0;
