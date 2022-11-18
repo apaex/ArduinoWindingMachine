@@ -79,6 +79,9 @@ int32_t Steps, Step_Accel, Step_Decel;
 
 Winding params[TRANSFORMER_COUNT][WINDING_COUNT];
 
+byte currentTransformer = -1;
+byte currentWinding = -1;
+
 int Set_Turns, Set_Step, Set_Speed=1, Set_Layers=1;  // Переменные изменяемые на экране
 int8_t Steppers_Dir = 1;
 
@@ -192,7 +195,7 @@ digitalWrite(STOP_BT, HIGH);
   TCCR1B=(0<<WGM13)|(1<<WGM12)|(0<<CS12)|(0<<CS11)|(1<<CS10);                   // Режим работы таймера/счетчика - CTC (очистить таймер при достижении значения в регистре сравнения OCR1A)
   OCR1A = 20000;                                                                // Значение в регистре OCR1A определяет частоту входа в прерывание таймера и устанавливает скрость вращения двигателей
 
-  lcd.begin(NCOL, NROW);                                                              // Инициализация LCD Дисплей 20 символов 4 строки   
+  lcd.begin(NCOL, NROW);                                                        // Инициализация LCD Дисплей 20 символов 4 строки   
   
   PrintScreen();
   sei();
@@ -226,10 +229,11 @@ void loop()
     switch (Menu_Index)    {                                                     // Если было нажатие то выполняем действие соответствующее текущей позиции курсора
       case Autowinding:  
       case Autowinding2: 
-      case Autowinding3: Menu_Index = Winding1;                                                                                                  break;
+      case Autowinding3: currentTransformer = Menu_Index - Autowinding; Menu_Index = Winding1;                                                   break;
       case Winding1: 
       case Winding2: 
-      case Winding3:     Menu_Index = TurnsSet;                                                                                                  break;
+      case Winding3:     currentWinding = Menu_Index - Winding1; Menu_Index = TurnsSet;                                                          break;
+      case WindingBack:  Menu_Index = Autowinding + currentTransformer;                                                                          break;
       case PosControl:   Menu_Index = ShaftPos;                                                                                                  break;
       case TurnsSet:     SetQuote(9,13); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,13); break;
       case StepSet:      SetQuote(7,14); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(7,14); break;  
@@ -239,7 +243,7 @@ void loop()
                         if (Steppers_Dir == 1) {PrintSymbol(12,0,0x3E); PrintSymbol(13,0,0x3E); PrintSymbol(14,0,0x3E);} 
                         else if (Steppers_Dir == -1) {PrintSymbol(12,0,0x3C); PrintSymbol(13,0,0x3C); PrintSymbol(14,0,0x3C);}                  break;                          
       case Start:        Push_Button = false; Var_Set=false; AutoWindStart = true; AutoWindingPrg(); AutoWindStart = false; lcd.clear();         break; 
-      case Cancel:       Menu_Index = Autowinding;                                                                                               break;
+      case Cancel:       Menu_Index = Winding1 + currentWinding;                                                                                               break;
       case ShaftPos:     SetQuote(9,14); Push_Button=false; Var_Set=true; digitalWrite(EN_STEP, LOW); Motor_Num = 1; OCR1A = 200000/Step_Mult;
                         while(!Push_Button){LCD_Print_Var(); ActualShaftPos=MotorMove(*Menu[Menu_Index].param * MicroSteps, ActualShaftPos);} 
                         Var_Set=false; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                           break;   
