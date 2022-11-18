@@ -14,7 +14,7 @@ struct Winding
   uint16_t step=0;
   uint16_t speed=1;
   uint16_t layers=1;
-  uint8_t dir=1;
+  bool dir=1;
   static const byte version = 3;
 
   void Load(int &p)

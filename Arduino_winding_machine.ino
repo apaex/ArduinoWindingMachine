@@ -88,7 +88,7 @@ byte currentTransformer = -1;
 byte currentWinding = -1;
 
 int Set_Turns, Set_Step, Set_Speed=1, Set_Layers=1;  // Переменные изменяемые на экране
-int8_t Steppers_Dir = 1;
+bool Steppers_Dir = 1;
 
 volatile uint16_t OCR1A_NOM;
 volatile uint32_t OCR1A_TEMP;
@@ -113,6 +113,7 @@ enum menu_states {Autowinding, Autowinding2, Autowinding3, PosControl, Winding1,
 struct MenuType {                       // Структура описывающая меню
   byte Screen;                          // Индекс экрана
   byte string_number;                   // Номер строки на экране
+  char type;
   char format[22];                      // Формат строки
   char format_Set_var[6];               // Формат значения при вводе переменной
   int  *param;                          // Указатель на адрес текущей переменной изменяемой на экране
@@ -121,28 +122,28 @@ struct MenuType {                       // Структура описывающ
   byte param_coef;};                    // Размерный коэффициент значения переменной
 
 struct MenuType Menu[] = {        // Объявляем переменную Menu пользовательского типа MenuType и доступную только для чтения
-  {0,  0,  "Setup 1            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {0,  1,  "Setup 2            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {0,  2,  "Setup 3            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {0,  3,  "Pos control        ", ""      ,NULL,        0,      0,      0        },    // "> POS CONTROL   "
+  {0,  0,  ' ', "Setup 1            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {0,  1,  ' ', "Setup 2            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {0,  2,  ' ', "Setup 3            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {0,  3,  ' ', "Pos control        ", ""      ,NULL,        0,      0,      0        },    // "> POS CONTROL   "
 
-  {1,  0,  "Winding 1          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {1,  1,  "Winding 2          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {1,  2,  "Winding 3          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {1,  3,  "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
+  {1,  0,  ' ', "Winding 1          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {1,  1,  ' ', "Winding 2          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {1,  2,  ' ', "Winding 3          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {1,  3,  ' ', "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
   
-  {2,  0,  "Turns:  %03d       ", "%03d"  ,&Set_Turns,  1,      999,    1        },    // "> TURNS: >000<  "
-  {2,  1,  "Step: 0.%04d       ", "%04d"  ,&Set_Step,   1,      200,    ShaftStep},    // "> STEP:>0.0000<↓"  
-  {2,  2,  "Speed:  %03d       ", "%03d"  ,&Set_Speed,  1,      300,    1        },    // "> SPEED: >000< ↑"
-  {2,  3,  "Layers: %02d       ", "%02d"  ,&Set_Layers, 1,      99,     1        },    // "> LAYERS:>00<  ↓" 
-  {2,  4,  "Direction >>>      ", ""      ,NULL,        0,      0,      0        },    // "> DIRECTION >>>↑"
-  {2,  5,  "Start              ", ""      ,NULL,        0,      0,      0        },    // "> START        ↓" 
-  {2,  6,  "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL       ↑" 
+  {2,  0,  'i', "Turns:  %03d       ", "%03d"  ,NULL,        1,      999,    1        },    // "> TURNS: >000<  "
+  {2,  1,  'i', "Step: 0.%04d       ", "%04d"  ,NULL,        1,      200,    ShaftStep},    // "> STEP:>0.0000<↓"  
+  {2,  2,  'i', "Speed:  %03d       ", "%03d"  ,NULL,        1,      300,    1        },    // "> SPEED: >000< ↑"
+  {2,  3,  'i', "Layers: %02d       ", "%02d"  ,NULL,        1,      99,     1        },    // "> LAYERS:>00<  ↓" 
+  {2,  4,  'b', "Direction >$>      ", ""      ,NULL,        0,      1,      1        },    // "> DIRECTION >>>↑"
+  {2,  5,  ' ', "Start              ", ""      ,NULL,        0,      0,      0        },    // "> START        ↓" 
+  {2,  6,  ' ', "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL       ↑" 
 
-  {10, 0,  "SH pos: %+04d      ", "%+04d" ,&Shaft_Pos,  -999,   999,    1        },    // "> SH POS:>±000< "
-  {10, 1,  "LA pos: %+04d      ", "%+04d" ,&Lay_Pos,    -999,   999,    1        },    // "> LA POS:>±000<↓" 
-  {10, 2,  "StpMul: %03d       ", "%03d"  ,&Step_Mult,  1,      100,    1        },    // "> STPMUL:>000< ↑"
-  {10, 3,  "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
+  {10, 0,  'i', "SH pos: %+04d      ", "%+04d" ,&Shaft_Pos,  -999,   999,    1        },    // "> SH POS:>±000< "
+  {10, 1,  'i', "LA pos: %+04d      ", "%+04d" ,&Lay_Pos,    -999,   999,    1        },    // "> LA POS:>±000<↓" 
+  {10, 2,  'i', "StpMul: %03d       ", "%03d"  ,&Step_Mult,  1,      100,    1        },    // "> STPMUL:>000< ↑"
+  {10, 3,  ' ', "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
 
 //  {14, 0,  "T%03d/%03d L%02d/%02d", ""      ,NULL,        0,      0,      0        },    // "T000/000 L00/00 "
 //  {14, 1,  "SP%03d ST0.%04d      ", ""      ,NULL,        0,      0,      0        },    // "SP000 ST0.0000  " 
@@ -243,7 +244,8 @@ void loop()
               Menu[TurnsSet].param = (int*)&params[currentTransformer][currentWinding].turns;
               Menu[StepSet].param = (int*)&params[currentTransformer][currentWinding].step;
               Menu[SpeedSet].param = (int*)&params[currentTransformer][currentWinding].speed;
-              Menu[LaySet].param = (int*)&params[currentTransformer][currentWinding].layers;
+              Menu[LaySet].param = (int*)&params[currentTransformer][currentWinding].layers;              
+              Menu[Direction].param = (int*)&params[currentTransformer][currentWinding].dir;
               break;
       case WindingBack:  Menu_Index = Autowinding + currentTransformer;                                                                          break;
       case PosControl:   Menu_Index = ShaftPos;                                                                                                  break;
@@ -251,9 +253,14 @@ void loop()
       case StepSet:      SetQuote(7,14); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(7,14); break;  
       case SpeedSet:     SetQuote(9,13); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,13); break;
       case LaySet:       SetQuote(9,12); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,12); break;   
-      case Direction:    Push_Button=false; if (Steppers_Dir == 1) Steppers_Dir = -1; else Steppers_Dir = 1;       
-                        if (Steppers_Dir == 1) {PrintSymbol(12,0,0x3E); PrintSymbol(13,0,0x3E); PrintSymbol(14,0,0x3E);} 
-                        else if (Steppers_Dir == -1) {PrintSymbol(12,0,0x3C); PrintSymbol(13,0,0x3C); PrintSymbol(14,0,0x3C);}                   break;                          
+      case Direction:
+              {
+                bool &Steppers_Dir = *(bool*)Menu[Direction].param;
+                Push_Button = false; 
+                Steppers_Dir = !Steppers_Dir;
+                PrintDirection(12, 0, Steppers_Dir);
+              }
+              break;                          
       case Start:        SaveSettings(); Push_Button = false; Var_Set=false; AutoWindStart = true; AutoWindingPrg(); AutoWindStart = false; lcd.clear();         break; 
       case Cancel:       SaveSettings(); Menu_Index = Winding1 + currentWinding;                                                                 break;
       case ShaftPos:     SetQuote(9,14); Push_Button=false; Var_Set=true; digitalWrite(EN_STEP, LOW); Motor_Num = 1; OCR1A = 200000/Step_Mult;
@@ -285,12 +292,25 @@ void PrintScreen() // Подпрограмма: Выводим экран на L
 
     for (int i = 0; i < NROW; ++i)
     {
-      if (Menu[first + i].Screen != scr)
+      MenuType &m = Menu[first + i];
+
+      if (m.Screen != scr)
         break;     
 
       lcd.setCursor(2, i); 
-      sprintf(Str_Buffer, Menu[first + i].format, *Menu[first + i].param * Menu[first + i].param_coef);
-      lcd.print(Str_Buffer);
+      switch (m.type)
+      {
+      case 'i':
+        sprintf(Str_Buffer,m.format, *m.param * m.param_coef);
+        lcd.print(Str_Buffer);
+        break;
+      case 'b':
+        lcd.print(m.format);
+        PrintDirection(12, i, *m.param);
+        break;
+      default:
+        lcd.print(m.format);
+      }
     }
 
     prev_screen = scr;
@@ -306,36 +326,58 @@ void PrintScreen() // Подпрограмма: Выводим экран на L
     PrintSymbol(NCOL-1, NROW-1, CH_DW); 
 
 }
-                                                                                                          
-void PrintSymbol(byte LCD_Column, byte LCD_Row, byte Symbol_Code) { // Подпрограмма: Выводим символ на экран
-  lcd.setCursor(LCD_Column, LCD_Row); 
-  lcd.write(byte(Symbol_Code));}
 
-void SetQuote   (int First_Cur, int Second_Cur) {                 // Подпрограмма: Выводим выделение изменяемой переменной на LCD
+
+                                                                    
+void PrintSymbol(byte LCD_Column, byte LCD_Row, byte Symbol_Code) // Подпрограмма: Выводим символ на экран
+{ 
+  lcd.setCursor(LCD_Column, LCD_Row); 
+  lcd.write(byte(Symbol_Code));
+}
+
+void PrintDirection(byte c, byte r, bool d)
+{
+  char ch = (d) ? 0x3E : 0x3C;  
+  PrintSymbol(c, r, ch); 
+  PrintSymbol(c+1, r, ch); 
+  PrintSymbol(c+2, r, ch); 
+}
+
+void SetQuote   (int First_Cur, int Second_Cur)                  // Подпрограмма: Выводим выделение изменяемой переменной на LCD
+{
   PrintSymbol(First_Cur,  Menu[Menu_Index].string_number,0x3E);   // Выводим символ >
   PrintSymbol(Second_Cur, Menu[Menu_Index].string_number,0x3C);   // Выводим символ <
-  PrintSymbol(0,          Menu[Menu_Index].string_number,0x20);}  // Стираем основной курсор
+  PrintSymbol(0,          Menu[Menu_Index].string_number,0x20);  // Стираем основной курсор
+}
 
-void ClearQuote (int First_Cur, int Second_Cur) {                 // Подпрограмма: Стираем выделение изменяемой переменной на LCD
+void ClearQuote (int First_Cur, int Second_Cur)                  // Подпрограмма: Стираем выделение изменяемой переменной на LCD
+{
   PrintSymbol(First_Cur,  Menu[Menu_Index].string_number,0x20);   // Стираем символ >
   PrintSymbol(Second_Cur, Menu[Menu_Index].string_number,0x20);   // Стираем символ <
-  PrintSymbol(0,          Menu[Menu_Index].string_number,0x3E);}  // Выводим основной курсор     
+  PrintSymbol(0,          Menu[Menu_Index].string_number,0x3E);  // Выводим основной курсор     
+}
 
-void LCD_Print_Var() {                                                  // Подпрограмма: Выводим новое значение переменной на LCD
+void LCD_Print_Var()                                                   // Подпрограмма: Выводим новое значение переменной на LCD
+{
   static int Previous_Param;
-    if (*Menu[Menu_Index].param != Previous_Param){
-      lcd.setCursor(10, Menu[Menu_Index].string_number);
-      sprintf(Str_Buffer, Menu[Menu_Index].format_Set_var, *Menu[Menu_Index].param * Menu[Menu_Index].param_coef);
-      lcd.print(Str_Buffer);
-      Previous_Param = *Menu[Menu_Index].param;}}
+  if (*Menu[Menu_Index].param != Previous_Param)
+  {
+    lcd.setCursor(10, Menu[Menu_Index].string_number);
+    sprintf(Str_Buffer, Menu[Menu_Index].format_Set_var, *Menu[Menu_Index].param * Menu[Menu_Index].param_coef);
+    lcd.print(Str_Buffer);
+    Previous_Param = *Menu[Menu_Index].param;
+  }
+}
 
-void PrintWendingScreen() { // Подпрограмма вывода экрана автонамотки
+void PrintWendingScreen()  // Подпрограмма вывода экрана автонамотки
+{  
   lcd.clear();
   sprintf(Str_Buffer, "T%03d/%03d L%02d/%02d", Actual_Turn, Set_Turns, Actual_Layer, Set_Layers);
   lcd.print(Str_Buffer);
   lcd.setCursor(0, 1);
   sprintf(Str_Buffer, "SP%03d ST0.%04d", Set_Speed, Set_Step*ShaftStep);
-  lcd.print(Str_Buffer);  }
+  lcd.print(Str_Buffer);  
+}
 
 
 void LoadSettings()
@@ -369,8 +411,8 @@ void AutoWindingPrg() {                                             // Подп�
    
   digitalWrite(EN_STEP, LOW);   // Разрешение управления двигателями
   digitalWrite(DIR_Z, HIGH);  
-  if (Steppers_Dir == 1) PORTB &= 0b11011111; 
-  else if (Steppers_Dir == -1) PORTB |= 0b00100000;
+  if (Steppers_Dir) PORTB &= 0b11011111; 
+  else PORTB |= 0b00100000;
   PrintWendingScreen();
   Push_Button = false; 
   Var_Set = false;
@@ -450,10 +492,10 @@ void AutoWindingPrg() {                                             // Подп�
       sprintf(Str_Buffer, Menu[15].format, Set_Speed, Set_Step*ShaftStep);
       lcd.print(Str_Buffer);
       
-      if (Steppers_Dir == 1) Steppers_Dir = -1;
-      else Steppers_Dir = 1; 
-      if (Steppers_Dir == 1) PORTB &= 0b11011111; 
-      else if (Steppers_Dir == -1) PORTB |= 0b00100000;
+      Steppers_Dir = !Steppers_Dir;
+
+      if (Steppers_Dir) PORTB &= 0b11011111; 
+      else PORTB |= 0b00100000;
       Actual_Turn = 0;        
       sprintf(Str_Buffer, "%03d", Actual_Turn); 
       lcd.setCursor(1, 0); 
