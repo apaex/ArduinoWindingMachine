@@ -115,29 +115,29 @@ struct MenuType {                       // Структура описывающая меню
   int  var_Max;                         // Ограничение значения переменной сверху
   byte param_coef;};                    // Размерный коэффициент значения переменной
 
-const struct MenuType Menu[] = {        // Объявляем переменную Menu пользовательского типа MenuType и доступную только для чтения
-  {0,  0,  "  Setup 1            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {0,  1,  "  Setup 2            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {0,  2,  "  Setup 3            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {0,  3,  "  Pos control        ", ""      ,NULL,        0,      0,      0        },    // "> POS CONTROL   "
+struct MenuType Menu[] = {        // Объявляем переменную Menu пользовательского типа MenuType и доступную только для чтения
+  {0,  0,  "Setup 1            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {0,  1,  "Setup 2            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {0,  2,  "Setup 3            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {0,  3,  "Pos control        ", ""      ,NULL,        0,      0,      0        },    // "> POS CONTROL   "
 
-  {1,  0,  "  Winding 1          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {1,  1,  "  Winding 2          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {1,  2,  "  Winding 3          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {1,  3,  "  Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
+  {1,  0,  "Winding 1          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {1,  1,  "Winding 2          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {1,  2,  "Winding 3          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {1,  3,  "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
   
-  {2,  0,  "  Turns:  %03d       ", "%03d"  ,&Set_Turns,  1,      999,    1        },    // "> TURNS: >000<  "
-  {2,  1,  "  Step: 0.%04d       ", "%04d"  ,&Set_Step,   1,      200,    ShaftStep},    // "> STEP:>0.0000<?"  
-  {2,  2,  "  Speed:  %03d       ", "%03d"  ,&Set_Speed,  1,      300,    1        },    // "> SPEED: >000< ?"
-  {2,  3,  "  Layers: %02d       ", "%02d"  ,&Set_Layers, 1,      99,     1        },    // "> LAYERS:>00<  ?" 
-  {2,  4,  "  Direction >>>      ", ""      ,NULL,        0,      0,      0        },    // "> DIRECTION >>>?"
-  {2,  5,  "  Start              ", ""      ,NULL,        0,      0,      0        },    // "> START        ?" 
-  {2,  6,  "  Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL       ?" 
+  {2,  0,  "Turns:  %03d       ", "%03d"  ,&Set_Turns,  1,      999,    1        },    // "> TURNS: >000<  "
+  {2,  1,  "Step: 0.%04d       ", "%04d"  ,&Set_Step,   1,      200,    ShaftStep},    // "> STEP:>0.0000<?"  
+  {2,  2,  "Speed:  %03d       ", "%03d"  ,&Set_Speed,  1,      300,    1        },    // "> SPEED: >000< ?"
+  {2,  3,  "Layers: %02d       ", "%02d"  ,&Set_Layers, 1,      99,     1        },    // "> LAYERS:>00<  ?" 
+  {2,  4,  "Direction >>>      ", ""      ,NULL,        0,      0,      0        },    // "> DIRECTION >>>?"
+  {2,  5,  "Start              ", ""      ,NULL,        0,      0,      0        },    // "> START        ?" 
+  {2,  6,  "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL       ?" 
 
-  {10, 0,  "  SH pos: %+04d      ", "%+04d" ,&Shaft_Pos,  -999,   999,    1        },    // "> SH POS:>±000< "
-  {10, 1,  "  LA pos: %+04d      ", "%+04d" ,&Lay_Pos,    -999,   999,    1        },    // "> LA POS:>±000<?" 
-  {10, 2,  "  StpMul: %03d       ", "%03d"  ,&Step_Mult,  1,      100,    1        },    // "> STPMUL:>000< ?"
-  {10, 3,  "  Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
+  {10, 0,  "SH pos: %+04d      ", "%+04d" ,&Shaft_Pos,  -999,   999,    1        },    // "> SH POS:>±000< "
+  {10, 1,  "LA pos: %+04d      ", "%+04d" ,&Lay_Pos,    -999,   999,    1        },    // "> LA POS:>±000<?" 
+  {10, 2,  "StpMul: %03d       ", "%03d"  ,&Step_Mult,  1,      100,    1        },    // "> STPMUL:>000< ?"
+  {10, 3,  "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
 
 //  {14, 0,  "T%03d/%03d L%02d/%02d", ""      ,NULL,        0,      0,      0        },    // "T000/000 L00/00 "
 //  {14, 1,  "SP%03d ST0.%04d      ", ""      ,NULL,        0,      0,      0        },    // "SP000 ST0.0000  " 
@@ -230,9 +230,16 @@ void loop()
       case Autowinding:  
       case Autowinding2: 
       case Autowinding3: currentTransformer = Menu_Index - Autowinding; Menu_Index = Winding1;                                                   break;
-      case Winding1: 
+      case Winding1:     
       case Winding2: 
-      case Winding3:     currentWinding = Menu_Index - Winding1; Menu_Index = TurnsSet;                                                          break;
+      case Winding3:     
+              currentWinding = Menu_Index - Winding1; 
+              Menu_Index = TurnsSet;                                                          
+              Menu[TurnsSet].param = (int*)&params[currentTransformer][currentWinding].turns;
+              Menu[StepSet].param = (int*)&params[currentTransformer][currentWinding].step;
+              Menu[SpeedSet].param = (int*)&params[currentTransformer][currentWinding].speed;
+              Menu[LaySet].param = (int*)&params[currentTransformer][currentWinding].layers;
+              break;
       case WindingBack:  Menu_Index = Autowinding + currentTransformer;                                                                          break;
       case PosControl:   Menu_Index = ShaftPos;                                                                                                  break;
       case TurnsSet:     SetQuote(9,13); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,13); break;
@@ -241,15 +248,15 @@ void loop()
       case LaySet:       SetQuote(9,12); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,12); break;   
       case Direction:    Push_Button=false; if (Steppers_Dir == 1) Steppers_Dir = -1; else Steppers_Dir = 1;       
                         if (Steppers_Dir == 1) {PrintSymbol(12,0,0x3E); PrintSymbol(13,0,0x3E); PrintSymbol(14,0,0x3E);} 
-                        else if (Steppers_Dir == -1) {PrintSymbol(12,0,0x3C); PrintSymbol(13,0,0x3C); PrintSymbol(14,0,0x3C);}                  break;                          
-      case Start:        Push_Button = false; Var_Set=false; AutoWindStart = true; AutoWindingPrg(); AutoWindStart = false; lcd.clear();         break; 
-      case Cancel:       Menu_Index = Winding1 + currentWinding;                                                                                               break;
+                        else if (Steppers_Dir == -1) {PrintSymbol(12,0,0x3C); PrintSymbol(13,0,0x3C); PrintSymbol(14,0,0x3C);}                   break;                          
+      case Start:        SaveSettings(); Push_Button = false; Var_Set=false; AutoWindStart = true; AutoWindingPrg(); AutoWindStart = false; lcd.clear();         break; 
+      case Cancel:       SaveSettings(); Menu_Index = Winding1 + currentWinding;                                                                 break;
       case ShaftPos:     SetQuote(9,14); Push_Button=false; Var_Set=true; digitalWrite(EN_STEP, LOW); Motor_Num = 1; OCR1A = 200000/Step_Mult;
                         while(!Push_Button){LCD_Print_Var(); ActualShaftPos=MotorMove(*Menu[Menu_Index].param * MicroSteps, ActualShaftPos);} 
-                        Var_Set=false; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                           break;   
+                        Var_Set=false; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                            break;   
       case LayPos:       SetQuote(9,14); Push_Button=false; Var_Set=true; digitalWrite(EN_STEP, LOW); Motor_Num = 2; OCR1A = 200000/Step_Mult;
                         while(!Push_Button){LCD_Print_Var(); ActualLayerPos=MotorMove(*Menu[Menu_Index].param * MicroSteps, ActualLayerPos);} 
-                        Var_Set=false; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                           break;                                                               
+                        Var_Set=false; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                            break;                                                               
       case StepMul:      SetQuote(9,13);Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,13);  break;    
       case PosCancel:    Menu_Index = Autowinding; Shaft_Pos = 0; Lay_Pos = 0; Step_Mult = 1; ActualShaftPos = 0; ActualLayerPos = 0;            break;
     }
@@ -276,7 +283,7 @@ void PrintScreen() // Подпрограмма: Выводим экран на LCD
       if (Menu[first + i].Screen != scr)
         break;     
 
-      lcd.setCursor(0, i); 
+      lcd.setCursor(2, i); 
       sprintf(Str_Buffer, Menu[first + i].format, *Menu[first + i].param * Menu[first + i].param_coef);
       lcd.print(Str_Buffer);
     }
@@ -329,6 +336,11 @@ void PrintWendingScreen() { // Подпрограмма вывода экрана автонамотки
 void LoadSettings()
 {
   int p=0;
+  byte v = 0;
+  EEPROM.get(p, v);          p+=1;
+  if (v != Winding::version)
+    return;
+
   for (int i=0; i<TRANSFORMER_COUNT; ++i)
     for (int j=0; j<WINDING_COUNT; ++j)
       params[i][j].Load(p);
@@ -337,6 +349,9 @@ void LoadSettings()
 void SaveSettings()
 {
   int p=0;
+  byte v = Winding::version;
+  EEPROM_save(p, v);          p+=1;   
+
   for (int i=0; i<TRANSFORMER_COUNT; ++i)
     for (int j=0; j<WINDING_COUNT; ++j)
       params[i][j].Save(p);
@@ -346,7 +361,6 @@ void SaveSettings()
 void AutoWindingPrg() {                                             // Подпрограмма автоматической намотки
    
   Serial.println("Start");
-  SaveSettings();
    
   digitalWrite(EN_STEP, LOW);   // Разрешение управления двигателями
   digitalWrite(DIR_Z, HIGH);  

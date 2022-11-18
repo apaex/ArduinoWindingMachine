@@ -1,5 +1,13 @@
 #include <EEPROM.h>
 
+    template< typename T > void EEPROM_save( int idx, const T &t ){
+        T v = 0;
+        EEPROM.get(idx, v);
+        if (t != v)
+          EEPROM.put(idx, t);
+    }
+
+
 struct Winding
 {
   uint16_t turns=0;
@@ -7,6 +15,7 @@ struct Winding
   uint16_t speed=1;
   uint16_t layers=1;
   uint8_t dir=1;
+  static const byte version = 3;
 
   void Load(int &p)
   {
@@ -19,10 +28,10 @@ struct Winding
 
   void Save(int &p)
   {
-    EEPROM.put(p, turns);        p+=2;
-    EEPROM.put(p, step);         p+=2;
-    EEPROM.put(p, speed);        p+=2;
-    EEPROM.put(p, layers);       p+=2;
-    EEPROM.put(p, dir);          p+=1;   
+    EEPROM_save(p, turns);        p+=2;
+    EEPROM_save(p, step);         p+=2;
+    EEPROM_save(p, speed);        p+=2;
+    EEPROM_save(p, layers);       p+=2;
+    EEPROM_save(p, dir);          p+=1;   
   }
 };
