@@ -141,7 +141,7 @@ const struct MenuType Menu[] = {        // Объявляем переменну
 #define NROW 4 
 
 LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7); // Назначаем пины для управления LCD 
-//LiquidCrystal_I2C lcd(0x27, NCOLS, NROWS); // 0x3F I2C адрес для PCF8574AT, дисплей 16 символов 2 строки 
+//LiquidCrystal_I2C lcd(0x27, NCOL, NROW); // 0x3F I2C адрес для PCF8574AT, дисплей 16 символов 2 строки 
 
 
 void setup() {
@@ -186,7 +186,7 @@ digitalWrite(STOP_BT, HIGH);
   TCCR1B=(0<<WGM13)|(1<<WGM12)|(0<<CS12)|(0<<CS11)|(1<<CS10);                   // Режим работы таймера/счетчика - CTC (очистить таймер при достижении значения в регистре сравнения OCR1A)
   OCR1A = 20000;                                                                // Значение в регистре OCR1A определяет частоту входа в прерывание таймера и устанавливает скрость вращения двигателей
 
-  lcd.begin(NCOLS,NROWS);                                                              // Инициализация LCD Дисплей 20 символов 4 строки   
+  lcd.begin(NCOL, NROW);                                                              // Инициализация LCD Дисплей 20 символов 4 строки   
   
   PrintScreen();
   sei();
@@ -238,9 +238,9 @@ if (Push_Button == true) {                                                     /
 void PrintScreen() // Подпрограмма: Выводим экран на LCD
 {                          
   byte scr = Menu[Menu_Index].Screen;
-  byte page = Menu[Menu_Index].string_number / NROW;  // страница
-  byte cur = Menu[Menu_Index].string_number % NROW;   // позиция курсора
-  byte first = page * NROW + scr;
+  byte page = Menu[Menu_Index].string_number / NROW;
+  byte cur = Menu[Menu_Index].string_number % NROW;  
+  byte first = Menu_Index - Menu[Menu_Index].string_number + page * NROW;
 
   static byte prev_screen = -1;
   static byte prev_page = -1;
