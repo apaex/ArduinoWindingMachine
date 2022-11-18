@@ -35,9 +35,11 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <LiquidCrystal.h>
+#include <LiquidCrystalCyr.h>
 //#include <LiquidCrystal_I2C.h>
 //#include <Wire.h>
+#include <HardwareSerial.h>
+#include "winding.h"
 
 #define ENC_CLK   2 // Даем имена номерам пинов
 #define ENC_SW    3
@@ -67,9 +69,18 @@ char Str_Buffer[22];                                      // Буфер для �
 byte LCD_Column, LCD_Row, Symbol_Code, Motor_Num;         // Номер столбца и строки LCD; код символа https://i.stack.imgur.com/oZhjJ.gif; номер шагового двигателя
 int32_t ActualShaftPos, ActualLayerPos;                   // Текущие позиции двигателей вала и укладчика
 int Actual_Turn = 0, Actual_Layer = 0;                    // Текущий виток и слой при автонамотке
-int Shaft_Pos, Lay_Pos, Set_Turns, Set_Step, Set_Speed=1, Set_Layers=1, Step_Mult=1;  // Переменные изменяемые на экране
+int Shaft_Pos, Lay_Pos, Step_Mult=1;  // Переменные изменяемые на экране
 byte Menu_Index = 0;                                      // Переменная хранит номер текущей строки меню
 int32_t Steps, Step_Accel, Step_Decel;
+
+
+#define TRANSFORMER_COUNT 3
+#define WINDING_COUNT 3
+
+Winding params[TRANSFORMER_COUNT][WINDING_COUNT];
+
+int Set_Turns, Set_Step, Set_Speed=1, Set_Layers=1;  // Переменные изменяемые на экране
+int8_t Steppers_Dir = 1;
 
 volatile uint16_t OCR1A_NOM;
 volatile uint32_t OCR1A_TEMP;
@@ -83,7 +94,7 @@ uint8_t run_btn;
 uint8_t MicroSteps = 16;
 long SteppersPositions[2];
 int Pitch = 1;
-int8_t Steppers_Dir = 1;
+
 int16_t SpeedIncrease, SpeedDecrease;
 
 volatile int X,Y;
@@ -104,6 +115,7 @@ struct MenuType {                       // Структура описывающ
 const struct MenuType Menu[] = {        // Объявляем переменную Menu пользовательского типа MenuType и доступную только для чтения
   {0,  0,  "  AUTOWINDING        ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
   {0,  1,  "  POS CONTROL        ", ""      ,NULL,        0,      0,      0        },    // "> POS CONTROL   "
+  
   {2,  0,  "  TURNS:  %03d       ", "%03d"  ,&Set_Turns,  1,      999,    1        },    // "> TURNS: >000<  "
   {2,  1,  "  STEP: 0.%04d       ", "%04d"  ,&Set_Step,   1,      200,    ShaftStep},    // "> STEP:>0.0000<↓"  
   {4,  0,  "  SPEED:  %03d       ", "%03d"  ,&Set_Speed,  1,      300,    1        },    // "> SPEED: >000< ↑"
@@ -112,19 +124,26 @@ const struct MenuType Menu[] = {        // Объявляем переменну
   {6,  1,  "  START              ", ""      ,NULL,        0,      0,      0        },    // "> START        ↓" 
   {8,  0,  "  CANCEL             ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL       ↑" 
   {8,  1,  "                     ", ""      ,NULL,        0,      0,      0        },    // ">               " 
+
   {10, 0,  "  SH POS: %+04d      ", "%+04d" ,&Shaft_Pos,  -999,   999,    1        },    // "> SH POS:>±000< "
   {10, 1,  "  LA POS: %+04d      ", "%+04d" ,&Lay_Pos,    -999,   999,    1        },    // "> LA POS:>±000<↓" 
   {12, 0,  "  STPMUL: %03d       ", "%03d"  ,&Step_Mult,  1,      100,    1        },    // "> STPMUL:>000< ↑"
-  {12, 1,  "  CANCEL             ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "   
+  {12, 1,  "  BACK               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "   
   {14, 0,  "T%03d/%03d L%02d/%02d", ""      ,NULL,        0,      0,      0        },    // "T000/000 L00/00 "
   {14, 1,  "SP%03d ST0.%04d      ", ""      ,NULL,        0,      0,      0        },    // "SP000 ST0.0000  " 
   {16, 0,  "AUTOWINDING DONE     ", ""      ,NULL,        0,      0,      0        },    // "AUTOWINDING DONE" 
   {16, 1,  "PRESS CONTINUE       ", ""      ,NULL,        0,      0,      0        }};   // "PRESS CONTINUE  "
   
-LiquidCrystal lcd(RS,EN,D4,D5,D6,D7); // Назначаем пины для управления LCD 
-//LiquidCrystal_I2C lcd(0x27,16,2); // 0x3F I2C адрес для PCF8574AT, дисплей 16 символов 2 строки 
+LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7); // Назначаем пины для управления LCD 
+//LiquidCrystal_I2C lcd(0x27,20,4); // 0x3F I2C адрес для PCF8574AT, дисплей 16 символов 2 строки 
+
+
 
 void setup() {
+Serial.begin(9600);
+
+LoadSettings();
+
 pinMode(ENC_CLK, INPUT);    // Инициализация входов/выходов  
 pinMode(ENC_SW,  INPUT);
 pinMode(STEP_Z,  OUTPUT);
@@ -149,7 +168,7 @@ digitalWrite(EN_STEP, HIGH); // Запрет управления двигате
 //digitalWrite(ENC_DT, HIGH);    
 digitalWrite(STOP_BT, HIGH);   
   
-// lcd.init(); 
+ // lcd.init(); 
   
   lcd.createChar(0, up);       // Записываем символ ⯅ в память LCD
   lcd.createChar(1, down);     // Записываем символ ⯆ в память LCD
@@ -164,6 +183,8 @@ digitalWrite(STOP_BT, HIGH);
 
   lcd.begin(20,4);                                                              // Инициализация LCD Дисплей 20 символов 4 строки   
 // lcd.begin(16,2);                                                             // Инициализация LCD Дисплей 16 символов 2 строки                                                              
+//  lcd.backlight();   
+  
   sprintf(Str_Buffer, Menu[0].format);
   lcd.print(Str_Buffer);                                                        // Выводим первую строку на экран
   lcd.setCursor(0,1); 
@@ -175,19 +196,20 @@ digitalWrite(STOP_BT, HIGH);
 void loop() {
 if (Encoder_Dir != 0) {                                                       // Проверяем изменение позиции энкодера
   switch (Menu_Index) {                                                       // Если позиция энкодера изменена то меняем Menu_Index и выводим экран
-    case Autowinding:  Menu_Index = constrain(Menu_Index + Encoder_Dir, Autowinding, PosControl);   break;
+    case Autowinding:  
     case PosControl:   Menu_Index = constrain(Menu_Index + Encoder_Dir, Autowinding, PosControl);   break;
-    case TurnsSet:     Menu_Index = constrain(Menu_Index + Encoder_Dir, TurnsSet, Cancel);          break;
-    case StepSet:      Menu_Index = constrain(Menu_Index + Encoder_Dir, TurnsSet, Cancel);          break;  
-    case SpeedSet:     Menu_Index = constrain(Menu_Index + Encoder_Dir, TurnsSet, Cancel);          break;
-    case LaySet:       Menu_Index = constrain(Menu_Index + Encoder_Dir, TurnsSet, Cancel);          break;        
-    case Direction:    Menu_Index = constrain(Menu_Index + Encoder_Dir, TurnsSet, Cancel);          break;        
-    case Start:        Menu_Index = constrain(Menu_Index + Encoder_Dir, TurnsSet, Cancel);          break;
+    case TurnsSet:    
+    case StepSet:      
+    case SpeedSet:     
+    case LaySet:             
+    case Direction:        
+    case Start:        
     case Cancel:       Menu_Index = constrain(Menu_Index + Encoder_Dir, TurnsSet, Cancel);          break;
-    case ShaftPos:     Menu_Index = constrain(Menu_Index + Encoder_Dir, ShaftPos, PosCancel);       break;
-    case LayPos:       Menu_Index = constrain(Menu_Index + Encoder_Dir, ShaftPos, PosCancel);       break;
-    case StepMul:      Menu_Index = constrain(Menu_Index + Encoder_Dir, ShaftPos, PosCancel);       break;
-    case PosCancel:    Menu_Index = constrain(Menu_Index + Encoder_Dir, ShaftPos, PosCancel);       break;}
+    case ShaftPos:     
+    case LayPos:       
+    case StepMul:      
+    case PosCancel:    Menu_Index = constrain(Menu_Index + Encoder_Dir, ShaftPos, PosCancel);       break;
+    }
     Encoder_Dir = 0; PrintScreen();}
 
 if (Push_Button == true) {                                                     // Проверяем нажатие кнопки
@@ -268,7 +290,28 @@ void PrintWendingScreen() { // Подпрограмма вывода экран�
   sprintf(Str_Buffer, Menu[15].format, Set_Speed, Set_Step*ShaftStep);
   lcd.print(Str_Buffer);  }
 
+
+void LoadSettings()
+{
+  int p=0;
+  for (int i=0; i<TRANSFORMER_COUNT; ++i)
+    for (int j=0; j<WINDING_COUNT; ++j)
+      params[i][j].Load(p);
+}
+
+void SaveSettings()
+{
+  int p=0;
+  for (int i=0; i<TRANSFORMER_COUNT; ++i)
+    for (int j=0; j<WINDING_COUNT; ++j)
+      params[i][j].Save(p);
+}
+
+
 void AutoWindingPrg() {                                             // Подпрограмма автоматической намотки
+   
+  Serial.println("Start");
+  SaveSettings();
    
   digitalWrite(EN_STEP, LOW);   // Разрешение управления двигателями
   digitalWrite(DIR_Z, HIGH);  
@@ -308,13 +351,13 @@ void AutoWindingPrg() {                                             // Подп�
               if (EN_D) digitalWrite(EN_STEP, HIGH);
               else digitalWrite(EN_STEP, LOW);
               EN_D = !EN_D;
-            }   
+            }
         }
        digitalWrite(EN_STEP, LOW);
        TIMSK1=2;                
        sprintf(Str_Buffer, "%03d", Actual_Turn); 
        lcd.setCursor(1, 0); 
-       lcd.print(Str_Buffer); 
+       lcd.print(Str_Buffer);
        
        EIMSK = 0b00000010;
        Set_Speed = Set_Speed_INT;
@@ -411,7 +454,11 @@ else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00000100) {Encoder_Dir =  1;}
      } 
                                                                                                                           
 ISR(INT1_vect)                               // Вектор прерывания от кнопки энкодера
-  {                               
+  {   
+  static unsigned long timer = 0;
+  if (millis() - timer < 300) return;
+  timer = millis();
+
  Push_Button = true;
  if (AutoWindStart == true) {Pause = true;}  // Если нажать кнопку энкодера во время автонамотки то выставляем флаг паузы 
  else return;
