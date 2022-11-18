@@ -58,6 +58,10 @@
 #define D6        18
 #define D7        19
 
+#define NCOL 20
+#define NROW 4 
+
+
 byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // Создаем свой символ ⯅ для LCD
 byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100};   // Создаем свой символ ⯆ для LCD
 
@@ -66,12 +70,15 @@ byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100}
 const byte CH_UP = 0;
 const byte CH_DW = 1;
 
+enum Mode {mdMenu, mdVarEdit, mdRun} mode;
+
 volatile int Encoder_Dir;                                 // Направление вращения энкодера
-volatile boolean Push_Button, Var_Set, DC, AutoWindStart; // Нажатие кнопки; режим установки значения; формирование сигнала STEP; работает подпрограмма автонамотки 
+volatile boolean Push_Button, DC; // Нажатие кнопки; режим установки значения; формирование сигнала STEP; работает подпрограмма автонамотки 
 volatile boolean Pause;                                   // Флаг паузы в режиме автонамотка   
 volatile int i;                                           // Счетчик кол-ва заходов в прерывание таймера
 char Str_Buffer[22];                                      // Буфер для функции sprintf 
-byte LCD_Column, LCD_Row, Symbol_Code, Motor_Num;         // Номер столбца и строки LCD; код символа https://i.stack.imgur.com/oZhjJ.gif; номер шагового двигателя
+
+byte Motor_Num;         // Номер столбца и строки LCD; код символа https://i.stack.imgur.com/oZhjJ.gif; номер шагового двигателя
 int32_t ActualShaftPos, ActualLayerPos;                   // Текущие позиции двигателей вала и укладчика
 int Actual_Turn = 0, Actual_Layer = 0;                    // Текущий виток и слой при автонамотке
 int Shaft_Pos, Lay_Pos, Step_Mult=1;  // Переменные изменяемые на экране
@@ -151,8 +158,7 @@ struct MenuType Menu[] = {        // Объявляем переменную Men
 //  {16, 1,  "PRESS CONTINUE       ", ""      ,NULL,        0,      0,      0        },    // "PRESS CONTINUE  "
 };  
 
-#define NCOL 20
-#define NROW 4 
+
 const int MENU_COUNT = sizeof(Menu)/sizeof(*Menu);
 
 LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7); // Назначаем пины для управления LCD 
@@ -231,8 +237,10 @@ void loop()
     PrintScreen();   
   }
 
-  if (Push_Button == true) {                                                     // Проверяем нажатие кнопки
-    switch (Menu_Index)    {                                                     // Если было нажатие то выполняем действие соответствующее текущей позиции курсора
+  if (Push_Button)                                                      // Проверяем нажатие кнопки
+  {  
+    switch (Menu_Index)                                                         // Если было нажатие то выполняем действие соответствующее текущей позиции курсора
+    {  
       case Autowinding:  
       case Autowinding2: 
       case Autowinding3: 
@@ -255,10 +263,10 @@ void loop()
               break;
       case WindingBack:  Menu_Index = Autowinding + currentTransformer;                                                                          break;
       case PosControl:   Menu_Index = ShaftPos;                                                                                                  break;
-      case TurnsSet:     SetQuote(9,13); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,13); break;
-      case StepSet:      SetQuote(7,14); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(7,14); break;  
-      case SpeedSet:     SetQuote(9,13); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,13); break;
-      case LaySet:       SetQuote(9,12); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,12); break;   
+      case TurnsSet:     SetQuote(9,13); Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(9,13); break;
+      case StepSet:      SetQuote(7,14); Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(7,14); break;  
+      case SpeedSet:     SetQuote(9,13); Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(9,13); break;
+      case LaySet:       SetQuote(9,12); Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(9,12); break;   
       case Direction:
               {
                 bool &Steppers_Dir = *(bool*)Menu[Direction].param;
@@ -267,18 +275,19 @@ void loop()
                 PrintDirection(12, 0, Steppers_Dir);
               }
               break;                          
-      case Start:        SaveSettings(); Push_Button = false; Var_Set=false; AutoWindStart = true; AutoWindingPrg(); AutoWindStart = false; lcd.clear();         break; 
+      case Start:        SaveSettings(); Push_Button = false; mode = mdRun; AutoWindingPrg(); mode = mdMenu; lcd.clear();         break; 
       case Cancel:       SaveSettings(); Menu_Index = Winding1 + currentWinding;                                                                 break;
-      case ShaftPos:     SetQuote(9,14); Push_Button=false; Var_Set=true; digitalWrite(EN_STEP, LOW); Motor_Num = 1; OCR1A = 200000/Step_Mult;
+      case ShaftPos:     SetQuote(9,14); Push_Button=false; mode = mdVarEdit; digitalWrite(EN_STEP, LOW); Motor_Num = 1; OCR1A = 200000/Step_Mult;
                         while(!Push_Button){LCD_Print_Var(); ActualShaftPos=MotorMove(*Menu[Menu_Index].param * MicroSteps, ActualShaftPos);} 
-                        Var_Set=false; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                            break;   
-      case LayPos:       SetQuote(9,14); Push_Button=false; Var_Set=true; digitalWrite(EN_STEP, LOW); Motor_Num = 2; OCR1A = 200000/Step_Mult;
+                        mode = mdMenu; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                            break;   
+      case LayPos:       SetQuote(9,14); Push_Button=false; mode = mdVarEdit; digitalWrite(EN_STEP, LOW); Motor_Num = 2; OCR1A = 200000/Step_Mult;
                         while(!Push_Button){LCD_Print_Var(); ActualLayerPos=MotorMove(*Menu[Menu_Index].param * MicroSteps, ActualLayerPos);} 
-                        Var_Set=false; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                            break;                                                               
-      case StepMul:      SetQuote(9,13);Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,13);  break;    
+                        mode = mdMenu; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                            break;                                                               
+      case StepMul:      SetQuote(9,13);Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(9,13);  break;    
       case PosCancel:    Menu_Index = Autowinding; Shaft_Pos = 0; Lay_Pos = 0; Step_Mult = 1; ActualShaftPos = 0; ActualLayerPos = 0;            break;
     }
-    Push_Button = false; PrintScreen();
+    Push_Button = false; 
+    PrintScreen();
   }
 }
 
@@ -373,7 +382,7 @@ void LCD_Print_Var()                                                   // Под
     return;
   
   byte cur = Menu[Menu_Index].string_number % NROW;
-  
+
   lcd.setCursor(10, cur);
   sprintf(Str_Buffer, Menu[Menu_Index].format_Set_var, *Menu[Menu_Index].param * Menu[Menu_Index].param_coef);
   lcd.print(Str_Buffer);
@@ -426,7 +435,7 @@ void AutoWindingPrg() {                                             // Подп�
   else PORTB |= 0b00100000;
   PrintWendingScreen();
   Push_Button = false; 
-  Var_Set = false;
+ 
   Set_Speed_INT = Set_Speed;
 
   while (Actual_Layer < Set_Layers)                                 // Пока текущее кол-во слоев меньше заданного проверяем сколько сейчас витков
@@ -549,12 +558,12 @@ else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00000100) {Encoder_Dir =  1;}
 
      Enc_Temp_prev = Enc_Temp;
      
-     if (AutoWindStart == true && Encoder_Dir != 0)                                                                        // Если повернуть энкодер во время автонамотки 
+     if (mode == mdRun && Encoder_Dir != 0)                                                                        // Если повернуть энкодер во время автонамотки 
      {
       Set_Speed_INT += Encoder_Dir; Encoder_Dir = 0; Set_Speed_INT = constrain(Set_Speed_INT, 1, 300);                     // то меняем значение скорости
      }
                                            
-     if (Var_Set == true && Encoder_Dir != 0) 
+     if (mode == mdVarEdit && Encoder_Dir != 0) 
      {                                                                                                                      // Если находимся в режиме изменения переменной 
       *Menu[Menu_Index].param += Encoder_Dir; Encoder_Dir = 0;                                                              // то меняем ее сразу и
       *Menu[Menu_Index].param = constrain(*Menu[Menu_Index].param, Menu[Menu_Index].var_Min, Menu[Menu_Index].var_Max);}    // ограничиваем в диапазоне var_Min ÷ var_Max
@@ -567,12 +576,12 @@ ISR(INT1_vect)                               // Вектор прерывани�
   timer = millis();
 
  Push_Button = true;
- if (AutoWindStart == true) {Pause = true;}  // Если нажать кнопку энкодера во время автонамотки то выставляем флаг паузы 
+ if (mode == mdRun) {Pause = true;}  // Если нажать кнопку энкодера во время автонамотки то выставляем флаг паузы 
  else return;
   }
 
 ISR(TIMER1_COMPA_vect) {                      // Вектор прерывания от таймера/счетчика 1 
- if (AutoWindStart) 
+ if (mode == mdRun) 
  {
   Motor_Num = 0;
   if (NSteps < 200 * MicroSteps) 
