@@ -62,15 +62,15 @@
 #define NROW 4 
 
 
-byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // Создаем свой символ ⯅ для LCD
-byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100};   // Создаем свой символ ⯆ для LCD
-
-//const byte CH_UP = '^';
-//const byte CH_DW = 'v';
-const byte CH_UP = 0;
-const byte CH_DW = 1;
-
 enum Mode {mdMenu, mdVarEdit, mdRun} mode;
+
+#define TRANSFORMER_COUNT 3
+#define WINDING_COUNT 3
+
+Winding params[TRANSFORMER_COUNT][WINDING_COUNT];
+
+byte currentTransformer = -1;
+byte currentWinding = -1;
 
 volatile int Encoder_Dir;                                 // Направление вращения энкодера
 volatile boolean Push_Button, DC; // Нажатие кнопки; режим установки значения; формирование сигнала STEP; работает подпрограмма автонамотки 
@@ -84,15 +84,6 @@ int Actual_Turn = 0, Actual_Layer = 0;                    // Текущий ви
 int Shaft_Pos, Lay_Pos, Step_Mult=1;  // Переменные изменяемые на экране
 byte Menu_Index = 0;                                      // Переменная хранит номер текущей строки меню
 int32_t Steps, Step_Accel, Step_Decel;
-
-
-#define TRANSFORMER_COUNT 3
-#define WINDING_COUNT 3
-
-Winding params[TRANSFORMER_COUNT][WINDING_COUNT];
-
-byte currentTransformer = -1;
-byte currentWinding = -1;
 
 volatile uint16_t OCR1A_NOM;
 volatile uint32_t OCR1A_TEMP;
@@ -112,7 +103,7 @@ int16_t SpeedIncrease, SpeedDecrease;
 volatile int X,Y;
 volatile int Set_Speed_INT;
 
-enum menu_states {Autowinding, Autowinding2, Autowinding3, PosControl, Winding1, Winding2, Winding3, WindingBack, TurnsSet, StepSet, SpeedSet, LaySet, Direction, Start, Cancel, ShaftPos, LayPos, StepMul, PosCancel}; // Нумерованный список строк экрана
+enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, Winding1, Winding2, Winding3, WindingBack, TurnsSet, StepSet, SpeedSet, LaySet, Direction, Start, Cancel, ShaftPos, LayPos, StepMul, PosCancel}; // Нумерованный список строк экрана
 
 struct MenuType {                       // Структура описывающая меню
   byte Screen;                          // Индекс экрана
@@ -157,6 +148,15 @@ struct MenuType Menu[] = {        // Объявляем переменную Men
 
 
 const int MENU_COUNT = sizeof(Menu)/sizeof(*Menu);
+
+
+byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // Создаем свой символ ⯅ для LCD
+byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100};   // Создаем свой символ ⯆ для LCD
+
+//const byte CH_UP = '^';
+//const byte CH_DW = 'v';
+const byte CH_UP = 0;
+const byte CH_DW = 1;
 
 LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7); // Назначаем пины для управления LCD 
 //LiquidCrystal_I2C lcd(0x27, NCOL, NROW); // 0x3F I2C адрес для PCF8574AT, дисплей 16 символов 2 строки 
@@ -238,10 +238,10 @@ void loop()
   {  
     switch (Menu_Index)                                                         // Если было нажатие то выполняем действие соответствующее текущей позиции курсора
     {  
-      case Autowinding:  
+      case Autowinding1:  
       case Autowinding2: 
       case Autowinding3: 
-              currentTransformer = Menu_Index - Autowinding; 
+              currentTransformer = Menu_Index - Autowinding1; 
               Menu_Index = Winding1;   
               Menu[Winding1].param = (int*)&params[currentTransformer][0].turns;   
               Menu[Winding2].param = (int*)&params[currentTransformer][1].turns;                                              
@@ -258,7 +258,7 @@ void loop()
               Menu[LaySet].param = (int*)&params[currentTransformer][currentWinding].layers;              
               Menu[Direction].param = (int*)&params[currentTransformer][currentWinding].dir;
               break;
-      case WindingBack:  Menu_Index = Autowinding + currentTransformer;                                                                          break;
+      case WindingBack:  Menu_Index = Autowinding1 + currentTransformer;                                                                          break;
       case PosControl:   Menu_Index = ShaftPos;                                                                                                  break;
       case TurnsSet:     SetQuote(9,13); Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(9,13); break;
       case StepSet:      SetQuote(7,14); Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(7,14); break;  
@@ -272,7 +272,7 @@ void loop()
                 PrintDirection(12, 0, Steppers_Dir);
               }
               break;                          
-      case Start:        SaveSettings(); Push_Button = false; mode = mdRun; AutoWindingPrg(); mode = mdMenu; lcd.clear();         break; 
+      case Start:        SaveSettings(); Push_Button = false; mode = mdRun; AutoWindingPrg(); mode = mdMenu; lcd.clear();   Menu_Index = Autowinding1;      break; 
       case Cancel:       SaveSettings(); Menu_Index = Winding1 + currentWinding;                                                                 break;
       case ShaftPos:     SetQuote(9,14); Push_Button=false; mode = mdVarEdit; digitalWrite(EN_STEP, LOW); Motor_Num = 1; OCR1A = 200000/Step_Mult;
                         while(!Push_Button){LCD_Print_Var(); ActualShaftPos=MotorMove(*Menu[Menu_Index].param * MicroSteps, ActualShaftPos);} 
@@ -281,7 +281,7 @@ void loop()
                         while(!Push_Button){LCD_Print_Var(); ActualLayerPos=MotorMove(*Menu[Menu_Index].param * MicroSteps, ActualLayerPos);} 
                         mode = mdMenu; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                            break;                                                               
       case StepMul:      SetQuote(9,13);Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(9,13);  break;    
-      case PosCancel:    Menu_Index = Autowinding; Shaft_Pos = 0; Lay_Pos = 0; Step_Mult = 1; ActualShaftPos = 0; ActualLayerPos = 0;            break;
+      case PosCancel:    Menu_Index = Autowinding1; Shaft_Pos = 0; Lay_Pos = 0; Step_Mult = 1; ActualShaftPos = 0; ActualLayerPos = 0;            break;
     }
     Push_Button = false; 
     PrintScreen();
@@ -531,8 +531,7 @@ void AutoWindingPrg()                                             // Подпр�
     Push_Button = false;
     while (Push_Button == false) {}
     Push_Button = false;
-    Pause = false;
-    Menu_Index = Autowinding; 
+    Pause = false; 
     Actual_Layer = 0;     
 }
 
