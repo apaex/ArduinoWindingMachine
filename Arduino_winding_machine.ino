@@ -94,9 +94,6 @@ Winding params[TRANSFORMER_COUNT][WINDING_COUNT];
 byte currentTransformer = -1;
 byte currentWinding = -1;
 
-int Set_Turns, Set_Step, Set_Speed=1, Set_Layers=1;  // Переменные изменяемые на экране
-bool Steppers_Dir = 1;
-
 volatile uint16_t OCR1A_NOM;
 volatile uint32_t OCR1A_TEMP;
 volatile uint32_t INCR;
@@ -391,11 +388,13 @@ void LCD_Print_Var()                                                   // Под
 
 void PrintWendingScreen()  // Подпрограмма вывода экрана автонамотки
 {  
+  Winding &w = params[currentTransformer][currentWinding];
+
   lcd.clear();
-  sprintf(Str_Buffer, "T%03d/%03d L%02d/%02d", Actual_Turn, Set_Turns, Actual_Layer, Set_Layers);
+  sprintf(Str_Buffer, "T%03d/%03d L%02d/%02d", Actual_Turn, w.turns, Actual_Layer, w.layers);
   lcd.print(Str_Buffer);
   lcd.setCursor(0, 1);
-  sprintf(Str_Buffer, "SP%03d ST0.%04d", Set_Speed, Set_Step*ShaftStep);
+  sprintf(Str_Buffer, "SP%03d ST0.%04d", w.speed, w.step*ShaftStep);
   lcd.print(Str_Buffer);  
 }
 
@@ -425,25 +424,27 @@ void SaveSettings()
 }
 
 
-void AutoWindingPrg() {                                             // Подпрограмма автоматической намотки
-   
+void AutoWindingPrg()                                             // Подпрограмма автоматической намотки
+{    
+  Winding &w = params[currentTransformer][currentWinding];
+
   Serial.println("Start");
    
   digitalWrite(EN_STEP, LOW);   // Разрешение управления двигателями
   digitalWrite(DIR_Z, HIGH);  
-  if (Steppers_Dir) PORTB &= 0b11011111; 
+  if (w.dir) PORTB &= 0b11011111; 
   else PORTB |= 0b00100000;
   PrintWendingScreen();
   Push_Button = false; 
  
-  Set_Speed_INT = Set_Speed;
+  Set_Speed_INT = w.speed;
 
-  while (Actual_Layer < Set_Layers)                                 // Пока текущее кол-во слоев меньше заданного проверяем сколько сейчас витков
+  while (Actual_Layer < w.layers)                                 // Пока текущее кол-во слоев меньше заданного проверяем сколько сейчас витков
     {
           OCR1A = 65535;
-          OCR1A_NOM = 4800000 / (Set_Speed*MicroSteps); 
+          OCR1A_NOM = 4800000 / (w.speed*MicroSteps); 
 
-      while (Actual_Turn < Set_Turns)                               // Пока текущее кол-во витков меньше заданного продолжаем мотать
+      while (Actual_Turn < w.turns)                               // Пока текущее кол-во витков меньше заданного продолжаем мотать
         {     
        run_btn = PINB & 0b00001000;
        while (run_btn)
@@ -451,13 +452,13 @@ void AutoWindingPrg() {                                             // Подп�
           TIMSK1=0; 
           run_btn = PINB & 0b00001000;   
           EIMSK = 0b00000010;
-          Set_Speed = Set_Speed_INT;
+          w.speed = Set_Speed_INT;      // ещё дичь - меняются настройки
           EIMSK = 0b00000011;
           
           lcd.setCursor(2, 1); 
-          sprintf(Str_Buffer, "%03d", Set_Speed);
+          sprintf(Str_Buffer, "%03d", w.speed);
           lcd.print(Str_Buffer);
-          OCR1A_NOM = 4800000 / (Set_Speed*MicroSteps); 
+          OCR1A_NOM = 4800000 / (w.speed*MicroSteps); 
           
           if (Pause == true)
             {
@@ -476,15 +477,15 @@ void AutoWindingPrg() {                                             // Подп�
        lcd.print(Str_Buffer);
        
        EIMSK = 0b00000010;
-       Set_Speed = Set_Speed_INT;
+       w.speed = Set_Speed_INT;
        EIMSK = 0b00000011;
        
        if (Actual_Turn > 1)
       {
         lcd.setCursor(2, 1); 
-        sprintf(Str_Buffer, "%03d", Set_Speed);
+        sprintf(Str_Buffer, "%03d", w.speed);
         lcd.print(Str_Buffer);
-        OCR1A_NOM = 4800000/(Set_Speed*MicroSteps);
+        OCR1A_NOM = 4800000/(w.speed*MicroSteps);
       }
           }   
       TIMSK1=0;
@@ -498,7 +499,7 @@ void AutoWindingPrg() {                                             // Подп�
       sprintf(Str_Buffer, "%02d", Actual_Layer);
       lcd.print(Str_Buffer);
       
-      if (Actual_Layer == Set_Layers) continue; 
+      if (Actual_Layer == w.layers) continue; 
       
       lcd.setCursor(0, 1); 
       sprintf(Str_Buffer, "PRESS CONTINUE  ");                            // "PRESS CONTINUE  "
@@ -509,12 +510,12 @@ void AutoWindingPrg() {                                             // Подп�
       Push_Button = false; 
       
       lcd.setCursor(0, 1);
-      sprintf(Str_Buffer, Menu[15].format, Set_Speed, Set_Step*ShaftStep);
+      sprintf(Str_Buffer, Menu[15].format, w.speed, w.step*ShaftStep);
       lcd.print(Str_Buffer);
       
-      Steppers_Dir = !Steppers_Dir;
+      w.dir = !w.dir;     // вот тут дичь - параметры настроек изменяются
 
-      if (Steppers_Dir) PORTB &= 0b11011111; 
+      if (w.dir) PORTB &= 0b11011111; 
       else PORTB |= 0b00100000;
       Actual_Turn = 0;        
       sprintf(Str_Buffer, "%03d", Actual_Turn); 
@@ -580,21 +581,24 @@ ISR(INT1_vect)                               // Вектор прерывани�
  else return;
   }
 
-ISR(TIMER1_COMPA_vect) {                      // Вектор прерывания от таймера/счетчика 1 
+ISR(TIMER1_COMPA_vect)                       // Вектор прерывания от таймера/счетчика 1 
+{
+  Winding &w = params[currentTransformer][currentWinding];
+
  if (mode == mdRun) 
  {
   Motor_Num = 0;
   if (NSteps < 200 * MicroSteps) 
   {
    PORTD |= 0b00010000;
-   if (NTurn>>4 > 200 - Set_Step) PORTB |= 0b00010000;
+   if (NTurn>>4 > 200 - w.step) PORTB |= 0b00010000;
    while (i<6) {i++;} i=0;
    PORTD &= 0b11101111; 
-   if (NTurn>>4 > 200 - Set_Step) PORTB &= 0b11101111;
+   if (NTurn>>4 > 200 - w.step) PORTB &= 0b11101111;
    NTurn++;
    if (NTurn>>4 > 200) {NTurn=0; Actual_Turn++;}
 
-  INCR = Set_Speed * 5 / (MicroSteps);
+  INCR = w.speed * 5 / (MicroSteps);
   Temp = NSteps * INCR;
   OCR1A_TEMP = 300000 * 1000 / Temp;
   OCR1A = min (65535, OCR1A_TEMP);
@@ -603,10 +607,10 @@ ISR(TIMER1_COMPA_vect) {                      // Вектор прерывани
   {
    OCR1A = OCR1A_NOM;
    PORTD |= 0b00010000;
-   if (NTurn>>4 > 200 - Set_Step) PORTB |= 0b00010000;
+   if (NTurn>>4 > 200 - w.step) PORTB |= 0b00010000;
    while (i<6) {i++;} i=0;
    PORTD &= 0b11101111; 
-   if (NTurn>>4 > 200 - Set_Step) PORTB &= 0b11101111;
+   if (NTurn>>4 > 200 - w.step) PORTB &= 0b11101111;
    NTurn++;
    if (NTurn>>4 > 200) {NTurn=0; Actual_Turn++;}
   }
