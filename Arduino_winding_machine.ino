@@ -209,7 +209,7 @@ byte GetLastMenuIndex()
 {
   byte scr = Menu[Menu_Index].Screen;
   byte r = Menu_Index;
-  while (Menu[r+1].Screen == scr) ++r;
+  while ((r+1 < MENU_COUNT) && (Menu[r+1].Screen == scr)) ++r;
   return r;
 }
 
