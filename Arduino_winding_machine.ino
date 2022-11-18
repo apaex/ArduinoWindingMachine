@@ -118,25 +118,30 @@ const struct MenuType Menu[] = {        // Объявляем переменну
   
   {2,  0,  "  TURNS:  %03d       ", "%03d"  ,&Set_Turns,  1,      999,    1        },    // "> TURNS: >000<  "
   {2,  1,  "  STEP: 0.%04d       ", "%04d"  ,&Set_Step,   1,      200,    ShaftStep},    // "> STEP:>0.0000<↓"  
-  {4,  0,  "  SPEED:  %03d       ", "%03d"  ,&Set_Speed,  1,      300,    1        },    // "> SPEED: >000< ↑"
-  {4,  1,  "  LAYERS: %02d       ", "%02d"  ,&Set_Layers, 1,      99,     1        },    // "> LAYERS:>00<  ↓" 
-  {6,  0,  "  DIRECTION >>>      ", ""      ,NULL,        0,      0,      0        },    // "> DIRECTION >>>↑"
-  {6,  1,  "  START              ", ""      ,NULL,        0,      0,      0        },    // "> START        ↓" 
-  {8,  0,  "  CANCEL             ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL       ↑" 
-  {8,  1,  "                     ", ""      ,NULL,        0,      0,      0        },    // ">               " 
+  {2,  2,  "  SPEED:  %03d       ", "%03d"  ,&Set_Speed,  1,      300,    1        },    // "> SPEED: >000< ↑"
+  {2,  3,  "  LAYERS: %02d       ", "%02d"  ,&Set_Layers, 1,      99,     1        },    // "> LAYERS:>00<  ↓" 
+  {2,  4,  "  DIRECTION >>>      ", ""      ,NULL,        0,      0,      0        },    // "> DIRECTION >>>↑"
+  {2,  5,  "  START              ", ""      ,NULL,        0,      0,      0        },    // "> START        ↓" 
+  {2,  6,  "  CANCEL             ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL       ↑" 
+  {2,  7,  "                     ", ""      ,NULL,        0,      0,      0        },    // ">               " 
 
   {10, 0,  "  SH POS: %+04d      ", "%+04d" ,&Shaft_Pos,  -999,   999,    1        },    // "> SH POS:>±000< "
   {10, 1,  "  LA POS: %+04d      ", "%+04d" ,&Lay_Pos,    -999,   999,    1        },    // "> LA POS:>±000<↓" 
-  {12, 0,  "  STPMUL: %03d       ", "%03d"  ,&Step_Mult,  1,      100,    1        },    // "> STPMUL:>000< ↑"
-  {12, 1,  "  BACK               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "   
+  {10, 2,  "  STPMUL: %03d       ", "%03d"  ,&Step_Mult,  1,      100,    1        },    // "> STPMUL:>000< ↑"
+  {10, 3,  "  BACK               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
+
   {14, 0,  "T%03d/%03d L%02d/%02d", ""      ,NULL,        0,      0,      0        },    // "T000/000 L00/00 "
   {14, 1,  "SP%03d ST0.%04d      ", ""      ,NULL,        0,      0,      0        },    // "SP000 ST0.0000  " 
+
   {16, 0,  "AUTOWINDING DONE     ", ""      ,NULL,        0,      0,      0        },    // "AUTOWINDING DONE" 
   {16, 1,  "PRESS CONTINUE       ", ""      ,NULL,        0,      0,      0        }};   // "PRESS CONTINUE  "
   
 LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7); // Назначаем пины для управления LCD 
 //LiquidCrystal_I2C lcd(0x27,20,4); // 0x3F I2C адрес для PCF8574AT, дисплей 16 символов 2 строки 
 
+
+#define NCOL 20
+#define NROW 4
 
 
 void setup() {
@@ -183,17 +188,13 @@ digitalWrite(STOP_BT, HIGH);
 
   lcd.begin(20,4);                                                              // Инициализация LCD Дисплей 20 символов 4 строки   
 // lcd.begin(16,2);                                                             // Инициализация LCD Дисплей 16 символов 2 строки                                                              
-//  lcd.backlight();   
   
-  sprintf(Str_Buffer, Menu[0].format);
-  lcd.print(Str_Buffer);                                                        // Выводим первую строку на экран
-  lcd.setCursor(0,1); 
-  sprintf(Str_Buffer, Menu[1].format);
-  lcd.print(Str_Buffer);                                                        // Выводим вторую строку на экран
-  PrintSymbol(0,0,0x3E);                                                        // Выводим символ ">" на 0,0 LCD
-  sei();} 
+  PrintScreen();
+  sei();
+} 
 
-void loop() {
+void loop() 
+{
 if (Encoder_Dir != 0) {                                                       // Проверяем изменение позиции энкодера
   switch (Menu_Index) {                                                       // Если позиция энкодера изменена то меняем Menu_Index и выводим экран
     case Autowinding:  
@@ -235,30 +236,43 @@ if (Push_Button == true) {                                                     /
     case PosCancel:    Menu_Index = Autowinding; Shaft_Pos = 0; Lay_Pos = 0; Step_Mult = 1; ActualShaftPos = 0; ActualLayerPos = 0;            break;}
     Push_Button = false; PrintScreen();}}
 
-void PrintScreen() {                          // Подпрограмма: Выводим экран на LCD
-  static byte Prev_Screen;
-  if (Menu[Menu_Index].Screen != Prev_Screen) {
-  lcd.clear();
-  sprintf(Str_Buffer, Menu[Menu[Menu_Index].Screen].format, *Menu[Menu[Menu_Index].Screen].param * Menu[Menu[Menu_Index].Screen].param_coef);
-  lcd.print(Str_Buffer);
-  lcd.setCursor(0, 1); 
-  sprintf(Str_Buffer, Menu[Menu[Menu_Index].Screen + 1].format, *Menu[Menu[Menu_Index].Screen + 1].param * Menu[Menu[Menu_Index].Screen + 1].param_coef);
-  lcd.print(Str_Buffer);
-  Prev_Screen = Menu[Menu_Index].Screen;}
-  if      (Menu_Index & 1) {PrintSymbol(0,1,0x3E); PrintSymbol(0,0,0x20);}  // Если индекс меню нечетный выводим курсор на вторую строку
-  else                     {PrintSymbol(0,0,0x3E); PrintSymbol(0,1,0x20);}  // Иначе выводим курсор на первую строку  
-  switch (Menu_Index) {                                                     // Выводим стрелки ⯅⯆ на соответствующих строках меню
-    case TurnsSet:     PrintSymbol(15,1,1);                      break;
-    case StepSet:      PrintSymbol(15,1,1);                      break;  
-    case SpeedSet:     PrintSymbol(15,1,1); PrintSymbol(15,0,0); break;
-    case LaySet:       PrintSymbol(15,1,1); PrintSymbol(15,0,0); break;  
-    case Direction:    PrintSymbol(15,1,1); PrintSymbol(15,0,0); break;    
-    case Start:        PrintSymbol(15,1,1); PrintSymbol(15,0,0); break;       
-    case Cancel:       PrintSymbol(15,0,0);                      break;    
-    case ShaftPos:     PrintSymbol(15,1,1);                      break;
-    case LayPos:       PrintSymbol(15,1,1);                      break;
-    case StepMul:      PrintSymbol(15,0,0);                      break;
-    case PosCancel:    PrintSymbol(15,0,0);                      break;}}
+void PrintScreen() // Подпрограмма: Выводим экран на LCD
+{                          
+  byte scr = Menu[Menu_Index].Screen;
+  byte page = Menu[Menu_Index].string_number / NROW;  // страница
+  byte cur = Menu[Menu_Index].string_number % NROW;   // позиция курсора
+  byte first = page * NROW + scr;
+
+  static byte prev_screen = -1;
+  static byte prev_page = -1;
+
+  if (scr != prev_screen || page != prev_page) 
+  {
+    lcd.clear();
+
+    for (int i = 0; i < NROW; ++i)
+    {
+      if (Menu[first + i].Screen != scr)
+        break;     
+
+      lcd.setCursor(0, i); 
+      sprintf(Str_Buffer, Menu[first + i].format, *Menu[first + i].param * Menu[first + i].param_coef);
+      lcd.print(Str_Buffer);
+    }
+
+    prev_screen = scr;
+    prev_page = page;
+  }
+  
+  for (int i = 0; i < NROW; ++i)
+      PrintSymbol(0, i, (i == cur) ? 0x3E : 0x20); 
+
+  if (page > 0)                             // Выводим стрелки ⯅⯆ на соответствующих строках меню
+    PrintSymbol(NCOL-1, 0, 0);
+  if (Menu[first + NROW].Screen == scr)
+    PrintSymbol(NCOL-1, NROW-1, 1); 
+
+}
                                                                                                           
 void PrintSymbol(byte LCD_Column, byte LCD_Row, byte Symbol_Code) { // Подпрограмма: Выводим символ на экран
   lcd.setCursor(LCD_Column, LCD_Row); 
