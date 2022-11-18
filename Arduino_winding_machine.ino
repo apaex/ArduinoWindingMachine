@@ -351,28 +351,33 @@ void PrintDirection(byte c, byte r, bool d)
 
 void SetQuote   (int First_Cur, int Second_Cur)                  // Подпрограмма: Выводим выделение изменяемой переменной на LCD
 {
-  PrintSymbol(First_Cur,  Menu[Menu_Index].string_number,0x3E);   // Выводим символ >
-  PrintSymbol(Second_Cur, Menu[Menu_Index].string_number,0x3C);   // Выводим символ <
-  PrintSymbol(0,          Menu[Menu_Index].string_number,0x20);  // Стираем основной курсор
+  byte cur = Menu[Menu_Index].string_number % NROW;  
+  PrintSymbol(First_Cur,  cur,0x3E);   // Выводим символ >
+  PrintSymbol(Second_Cur, cur,0x3C);   // Выводим символ <
+  PrintSymbol(0,          cur,0x20);  // Стираем основной курсор
 }
 
 void ClearQuote (int First_Cur, int Second_Cur)                  // Подпрограмма: Стираем выделение изменяемой переменной на LCD
 {
-  PrintSymbol(First_Cur,  Menu[Menu_Index].string_number,0x20);   // Стираем символ >
-  PrintSymbol(Second_Cur, Menu[Menu_Index].string_number,0x20);   // Стираем символ <
-  PrintSymbol(0,          Menu[Menu_Index].string_number,0x3E);  // Выводим основной курсор     
+  byte cur = Menu[Menu_Index].string_number % NROW;  
+  PrintSymbol(First_Cur,  cur,0x20);   // Стираем символ >
+  PrintSymbol(Second_Cur, cur,0x20);   // Стираем символ <
+  PrintSymbol(0,          cur,0x3E);  // Выводим основной курсор     
 }
 
 void LCD_Print_Var()                                                   // Подпрограмма: Выводим новое значение переменной на LCD
 {
   static int Previous_Param;
-  if (*Menu[Menu_Index].param != Previous_Param)
-  {
-    lcd.setCursor(10, Menu[Menu_Index].string_number);
-    sprintf(Str_Buffer, Menu[Menu_Index].format_Set_var, *Menu[Menu_Index].param * Menu[Menu_Index].param_coef);
-    lcd.print(Str_Buffer);
-    Previous_Param = *Menu[Menu_Index].param;
-  }
+
+  if (*Menu[Menu_Index].param == Previous_Param)
+    return;
+  
+  byte cur = Menu[Menu_Index].string_number % NROW;
+  
+  lcd.setCursor(10, cur);
+  sprintf(Str_Buffer, Menu[Menu_Index].format_Set_var, *Menu[Menu_Index].param * Menu[Menu_Index].param_coef);
+  lcd.print(Str_Buffer);
+  Previous_Param = *Menu[Menu_Index].param;  
 }
 
 void PrintWendingScreen()  // Подпрограмма вывода экрана автонамотки
