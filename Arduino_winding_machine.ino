@@ -127,9 +127,9 @@ struct MenuType Menu[] = {        // Объявляем переменную Men
   {0,  2,  ' ', "Setup 3            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
   {0,  3,  ' ', "Pos control        ", ""      ,NULL,        0,      0,      0        },    // "> POS CONTROL   "
 
-  {1,  0,  ' ', "Winding 1          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {1,  1,  ' ', "Winding 2          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {1,  2,  ' ', "Winding 3          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {1,  0,  'i', "Winding 1  % 3d    ", ""      ,NULL,        0,      0,      1        },    // "> AUTOWINDING   "
+  {1,  1,  'i', "Winding 2  % 3d    ", ""      ,NULL,        0,      0,      1        },    // "> AUTOWINDING   "
+  {1,  2,  'i', "Winding 3  % 3d    ", ""      ,NULL,        0,      0,      1        },    // "> AUTOWINDING   "
   {1,  3,  ' ', "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
   
   {2,  0,  'i', "Turns:  %03d       ", "%03d"  ,NULL,        1,      999,    1        },    // "> TURNS: >000<  "
@@ -235,7 +235,13 @@ void loop()
     switch (Menu_Index)    {                                                     // Если было нажатие то выполняем действие соответствующее текущей позиции курсора
       case Autowinding:  
       case Autowinding2: 
-      case Autowinding3: currentTransformer = Menu_Index - Autowinding; Menu_Index = Winding1;                                                   break;
+      case Autowinding3: 
+              currentTransformer = Menu_Index - Autowinding; 
+              Menu_Index = Winding1;   
+              Menu[Winding1].param = (int*)&params[currentTransformer][0].turns;   
+              Menu[Winding2].param = (int*)&params[currentTransformer][1].turns;                                              
+              Menu[Winding3].param = (int*)&params[currentTransformer][2].turns;                          
+              break;
       case Winding1:     
       case Winding2: 
       case Winding3:     
