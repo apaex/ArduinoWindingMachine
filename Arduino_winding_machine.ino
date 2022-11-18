@@ -1,8 +1,8 @@
 /* Name: Winding machine    
    Description: Arduino ATmega 328P + Stepper motor control CNC Shield v3 + 2004 LCD + Encoder KY-040
    Author:      TDA
-   Ver:         2.1b
-   Date:        25/10/2019
+   Ver:         3.0b
+   Date:        19/11/2022
 
        Arduino pinout diagram:
           _______________
@@ -122,9 +122,9 @@ struct MenuType Menu[] = {        // Объявляем переменную Men
   {0,  2,  ' ', "Setup 3            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
   {0,  3,  ' ', "Pos control        ", ""      ,NULL,        0,      0,      0        },    // "> POS CONTROL   "
 
-  {1,  0,  'i', "Winding 1  % 3d    ", ""      ,NULL,        0,      0,      1        },    // "> AUTOWINDING   "
-  {1,  1,  'i', "Winding 2  % 3d    ", ""      ,NULL,        0,      0,      1        },    // "> AUTOWINDING   "
-  {1,  2,  'i', "Winding 3  % 3d    ", ""      ,NULL,        0,      0,      1        },    // "> AUTOWINDING   "
+  {1,  0,  'i', "Winding 1  % 3dT   ", ""      ,NULL,        0,      0,      1        },    // "> AUTOWINDING   "
+  {1,  1,  'i', "Winding 2  % 3dT   ", ""      ,NULL,        0,      0,      1        },    // "> AUTOWINDING   "
+  {1,  2,  'i', "Winding 3  % 3dT   ", ""      ,NULL,        0,      0,      1        },    // "> AUTOWINDING   "
   {1,  3,  ' ', "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
   
   {2,  0,  'i', "Turns:  %03d       ", "%03d"  ,NULL,        1,      999,    1        },    // "> TURNS: >000<  "
@@ -162,34 +162,35 @@ LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7); // Назначаем пины для �
 //LiquidCrystal_I2C lcd(0x27, NCOL, NROW); // 0x3F I2C адрес для PCF8574AT, дисплей 16 символов 2 строки 
 
 
-void setup() {
-Serial.begin(9600);
+void setup() 
+{
+  Serial.begin(9600);
 
-LoadSettings();
+  LoadSettings();
 
-pinMode(ENC_CLK, INPUT);    // Инициализация входов/выходов  
-pinMode(ENC_SW,  INPUT);
-pinMode(STEP_Z,  OUTPUT);
-pinMode(ENC_DT,  INPUT);
-pinMode(DIR_Z,   OUTPUT);
-pinMode(EN_STEP, OUTPUT);
-pinMode(STEP_A,  OUTPUT);
-pinMode(DIR_A,   OUTPUT); 
-pinMode(BUZZ_OUT,OUTPUT);
-pinMode(STOP_BT, INPUT);
-pinMode(RS,      OUTPUT);
-pinMode(EN,      OUTPUT);
-pinMode(D4,      OUTPUT);
-pinMode(D5,      OUTPUT);
-pinMode(D6,      OUTPUT);
-pinMode(D7,      OUTPUT);
+  pinMode(ENC_CLK, INPUT);    // Инициализация входов/выходов  
+  pinMode(ENC_SW,  INPUT);
+  pinMode(STEP_Z,  OUTPUT);
+  pinMode(ENC_DT,  INPUT);
+  pinMode(DIR_Z,   OUTPUT);
+  pinMode(EN_STEP, OUTPUT);
+  pinMode(STEP_A,  OUTPUT);
+  pinMode(DIR_A,   OUTPUT); 
+  pinMode(BUZZ_OUT,OUTPUT);
+  pinMode(STOP_BT, INPUT);
+  pinMode(RS,      OUTPUT);
+  pinMode(EN,      OUTPUT);
+  pinMode(D4,      OUTPUT);
+  pinMode(D5,      OUTPUT);
+  pinMode(D6,      OUTPUT);
+  pinMode(D7,      OUTPUT);
 
-digitalWrite(EN_STEP, HIGH); // Запрет управления двигателями  
+  digitalWrite(EN_STEP, HIGH); // Запрет управления двигателями  
 
-//digitalWrite(ENC_CLK,HIGH);  // Вкл. подтягивающие резисторы к VDD 
-//digitalWrite(ENC_SW, HIGH);   
-//digitalWrite(ENC_DT, HIGH);    
-digitalWrite(STOP_BT, HIGH);   
+  //digitalWrite(ENC_CLK,HIGH);  // Вкл. подтягивающие резисторы к VDD 
+  //digitalWrite(ENC_SW, HIGH);   
+  //digitalWrite(ENC_DT, HIGH);    
+  digitalWrite(STOP_BT, HIGH);   
   
  // lcd.init(); 
   
@@ -535,8 +536,9 @@ void AutoWindingPrg()                                             // Подпр�
     Actual_Layer = 0;     
 }
 
-int MotorMove(int32_t Move_Var, int32_t Actual_Rot) {                    // Подпрограмма: Движение шагового двигателя до заданной координаты
-long Rotation;        
+int MotorMove(int32_t Move_Var, int32_t Actual_Rot)                     // Подпрограмма: Движение шагового двигателя до заданной координаты
+{ 
+  long Rotation;        
   Rotation = Move_Var * Step_Mult - Actual_Rot;
   switch(Motor_Num) {
     case 1: if      (Rotation > 0) {PORTD |= 0b10000000; TCNT1=0; TIMSK1=2; while(i<2){} TIMSK1=0; TCNT1=0; Actual_Rot++; i=0; DC=false;} 
@@ -545,40 +547,52 @@ long Rotation;
     case 2: if      (Rotation > 0) {PORTB |= 0b00100000; TCNT1=0; TIMSK1=2; while(i<2){} TIMSK1=0; TCNT1=0; Actual_Rot++; i=0; DC=false;} 
             else if (Rotation < 0) {PORTB &= 0b11011111; TCNT1=0; TIMSK1=2; while(i<2){} TIMSK1=0; TCNT1=0; Actual_Rot--; i=0; DC=false;}
             else     TIMSK1 = 0; i = 0; DC = false; break;}                    
-return Actual_Rot;}
+  return Actual_Rot;
+}
 
-ISR(INT0_vect) {  // Вектор прерывания от энкодера
-static byte Enc_Temp, Enc_Temp_prev;    // Временная переменная для хранения состояния порта
-Enc_Temp = PIND & 0b00100100;                                                                                                // Маскируем все пины порта D кроме PD2 и PD5      
 
-     if (Enc_Temp==0b00100000 && Enc_Temp_prev==0b00000100) {Encoder_Dir = -1;} // -1 - шаг против часовой
-else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00100100) {Encoder_Dir =  1;} // +1 - шаг по часовой
-else if (Enc_Temp==0b00100000 && Enc_Temp_prev==0b00100100) {Encoder_Dir = -1;}
-else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00000100) {Encoder_Dir =  1;}
 
-     Enc_Temp_prev = Enc_Temp;
-     
-     if (mode == mdRun && Encoder_Dir != 0)                                                                        // Если повернуть энкодер во время автонамотки 
-     {
-      Set_Speed_INT += Encoder_Dir; Encoder_Dir = 0; Set_Speed_INT = constrain(Set_Speed_INT, 1, 300);                     // то меняем значение скорости
-     }
-                                           
-     if (mode == mdVarEdit && Encoder_Dir != 0) 
-     {                                                                                                                      // Если находимся в режиме изменения переменной 
-      *Menu[Menu_Index].param += Encoder_Dir; Encoder_Dir = 0;                                                              // то меняем ее сразу и
-      *Menu[Menu_Index].param = constrain(*Menu[Menu_Index].param, Menu[Menu_Index].var_Min, Menu[Menu_Index].var_Max);}    // ограничиваем в диапазоне var_Min ÷ var_Max
-     } 
-                                                                                                                          
+ISR(INT0_vect)   // Вектор прерывания от энкодера
+{
+  static byte Enc_Temp_prev;    // Временная переменная для хранения состояния порта
+
+  byte Enc_Temp = PIND & 0b00100100;                                                                                                // Маскируем все пины порта D кроме PD2 и PD5      
+
+  if (Enc_Temp==0b00100000 && Enc_Temp_prev==0b00000100) {Encoder_Dir = -1;} // -1 - шаг против часовой
+  else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00100100) {Encoder_Dir =  1;} // +1 - шаг по часовой
+  else if (Enc_Temp==0b00100000 && Enc_Temp_prev==0b00100100) {Encoder_Dir = -1;}
+  else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00000100) {Encoder_Dir =  1;}
+
+  Enc_Temp_prev = Enc_Temp;
+
+  if (mode == mdRun && Encoder_Dir != 0)                                                                        // Если повернуть энкодер во время автонамотки 
+  {
+    Set_Speed_INT += Encoder_Dir; Encoder_Dir = 0; Set_Speed_INT = constrain(Set_Speed_INT, 1, 300);                     // то меняем значение скорости
+  }
+                                        
+  if (mode == mdVarEdit && Encoder_Dir != 0) 
+  {                                                                                                                      // Если находимся в режиме изменения переменной 
+    *Menu[Menu_Index].param += Encoder_Dir; Encoder_Dir = 0;                                                              // то меняем ее сразу и
+    *Menu[Menu_Index].param = constrain(*Menu[Menu_Index].param, Menu[Menu_Index].var_Min, Menu[Menu_Index].var_Max);    // ограничиваем в диапазоне var_Min ÷ var_Max
+  } 
+}
+
+
+
 ISR(INT1_vect)                               // Вектор прерывания от кнопки энкодера
-  {   
+{   
   static unsigned long timer = 0;
   if (millis() - timer < 300) return;
   timer = millis();
 
- Push_Button = true;
- if (mode == mdRun) {Pause = true;}  // Если нажать кнопку энкодера во время автонамотки то выставляем флаг паузы 
- else return;
-  }
+  Push_Button = true;
+
+  if (mode == mdRun) 
+    Pause = true;  // Если нажать кнопку энкодера во время автонамотки то выставляем флаг паузы 
+}
+
+
+
 
 ISR(TIMER1_COMPA_vect)                       // Вектор прерывания от таймера/счетчика 1 
 {
@@ -617,13 +631,14 @@ ISR(TIMER1_COMPA_vect)                       // Вектор прерывани�
   }
   
   i++;                                        // Счетчик кол-ва заходов в прерывание
-  DC =! DC;                                   // Первое прерывание устанавливает STEP следующее - сбрасывает
+  DC = !DC;                                   // Первое прерывание устанавливает STEP следующее - сбрасывает
     if      (Motor_Num == 1) {
       if (DC == true) {PORTD |= 0b00010000;}  // STEP_Z
       else            {PORTD &= 0b11101111;}}
     else if (Motor_Num == 2) {
       if (DC == true) {PORTB |= 0b00010000;}  // STEP_A
-      else            {PORTB &= 0b11101111;}}}
+      else            {PORTB &= 0b11101111;}}
+}
 
 
 
