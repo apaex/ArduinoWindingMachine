@@ -29,7 +29,7 @@
 
 //**************************************************************  
     
-#define ShaftStep 50 // ShaftStep = РЁР°Рі СЂРµР·СЊР±С‹*50
+#define ShaftStep 50 // ShaftStep = Шаг резьбы*50
 
 //**************************************************************
 
@@ -41,7 +41,7 @@
 #include <HardwareSerial.h>
 #include "winding.h"
 
-#define ENC_CLK   2 // Р”Р°РµРј РёРјРµРЅР° РЅРѕРјРµСЂР°Рј РїРёРЅРѕРІ
+#define ENC_CLK   2 // Даем имена номерам пинов
 #define ENC_SW    3
 #define STEP_Z    4 
 #define ENC_DT    5 
@@ -58,19 +58,19 @@
 #define D6        18
 #define D7        19
 
-byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // РЎРѕР·РґР°РµРј СЃРІРѕР№ СЃРёРјРІРѕР» вЇ… РґР»СЏ LCD
-byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100};   // РЎРѕР·РґР°РµРј СЃРІРѕР№ СЃРёРјРІРѕР» вЇ† РґР»СЏ LCD
+byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // Создаем свой символ ? для LCD
+byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100};   // Создаем свой символ ? для LCD
 
-volatile int Encoder_Dir;                                 // РќР°РїСЂР°РІР»РµРЅРёРµ РІСЂР°С‰РµРЅРёСЏ СЌРЅРєРѕРґРµСЂР°
-volatile boolean Push_Button, Var_Set, DC, AutoWindStart; // РќР°Р¶Р°С‚РёРµ РєРЅРѕРїРєРё; СЂРµР¶РёРј СѓСЃС‚Р°РЅРѕРІРєРё Р·РЅР°С‡РµРЅРёСЏ; С„РѕСЂРјРёСЂРѕРІР°РЅРёРµ СЃРёРіРЅР°Р»Р° STEP; СЂР°Р±РѕС‚Р°РµС‚ РїРѕРґРїСЂРѕРіСЂР°РјРјР° Р°РІС‚РѕРЅР°РјРѕС‚РєРё 
-volatile boolean Pause;                                   // Р¤Р»Р°Рі РїР°СѓР·С‹ РІ СЂРµР¶РёРјРµ Р°РІС‚РѕРЅР°РјРѕС‚РєР°   
-volatile int i;                                           // РЎС‡РµС‚С‡РёРє РєРѕР»-РІР° Р·Р°С…РѕРґРѕРІ РІ РїСЂРµСЂС‹РІР°РЅРёРµ С‚Р°Р№РјРµСЂР°
-char Str_Buffer[22];                                      // Р‘СѓС„РµСЂ РґР»СЏ С„СѓРЅРєС†РёРё sprintf 
-byte LCD_Column, LCD_Row, Symbol_Code, Motor_Num;         // РќРѕРјРµСЂ СЃС‚РѕР»Р±С†Р° Рё СЃС‚СЂРѕРєРё LCD; РєРѕРґ СЃРёРјРІРѕР»Р° https://i.stack.imgur.com/oZhjJ.gif; РЅРѕРјРµСЂ С€Р°РіРѕРІРѕРіРѕ РґРІРёРіР°С‚РµР»СЏ
-int32_t ActualShaftPos, ActualLayerPos;                   // РўРµРєСѓС‰РёРµ РїРѕР·РёС†РёРё РґРІРёРіР°С‚РµР»РµР№ РІР°Р»Р° Рё СѓРєР»Р°РґС‡РёРєР°
-int Actual_Turn = 0, Actual_Layer = 0;                    // РўРµРєСѓС‰РёР№ РІРёС‚РѕРє Рё СЃР»РѕР№ РїСЂРё Р°РІС‚РѕРЅР°РјРѕС‚РєРµ
-int Shaft_Pos, Lay_Pos, Step_Mult=1;  // РџРµСЂРµРјРµРЅРЅС‹Рµ РёР·РјРµРЅСЏРµРјС‹Рµ РЅР° СЌРєСЂР°РЅРµ
-byte Menu_Index = 0;                                      // РџРµСЂРµРјРµРЅРЅР°СЏ С…СЂР°РЅРёС‚ РЅРѕРјРµСЂ С‚РµРєСѓС‰РµР№ СЃС‚СЂРѕРєРё РјРµРЅСЋ
+volatile int Encoder_Dir;                                 // Направление вращения энкодера
+volatile boolean Push_Button, Var_Set, DC, AutoWindStart; // Нажатие кнопки; режим установки значения; формирование сигнала STEP; работает подпрограмма автонамотки 
+volatile boolean Pause;                                   // Флаг паузы в режиме автонамотка   
+volatile int i;                                           // Счетчик кол-ва заходов в прерывание таймера
+char Str_Buffer[22];                                      // Буфер для функции sprintf 
+byte LCD_Column, LCD_Row, Symbol_Code, Motor_Num;         // Номер столбца и строки LCD; код символа https://i.stack.imgur.com/oZhjJ.gif; номер шагового двигателя
+int32_t ActualShaftPos, ActualLayerPos;                   // Текущие позиции двигателей вала и укладчика
+int Actual_Turn = 0, Actual_Layer = 0;                    // Текущий виток и слой при автонамотке
+int Shaft_Pos, Lay_Pos, Step_Mult=1;  // Переменные изменяемые на экране
+byte Menu_Index = 0;                                      // Переменная хранит номер текущей строки меню
 int32_t Steps, Step_Accel, Step_Decel;
 
 
@@ -79,7 +79,7 @@ int32_t Steps, Step_Accel, Step_Decel;
 
 Winding params[TRANSFORMER_COUNT][WINDING_COUNT];
 
-int Set_Turns, Set_Step, Set_Speed=1, Set_Layers=1;  // РџРµСЂРµРјРµРЅРЅС‹Рµ РёР·РјРµРЅСЏРµРјС‹Рµ РЅР° СЌРєСЂР°РЅРµ
+int Set_Turns, Set_Step, Set_Speed=1, Set_Layers=1;  // Переменные изменяемые на экране
 int8_t Steppers_Dir = 1;
 
 volatile uint16_t OCR1A_NOM;
@@ -100,48 +100,54 @@ int16_t SpeedIncrease, SpeedDecrease;
 volatile int X,Y;
 volatile int Set_Speed_INT;
 
-enum menu_states {Autowinding, PosControl, TurnsSet, StepSet, SpeedSet, LaySet, Direction, Start, Cancel, Empty, ShaftPos, LayPos, StepMul, PosCancel}; // РќСѓРјРµСЂРѕРІР°РЅРЅС‹Р№ СЃРїРёСЃРѕРє СЃС‚СЂРѕРє СЌРєСЂР°РЅР°
+enum menu_states {Autowinding, Autowinding2, Autowinding3, PosControl, Winding1, Winding2, Winding3, WindingBack, TurnsSet, StepSet, SpeedSet, LaySet, Direction, Start, Cancel, ShaftPos, LayPos, StepMul, PosCancel}; // Нумерованный список строк экрана
 
-struct MenuType {                       // РЎС‚СЂСѓРєС‚СѓСЂР° РѕРїРёСЃС‹РІР°СЋС‰Р°СЏ РјРµРЅСЋ
-  byte Screen;                          // РРЅРґРµРєСЃ СЌРєСЂР°РЅР°
-  byte string_number;                   // РќРѕРјРµСЂ СЃС‚СЂРѕРєРё РЅР° СЌРєСЂР°РЅРµ
-  char format[22];                      // Р¤РѕСЂРјР°С‚ СЃС‚СЂРѕРєРё
-  char format_Set_var[6];               // Р¤РѕСЂРјР°С‚ Р·РЅР°С‡РµРЅРёСЏ РїСЂРё РІРІРѕРґРµ РїРµСЂРµРјРµРЅРЅРѕР№
-  int  *param;                          // РЈРєР°Р·Р°С‚РµР»СЊ РЅР° Р°РґСЂРµСЃ С‚РµРєСѓС‰РµР№ РїРµСЂРµРјРµРЅРЅРѕР№ РёР·РјРµРЅСЏРµРјРѕР№ РЅР° СЌРєСЂР°РЅРµ
-  int  var_Min;                         // РћРіСЂР°РЅРёС‡РµРЅРёРµ Р·РЅР°С‡РµРЅРёСЏ РїРµСЂРµРјРµРЅРЅРѕР№ СЃРЅРёР·Сѓ
-  int  var_Max;                         // РћРіСЂР°РЅРёС‡РµРЅРёРµ Р·РЅР°С‡РµРЅРёСЏ РїРµСЂРµРјРµРЅРЅРѕР№ СЃРІРµСЂС…Сѓ
-  byte param_coef;};                    // Р Р°Р·РјРµСЂРЅС‹Р№ РєРѕСЌС„С„РёС†РёРµРЅС‚ Р·РЅР°С‡РµРЅРёСЏ РїРµСЂРµРјРµРЅРЅРѕР№
+struct MenuType {                       // Структура описывающая меню
+  byte Screen;                          // Индекс экрана
+  byte string_number;                   // Номер строки на экране
+  char format[22];                      // Формат строки
+  char format_Set_var[6];               // Формат значения при вводе переменной
+  int  *param;                          // Указатель на адрес текущей переменной изменяемой на экране
+  int  var_Min;                         // Ограничение значения переменной снизу
+  int  var_Max;                         // Ограничение значения переменной сверху
+  byte param_coef;};                    // Размерный коэффициент значения переменной
 
-const struct MenuType Menu[] = {        // РћР±СЉСЏРІР»СЏРµРј РїРµСЂРµРјРµРЅРЅСѓСЋ Menu РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРѕРіРѕ С‚РёРїР° MenuType Рё РґРѕСЃС‚СѓРїРЅСѓСЋ С‚РѕР»СЊРєРѕ РґР»СЏ С‡С‚РµРЅРёСЏ
-  {0,  0,  "  AUTOWINDING        ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {0,  1,  "  POS CONTROL        ", ""      ,NULL,        0,      0,      0        },    // "> POS CONTROL   "
+const struct MenuType Menu[] = {        // Объявляем переменную Menu пользовательского типа MenuType и доступную только для чтения
+  {0,  0,  "  Setup 1            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {0,  1,  "  Setup 2            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {0,  2,  "  Setup 3            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {0,  3,  "  Pos control        ", ""      ,NULL,        0,      0,      0        },    // "> POS CONTROL   "
+
+  {1,  0,  "  Winding 1          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {1,  1,  "  Winding 2          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {1,  2,  "  Winding 3          ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
+  {1,  3,  "  Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
   
-  {2,  0,  "  TURNS:  %03d       ", "%03d"  ,&Set_Turns,  1,      999,    1        },    // "> TURNS: >000<  "
-  {2,  1,  "  STEP: 0.%04d       ", "%04d"  ,&Set_Step,   1,      200,    ShaftStep},    // "> STEP:>0.0000<в†“"  
-  {2,  2,  "  SPEED:  %03d       ", "%03d"  ,&Set_Speed,  1,      300,    1        },    // "> SPEED: >000< в†‘"
-  {2,  3,  "  LAYERS: %02d       ", "%02d"  ,&Set_Layers, 1,      99,     1        },    // "> LAYERS:>00<  в†“" 
-  {2,  4,  "  DIRECTION >>>      ", ""      ,NULL,        0,      0,      0        },    // "> DIRECTION >>>в†‘"
-  {2,  5,  "  START              ", ""      ,NULL,        0,      0,      0        },    // "> START        в†“" 
-  {2,  6,  "  CANCEL             ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL       в†‘" 
-  {2,  7,  "                     ", ""      ,NULL,        0,      0,      0        },    // ">               " 
+  {2,  0,  "  Turns:  %03d       ", "%03d"  ,&Set_Turns,  1,      999,    1        },    // "> TURNS: >000<  "
+  {2,  1,  "  Step: 0.%04d       ", "%04d"  ,&Set_Step,   1,      200,    ShaftStep},    // "> STEP:>0.0000<?"  
+  {2,  2,  "  Speed:  %03d       ", "%03d"  ,&Set_Speed,  1,      300,    1        },    // "> SPEED: >000< ?"
+  {2,  3,  "  Layers: %02d       ", "%02d"  ,&Set_Layers, 1,      99,     1        },    // "> LAYERS:>00<  ?" 
+  {2,  4,  "  Direction >>>      ", ""      ,NULL,        0,      0,      0        },    // "> DIRECTION >>>?"
+  {2,  5,  "  Start              ", ""      ,NULL,        0,      0,      0        },    // "> START        ?" 
+  {2,  6,  "  Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL       ?" 
 
-  {10, 0,  "  SH POS: %+04d      ", "%+04d" ,&Shaft_Pos,  -999,   999,    1        },    // "> SH POS:>В±000< "
-  {10, 1,  "  LA POS: %+04d      ", "%+04d" ,&Lay_Pos,    -999,   999,    1        },    // "> LA POS:>В±000<в†“" 
-  {10, 2,  "  STPMUL: %03d       ", "%03d"  ,&Step_Mult,  1,      100,    1        },    // "> STPMUL:>000< в†‘"
-  {10, 3,  "  BACK               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
+  {10, 0,  "  SH pos: %+04d      ", "%+04d" ,&Shaft_Pos,  -999,   999,    1        },    // "> SH POS:>±000< "
+  {10, 1,  "  LA pos: %+04d      ", "%+04d" ,&Lay_Pos,    -999,   999,    1        },    // "> LA POS:>±000<?" 
+  {10, 2,  "  StpMul: %03d       ", "%03d"  ,&Step_Mult,  1,      100,    1        },    // "> STPMUL:>000< ?"
+  {10, 3,  "  Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
 
-  {14, 0,  "T%03d/%03d L%02d/%02d", ""      ,NULL,        0,      0,      0        },    // "T000/000 L00/00 "
-  {14, 1,  "SP%03d ST0.%04d      ", ""      ,NULL,        0,      0,      0        },    // "SP000 ST0.0000  " 
-
-  {16, 0,  "AUTOWINDING DONE     ", ""      ,NULL,        0,      0,      0        },    // "AUTOWINDING DONE" 
-  {16, 1,  "PRESS CONTINUE       ", ""      ,NULL,        0,      0,      0        }};   // "PRESS CONTINUE  "
-
+//  {14, 0,  "T%03d/%03d L%02d/%02d", ""      ,NULL,        0,      0,      0        },    // "T000/000 L00/00 "
+//  {14, 1,  "SP%03d ST0.%04d      ", ""      ,NULL,        0,      0,      0        },    // "SP000 ST0.0000  " 
+//  {16, 0,  "AUTOWINDING DONE     ", ""      ,NULL,        0,      0,      0        },    // "AUTOWINDING DONE" 
+//  {16, 1,  "PRESS CONTINUE       ", ""      ,NULL,        0,      0,      0        },    // "PRESS CONTINUE  "
+};  
 
 #define NCOL 20
 #define NROW 4 
+const int MENU_COUNT = sizeof(Menu)/sizeof(*Menu);
 
-LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7); // РќР°Р·РЅР°С‡Р°РµРј РїРёРЅС‹ РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ LCD 
-//LiquidCrystal_I2C lcd(0x27, NCOL, NROW); // 0x3F I2C Р°РґСЂРµСЃ РґР»СЏ PCF8574AT, РґРёСЃРїР»РµР№ 16 СЃРёРјРІРѕР»РѕРІ 2 СЃС‚СЂРѕРєРё 
+LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7); // Назначаем пины для управления LCD 
+//LiquidCrystal_I2C lcd(0x27, NCOL, NROW); // 0x3F I2C адрес для PCF8574AT, дисплей 16 символов 2 строки 
 
 
 void setup() {
@@ -149,7 +155,7 @@ Serial.begin(9600);
 
 LoadSettings();
 
-pinMode(ENC_CLK, INPUT);    // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РІС…РѕРґРѕРІ/РІС‹С…РѕРґРѕРІ  
+pinMode(ENC_CLK, INPUT);    // Инициализация входов/выходов  
 pinMode(ENC_SW,  INPUT);
 pinMode(STEP_Z,  OUTPUT);
 pinMode(ENC_DT,  INPUT);
@@ -166,76 +172,88 @@ pinMode(D5,      OUTPUT);
 pinMode(D6,      OUTPUT);
 pinMode(D7,      OUTPUT);
 
-digitalWrite(EN_STEP, HIGH); // Р—Р°РїСЂРµС‚ СѓРїСЂР°РІР»РµРЅРёСЏ РґРІРёРіР°С‚РµР»СЏРјРё  
+digitalWrite(EN_STEP, HIGH); // Запрет управления двигателями  
 
-//digitalWrite(ENC_CLK,HIGH);  // Р’РєР». РїРѕРґС‚СЏРіРёРІР°СЋС‰РёРµ СЂРµР·РёСЃС‚РѕСЂС‹ Рє VDD 
+//digitalWrite(ENC_CLK,HIGH);  // Вкл. подтягивающие резисторы к VDD 
 //digitalWrite(ENC_SW, HIGH);   
 //digitalWrite(ENC_DT, HIGH);    
 digitalWrite(STOP_BT, HIGH);   
   
  // lcd.init(); 
   
-  lcd.createChar(0, up);       // Р—Р°РїРёСЃС‹РІР°РµРј СЃРёРјРІРѕР» вЇ… РІ РїР°РјСЏС‚СЊ LCD
-  lcd.createChar(1, down);     // Р—Р°РїРёСЃС‹РІР°РµРј СЃРёРјРІРѕР» вЇ† РІ РїР°РјСЏС‚СЊ LCD
+  lcd.createChar(0, up);       // Записываем символ ? в память LCD
+  lcd.createChar(1, down);     // Записываем символ ? в память LCD
 
-  cli();                                                                        // Р“Р»РѕР±Р°Р»СЊРЅС‹Р№ Р·Р°РїСЂРµС‚ РїСЂРµСЂС‹РІР°РЅРёР№
-  EICRA = (1<<ISC11)|(0<<ISC10)|(0<<ISC01)|(1<<ISC00);                          // РќР°СЃС‚СЂРѕР№РєР° СЃСЂР°Р±Р°С‚С‹РІР°РЅРёСЏ РїСЂРµСЂС‹РІР°РЅРёР№: INT0 РїРѕ РёР·РјРµРЅРµРЅРёСЋ СЃРёРіРЅР°Р»Р°, INT1 РїРѕ СЃРїР°РґСѓ СЃРёРіРЅР°Р»Р°; ATmega328/P DATASHEET СЃС‚СЂ.89
-  EIMSK = (1<<INT0)|(1<<INT1);                                                  // Р Р°Р·СЂРµС€РµРЅРёРµ РїСЂРµСЂС‹РІР°РЅРёР№ INT0 Рё INT1; ATmega328/P DATASHEET СЃС‚СЂ.90 
-  EIFR = 0x00;                                                                  // РЎР±СЂР°СЃС‹РІР°РµРј С„Р»Р°РіРё РІРЅРµС€РЅРёС… РїСЂРµСЂС‹РІР°РЅРёР№; ATmega328/P DATASHEET СЃС‚СЂ.91
-  TCCR1A=(0<<COM1A1)|(0<<COM1B1)|(0<<COM1A0)|(0<<COM1B0)|(0<<WGM11)|(0<<WGM10); // РќР°СЃС‚СЂРѕР№РєР° С‚Р°Р№РјРµСЂР°/СЃС‡РµС‚С‡РёРєР° 1: РЅРѕСЂРјР°Р»СЊРЅС‹Р№ СЂРµР¶РёРј СЂР°Р±РѕС‚С‹ РїРѕСЂС‚Р°, OC1A/OC1B РѕС‚РєР»СЋС‡РµРЅС‹; ATmega328/P DATASHEET СЃС‚СЂ.170-172
-  TCCR1B=(0<<WGM13)|(1<<WGM12)|(0<<CS12)|(0<<CS11)|(1<<CS10);                   // Р РµР¶РёРј СЂР°Р±РѕС‚С‹ С‚Р°Р№РјРµСЂР°/СЃС‡РµС‚С‡РёРєР° - CTC (РѕС‡РёСЃС‚РёС‚СЊ С‚Р°Р№РјРµСЂ РїСЂРё РґРѕСЃС‚РёР¶РµРЅРёРё Р·РЅР°С‡РµРЅРёСЏ РІ СЂРµРіРёСЃС‚СЂРµ СЃСЂР°РІРЅРµРЅРёСЏ OCR1A)
-  OCR1A = 20000;                                                                // Р—РЅР°С‡РµРЅРёРµ РІ СЂРµРіРёСЃС‚СЂРµ OCR1A РѕРїСЂРµРґРµР»СЏРµС‚ С‡Р°СЃС‚РѕС‚Сѓ РІС…РѕРґР° РІ РїСЂРµСЂС‹РІР°РЅРёРµ С‚Р°Р№РјРµСЂР° Рё СѓСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ СЃРєСЂРѕСЃС‚СЊ РІСЂР°С‰РµРЅРёСЏ РґРІРёРіР°С‚РµР»РµР№
+  cli();                                                                        // Глобальный запрет прерываний
+  EICRA = (1<<ISC11)|(0<<ISC10)|(0<<ISC01)|(1<<ISC00);                          // Настройка срабатывания прерываний: INT0 по изменению сигнала, INT1 по спаду сигнала; ATmega328/P DATASHEET стр.89
+  EIMSK = (1<<INT0)|(1<<INT1);                                                  // Разрешение прерываний INT0 и INT1; ATmega328/P DATASHEET стр.90 
+  EIFR = 0x00;                                                                  // Сбрасываем флаги внешних прерываний; ATmega328/P DATASHEET стр.91
+  TCCR1A=(0<<COM1A1)|(0<<COM1B1)|(0<<COM1A0)|(0<<COM1B0)|(0<<WGM11)|(0<<WGM10); // Настройка таймера/счетчика 1: нормальный режим работы порта, OC1A/OC1B отключены; ATmega328/P DATASHEET стр.170-172
+  TCCR1B=(0<<WGM13)|(1<<WGM12)|(0<<CS12)|(0<<CS11)|(1<<CS10);                   // Режим работы таймера/счетчика - CTC (очистить таймер при достижении значения в регистре сравнения OCR1A)
+  OCR1A = 20000;                                                                // Значение в регистре OCR1A определяет частоту входа в прерывание таймера и устанавливает скрость вращения двигателей
 
-  lcd.begin(NCOL, NROW);                                                              // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ LCD Р”РёСЃРїР»РµР№ 20 СЃРёРјРІРѕР»РѕРІ 4 СЃС‚СЂРѕРєРё   
+  lcd.begin(NCOL, NROW);                                                              // Инициализация LCD Дисплей 20 символов 4 строки   
   
   PrintScreen();
   sei();
 } 
 
+// для текущего меню получаем индекс первого элемента
+byte GetFirstMenuIndex()
+{
+  return Menu_Index - Menu[Menu_Index].string_number;
+}
+
+// для текущего меню получаем индекс последнего элемента
+byte GetLastMenuIndex()
+{
+  byte scr = Menu[Menu_Index].Screen;
+  byte r = Menu_Index;
+  while (Menu[r+1].Screen == scr) ++r;
+  return r;
+}
+
 void loop() 
 {
-if (Encoder_Dir != 0) {                                                       // РџСЂРѕРІРµСЂСЏРµРј РёР·РјРµРЅРµРЅРёРµ РїРѕР·РёС†РёРё СЌРЅРєРѕРґРµСЂР°
-  switch (Menu_Index) {                                                       // Р•СЃР»Рё РїРѕР·РёС†РёСЏ СЌРЅРєРѕРґРµСЂР° РёР·РјРµРЅРµРЅР° С‚Рѕ РјРµРЅСЏРµРј Menu_Index Рё РІС‹РІРѕРґРёРј СЌРєСЂР°РЅ
-    case Autowinding:  
-    case PosControl:   Menu_Index = constrain(Menu_Index + Encoder_Dir, Autowinding, PosControl);   break;
-    case TurnsSet:    
-    case StepSet:      
-    case SpeedSet:     
-    case LaySet:             
-    case Direction:        
-    case Start:        
-    case Cancel:       Menu_Index = constrain(Menu_Index + Encoder_Dir, TurnsSet, Cancel);          break;
-    case ShaftPos:     
-    case LayPos:       
-    case StepMul:      
-    case PosCancel:    Menu_Index = constrain(Menu_Index + Encoder_Dir, ShaftPos, PosCancel);       break;
+  if (Encoder_Dir != 0)
+  {                                                         // Проверяем изменение позиции энкодера                         
+    Menu_Index = constrain(Menu_Index + Encoder_Dir, GetFirstMenuIndex(), GetLastMenuIndex()); // Если позиция энкодера изменена то меняем Menu_Index и выводим экран
+    Encoder_Dir = 0; 
+    PrintScreen();   
+  }
+
+  if (Push_Button == true) {                                                     // Проверяем нажатие кнопки
+    switch (Menu_Index)    {                                                     // Если было нажатие то выполняем действие соответствующее текущей позиции курсора
+      case Autowinding:  
+      case Autowinding2: 
+      case Autowinding3: Menu_Index = Winding1;                                                                                                  break;
+      case Winding1: 
+      case Winding2: 
+      case Winding3:     Menu_Index = TurnsSet;                                                                                                  break;
+      case PosControl:   Menu_Index = ShaftPos;                                                                                                  break;
+      case TurnsSet:     SetQuote(9,13); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,13); break;
+      case StepSet:      SetQuote(7,14); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(7,14); break;  
+      case SpeedSet:     SetQuote(9,13); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,13); break;
+      case LaySet:       SetQuote(9,12); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,12); break;   
+      case Direction:    Push_Button=false; if (Steppers_Dir == 1) Steppers_Dir = -1; else Steppers_Dir = 1;       
+                        if (Steppers_Dir == 1) {PrintSymbol(12,0,0x3E); PrintSymbol(13,0,0x3E); PrintSymbol(14,0,0x3E);} 
+                        else if (Steppers_Dir == -1) {PrintSymbol(12,0,0x3C); PrintSymbol(13,0,0x3C); PrintSymbol(14,0,0x3C);}                  break;                          
+      case Start:        Push_Button = false; Var_Set=false; AutoWindStart = true; AutoWindingPrg(); AutoWindStart = false; lcd.clear();         break; 
+      case Cancel:       Menu_Index = Autowinding;                                                                                               break;
+      case ShaftPos:     SetQuote(9,14); Push_Button=false; Var_Set=true; digitalWrite(EN_STEP, LOW); Motor_Num = 1; OCR1A = 200000/Step_Mult;
+                        while(!Push_Button){LCD_Print_Var(); ActualShaftPos=MotorMove(*Menu[Menu_Index].param * MicroSteps, ActualShaftPos);} 
+                        Var_Set=false; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                           break;   
+      case LayPos:       SetQuote(9,14); Push_Button=false; Var_Set=true; digitalWrite(EN_STEP, LOW); Motor_Num = 2; OCR1A = 200000/Step_Mult;
+                        while(!Push_Button){LCD_Print_Var(); ActualLayerPos=MotorMove(*Menu[Menu_Index].param * MicroSteps, ActualLayerPos);} 
+                        Var_Set=false; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                           break;                                                               
+      case StepMul:      SetQuote(9,13);Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,13);  break;    
+      case PosCancel:    Menu_Index = Autowinding; Shaft_Pos = 0; Lay_Pos = 0; Step_Mult = 1; ActualShaftPos = 0; ActualLayerPos = 0;            break;
     }
-    Encoder_Dir = 0; PrintScreen();}
+    Push_Button = false; PrintScreen();
+  }
+}
 
-if (Push_Button == true) {                                                     // РџСЂРѕРІРµСЂСЏРµРј РЅР°Р¶Р°С‚РёРµ РєРЅРѕРїРєРё
-  switch (Menu_Index)    {                                                     // Р•СЃР»Рё Р±С‹Р»Рѕ РЅР°Р¶Р°С‚РёРµ С‚Рѕ РІС‹РїРѕР»РЅСЏРµРј РґРµР№СЃС‚РІРёРµ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РµРµ С‚РµРєСѓС‰РµР№ РїРѕР·РёС†РёРё РєСѓСЂСЃРѕСЂР°
-    case Autowinding:  Menu_Index = TurnsSet;                                                                                                  break;
-    case PosControl:   Menu_Index = ShaftPos;                                                                                                  break;
-    case TurnsSet:     SetQuote(9,13); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,13); break;
-    case StepSet:      SetQuote(7,14); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(7,14); break;  
-    case SpeedSet:     SetQuote(9,13); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,13); break;
-    case LaySet:       SetQuote(9,12); Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,12); break;   
-    case Direction:    Push_Button=false; if (Steppers_Dir == 1) Steppers_Dir = -1; else Steppers_Dir = 1;       
-                       if (Steppers_Dir == 1) {PrintSymbol(12,0,0x3E); PrintSymbol(13,0,0x3E); PrintSymbol(14,0,0x3E);} 
-                       else if (Steppers_Dir == -1) {PrintSymbol(12,0,0x3C); PrintSymbol(13,0,0x3C); PrintSymbol(14,0,0x3C);}                  break;                          
-    case Start:        Push_Button = false; Var_Set=false; AutoWindStart = true; AutoWindingPrg(); AutoWindStart = false; lcd.clear();         break; 
-    case Cancel:       Menu_Index = Autowinding;                                                                                               break;
-    case ShaftPos:     SetQuote(9,14); Push_Button=false; Var_Set=true; digitalWrite(EN_STEP, LOW); Motor_Num = 1; OCR1A = 200000/Step_Mult;
-                       while(!Push_Button){LCD_Print_Var(); ActualShaftPos=MotorMove(*Menu[Menu_Index].param * MicroSteps, ActualShaftPos);} 
-                       Var_Set=false; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                           break;   
-    case LayPos:       SetQuote(9,14); Push_Button=false; Var_Set=true; digitalWrite(EN_STEP, LOW); Motor_Num = 2; OCR1A = 200000/Step_Mult;
-                       while(!Push_Button){LCD_Print_Var(); ActualLayerPos=MotorMove(*Menu[Menu_Index].param * MicroSteps, ActualLayerPos);} 
-                       Var_Set=false; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                           break;                                                               
-    case StepMul:      SetQuote(9,13);Push_Button=false; Var_Set=true; while(!Push_Button){LCD_Print_Var();} Var_Set=false; ClearQuote(9,13);  break;    
-    case PosCancel:    Menu_Index = Autowinding; Shaft_Pos = 0; Lay_Pos = 0; Step_Mult = 1; ActualShaftPos = 0; ActualLayerPos = 0;            break;}
-    Push_Button = false; PrintScreen();}}
-
-void PrintScreen() // РџРѕРґРїСЂРѕРіСЂР°РјРјР°: Р’С‹РІРѕРґРёРј СЌРєСЂР°РЅ РЅР° LCD
+void PrintScreen() // Подпрограмма: Выводим экран на LCD
 {                          
   byte scr = Menu[Menu_Index].Screen;
   byte page = Menu[Menu_Index].string_number / NROW;
@@ -266,28 +284,28 @@ void PrintScreen() // РџРѕРґРїСЂРѕРіСЂР°РјРјР°: Р’С‹РІРѕРґРёРј СЌРєСЂР°РЅ РЅР° L
   for (int i = 0; i < NROW; ++i)
       PrintSymbol(0, i, (i == cur) ? 0x3E : 0x20); 
 
-  if (page > 0)                             // Р’С‹РІРѕРґРёРј СЃС‚СЂРµР»РєРё вЇ…вЇ† РЅР° СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РёС… СЃС‚СЂРѕРєР°С… РјРµРЅСЋ
+  if (page > 0)                             // Выводим стрелки ?? на соответствующих строках меню
     PrintSymbol(NCOL-1, 0, 0);
   if (Menu[first + NROW].Screen == scr)
     PrintSymbol(NCOL-1, NROW-1, 1); 
 
 }
                                                                                                           
-void PrintSymbol(byte LCD_Column, byte LCD_Row, byte Symbol_Code) { // РџРѕРґРїСЂРѕРіСЂР°РјРјР°: Р’С‹РІРѕРґРёРј СЃРёРјРІРѕР» РЅР° СЌРєСЂР°РЅ
+void PrintSymbol(byte LCD_Column, byte LCD_Row, byte Symbol_Code) { // Подпрограмма: Выводим символ на экран
   lcd.setCursor(LCD_Column, LCD_Row); 
   lcd.write(byte(Symbol_Code));}
 
-void SetQuote   (int First_Cur, int Second_Cur) {                 // РџРѕРґРїСЂРѕРіСЂР°РјРјР°: Р’С‹РІРѕРґРёРј РІС‹РґРµР»РµРЅРёРµ РёР·РјРµРЅСЏРµРјРѕР№ РїРµСЂРµРјРµРЅРЅРѕР№ РЅР° LCD
-  PrintSymbol(First_Cur,  Menu[Menu_Index].string_number,0x3E);   // Р’С‹РІРѕРґРёРј СЃРёРјРІРѕР» >
-  PrintSymbol(Second_Cur, Menu[Menu_Index].string_number,0x3C);   // Р’С‹РІРѕРґРёРј СЃРёРјРІРѕР» <
-  PrintSymbol(0,          Menu[Menu_Index].string_number,0x20);}  // РЎС‚РёСЂР°РµРј РѕСЃРЅРѕРІРЅРѕР№ РєСѓСЂСЃРѕСЂ
+void SetQuote   (int First_Cur, int Second_Cur) {                 // Подпрограмма: Выводим выделение изменяемой переменной на LCD
+  PrintSymbol(First_Cur,  Menu[Menu_Index].string_number,0x3E);   // Выводим символ >
+  PrintSymbol(Second_Cur, Menu[Menu_Index].string_number,0x3C);   // Выводим символ <
+  PrintSymbol(0,          Menu[Menu_Index].string_number,0x20);}  // Стираем основной курсор
 
-void ClearQuote (int First_Cur, int Second_Cur) {                 // РџРѕРґРїСЂРѕРіСЂР°РјРјР°: РЎС‚РёСЂР°РµРј РІС‹РґРµР»РµРЅРёРµ РёР·РјРµРЅСЏРµРјРѕР№ РїРµСЂРµРјРµРЅРЅРѕР№ РЅР° LCD
-  PrintSymbol(First_Cur,  Menu[Menu_Index].string_number,0x20);   // РЎС‚РёСЂР°РµРј СЃРёРјРІРѕР» >
-  PrintSymbol(Second_Cur, Menu[Menu_Index].string_number,0x20);   // РЎС‚РёСЂР°РµРј СЃРёРјРІРѕР» <
-  PrintSymbol(0,          Menu[Menu_Index].string_number,0x3E);}  // Р’С‹РІРѕРґРёРј РѕСЃРЅРѕРІРЅРѕР№ РєСѓСЂСЃРѕСЂ     
+void ClearQuote (int First_Cur, int Second_Cur) {                 // Подпрограмма: Стираем выделение изменяемой переменной на LCD
+  PrintSymbol(First_Cur,  Menu[Menu_Index].string_number,0x20);   // Стираем символ >
+  PrintSymbol(Second_Cur, Menu[Menu_Index].string_number,0x20);   // Стираем символ <
+  PrintSymbol(0,          Menu[Menu_Index].string_number,0x3E);}  // Выводим основной курсор     
 
-void LCD_Print_Var() {                                                  // РџРѕРґРїСЂРѕРіСЂР°РјРјР°: Р’С‹РІРѕРґРёРј РЅРѕРІРѕРµ Р·РЅР°С‡РµРЅРёРµ РїРµСЂРµРјРµРЅРЅРѕР№ РЅР° LCD
+void LCD_Print_Var() {                                                  // Подпрограмма: Выводим новое значение переменной на LCD
   static int Previous_Param;
     if (*Menu[Menu_Index].param != Previous_Param){
       lcd.setCursor(10, Menu[Menu_Index].string_number);
@@ -295,12 +313,12 @@ void LCD_Print_Var() {                                                  // РџРѕР
       lcd.print(Str_Buffer);
       Previous_Param = *Menu[Menu_Index].param;}}
 
-void PrintWendingScreen() { // РџРѕРґРїСЂРѕРіСЂР°РјРјР° РІС‹РІРѕРґР° СЌРєСЂР°РЅР° Р°РІС‚РѕРЅР°РјРѕС‚РєРё
+void PrintWendingScreen() { // Подпрограмма вывода экрана автонамотки
   lcd.clear();
-  sprintf(Str_Buffer, Menu[14].format, Actual_Turn, Set_Turns, Actual_Layer, Set_Layers);
+  sprintf(Str_Buffer, "T%03d/%03d L%02d/%02d", Actual_Turn, Set_Turns, Actual_Layer, Set_Layers);
   lcd.print(Str_Buffer);
   lcd.setCursor(0, 1);
-  sprintf(Str_Buffer, Menu[15].format, Set_Speed, Set_Step*ShaftStep);
+  sprintf(Str_Buffer, "SP%03d ST0.%04d", Set_Speed, Set_Step*ShaftStep);
   lcd.print(Str_Buffer);  }
 
 
@@ -321,12 +339,12 @@ void SaveSettings()
 }
 
 
-void AutoWindingPrg() {                                             // РџРѕРґРїСЂРѕРіСЂР°РјРјР° Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕР№ РЅР°РјРѕС‚РєРё
+void AutoWindingPrg() {                                             // Подпрограмма автоматической намотки
    
   Serial.println("Start");
   SaveSettings();
    
-  digitalWrite(EN_STEP, LOW);   // Р Р°Р·СЂРµС€РµРЅРёРµ СѓРїСЂР°РІР»РµРЅРёСЏ РґРІРёРіР°С‚РµР»СЏРјРё
+  digitalWrite(EN_STEP, LOW);   // Разрешение управления двигателями
   digitalWrite(DIR_Z, HIGH);  
   if (Steppers_Dir == 1) PORTB &= 0b11011111; 
   else if (Steppers_Dir == -1) PORTB |= 0b00100000;
@@ -335,12 +353,12 @@ void AutoWindingPrg() {                                             // РџРѕРґРїС
   Var_Set = false;
   Set_Speed_INT = Set_Speed;
 
-  while (Actual_Layer < Set_Layers)                                 // РџРѕРєР° С‚РµРєСѓС‰РµРµ РєРѕР»-РІРѕ СЃР»РѕРµРІ РјРµРЅСЊС€Рµ Р·Р°РґР°РЅРЅРѕРіРѕ РїСЂРѕРІРµСЂСЏРµРј СЃРєРѕР»СЊРєРѕ СЃРµР№С‡Р°СЃ РІРёС‚РєРѕРІ
+  while (Actual_Layer < Set_Layers)                                 // Пока текущее кол-во слоев меньше заданного проверяем сколько сейчас витков
     {
           OCR1A = 65535;
           OCR1A_NOM = 4800000 / (Set_Speed*MicroSteps); 
 
-      while (Actual_Turn < Set_Turns)                               // РџРѕРєР° С‚РµРєСѓС‰РµРµ РєРѕР»-РІРѕ РІРёС‚РєРѕРІ РјРµРЅСЊС€Рµ Р·Р°РґР°РЅРЅРѕРіРѕ РїСЂРѕРґРѕР»Р¶Р°РµРј РјРѕС‚Р°С‚СЊ
+      while (Actual_Turn < Set_Turns)                               // Пока текущее кол-во витков меньше заданного продолжаем мотать
         {     
        run_btn = PINB & 0b00001000;
        while (run_btn)
@@ -432,7 +450,7 @@ void AutoWindingPrg() {                                             // РџРѕРґРїС
     Actual_Layer = 0;     
 }
 
-int MotorMove(int32_t Move_Var, int32_t Actual_Rot) {                    // РџРѕРґРїСЂРѕРіСЂР°РјРјР°: Р”РІРёР¶РµРЅРёРµ С€Р°РіРѕРІРѕРіРѕ РґРІРёРіР°С‚РµР»СЏ РґРѕ Р·Р°РґР°РЅРЅРѕР№ РєРѕРѕСЂРґРёРЅР°С‚С‹
+int MotorMove(int32_t Move_Var, int32_t Actual_Rot) {                    // Подпрограмма: Движение шагового двигателя до заданной координаты
 long Rotation;        
   Rotation = Move_Var * Step_Mult - Actual_Rot;
   switch(Motor_Num) {
@@ -444,40 +462,40 @@ long Rotation;
             else     TIMSK1 = 0; i = 0; DC = false; break;}                    
 return Actual_Rot;}
 
-ISR(INT0_vect) {  // Р’РµРєС‚РѕСЂ РїСЂРµСЂС‹РІР°РЅРёСЏ РѕС‚ СЌРЅРєРѕРґРµСЂР°
-static byte Enc_Temp, Enc_Temp_prev;    // Р’СЂРµРјРµРЅРЅР°СЏ РїРµСЂРµРјРµРЅРЅР°СЏ РґР»СЏ С…СЂР°РЅРµРЅРёСЏ СЃРѕСЃС‚РѕСЏРЅРёСЏ РїРѕСЂС‚Р°
-Enc_Temp = PIND & 0b00100100;                                                                                                // РњР°СЃРєРёСЂСѓРµРј РІСЃРµ РїРёРЅС‹ РїРѕСЂС‚Р° D РєСЂРѕРјРµ PD2 Рё PD5      
+ISR(INT0_vect) {  // Вектор прерывания от энкодера
+static byte Enc_Temp, Enc_Temp_prev;    // Временная переменная для хранения состояния порта
+Enc_Temp = PIND & 0b00100100;                                                                                                // Маскируем все пины порта D кроме PD2 и PD5      
 
-     if (Enc_Temp==0b00100000 && Enc_Temp_prev==0b00000100) {Encoder_Dir = -1;} // -1 - С€Р°Рі РїСЂРѕС‚РёРІ С‡Р°СЃРѕРІРѕР№
-else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00100100) {Encoder_Dir =  1;} // +1 - С€Р°Рі РїРѕ С‡Р°СЃРѕРІРѕР№
+     if (Enc_Temp==0b00100000 && Enc_Temp_prev==0b00000100) {Encoder_Dir = -1;} // -1 - шаг против часовой
+else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00100100) {Encoder_Dir =  1;} // +1 - шаг по часовой
 else if (Enc_Temp==0b00100000 && Enc_Temp_prev==0b00100100) {Encoder_Dir = -1;}
 else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00000100) {Encoder_Dir =  1;}
 
      Enc_Temp_prev = Enc_Temp;
      
-     if (AutoWindStart == true && Encoder_Dir != 0)                                                                        // Р•СЃР»Рё РїРѕРІРµСЂРЅСѓС‚СЊ СЌРЅРєРѕРґРµСЂ РІРѕ РІСЂРµРјСЏ Р°РІС‚РѕРЅР°РјРѕС‚РєРё 
+     if (AutoWindStart == true && Encoder_Dir != 0)                                                                        // Если повернуть энкодер во время автонамотки 
      {
-      Set_Speed_INT += Encoder_Dir; Encoder_Dir = 0; Set_Speed_INT = constrain(Set_Speed_INT, 1, 300);                     // С‚Рѕ РјРµРЅСЏРµРј Р·РЅР°С‡РµРЅРёРµ СЃРєРѕСЂРѕСЃС‚Рё
+      Set_Speed_INT += Encoder_Dir; Encoder_Dir = 0; Set_Speed_INT = constrain(Set_Speed_INT, 1, 300);                     // то меняем значение скорости
      }
                                            
      if (Var_Set == true && Encoder_Dir != 0) 
-     {                                                                                                                      // Р•СЃР»Рё РЅР°С…РѕРґРёРјСЃСЏ РІ СЂРµР¶РёРјРµ РёР·РјРµРЅРµРЅРёСЏ РїРµСЂРµРјРµРЅРЅРѕР№ 
-      *Menu[Menu_Index].param += Encoder_Dir; Encoder_Dir = 0;                                                              // С‚Рѕ РјРµРЅСЏРµРј РµРµ СЃСЂР°Р·Сѓ Рё
-      *Menu[Menu_Index].param = constrain(*Menu[Menu_Index].param, Menu[Menu_Index].var_Min, Menu[Menu_Index].var_Max);}    // РѕРіСЂР°РЅРёС‡РёРІР°РµРј РІ РґРёР°РїР°Р·РѕРЅРµ var_Min Г· var_Max
+     {                                                                                                                      // Если находимся в режиме изменения переменной 
+      *Menu[Menu_Index].param += Encoder_Dir; Encoder_Dir = 0;                                                              // то меняем ее сразу и
+      *Menu[Menu_Index].param = constrain(*Menu[Menu_Index].param, Menu[Menu_Index].var_Min, Menu[Menu_Index].var_Max);}    // ограничиваем в диапазоне var_Min ? var_Max
      } 
                                                                                                                           
-ISR(INT1_vect)                               // Р’РµРєС‚РѕСЂ РїСЂРµСЂС‹РІР°РЅРёСЏ РѕС‚ РєРЅРѕРїРєРё СЌРЅРєРѕРґРµСЂР°
+ISR(INT1_vect)                               // Вектор прерывания от кнопки энкодера
   {   
   static unsigned long timer = 0;
   if (millis() - timer < 300) return;
   timer = millis();
 
  Push_Button = true;
- if (AutoWindStart == true) {Pause = true;}  // Р•СЃР»Рё РЅР°Р¶Р°С‚СЊ РєРЅРѕРїРєСѓ СЌРЅРєРѕРґРµСЂР° РІРѕ РІСЂРµРјСЏ Р°РІС‚РѕРЅР°РјРѕС‚РєРё С‚Рѕ РІС‹СЃС‚Р°РІР»СЏРµРј С„Р»Р°Рі РїР°СѓР·С‹ 
+ if (AutoWindStart == true) {Pause = true;}  // Если нажать кнопку энкодера во время автонамотки то выставляем флаг паузы 
  else return;
   }
 
-ISR(TIMER1_COMPA_vect) {                      // Р’РµРєС‚РѕСЂ РїСЂРµСЂС‹РІР°РЅРёСЏ РѕС‚ С‚Р°Р№РјРµСЂР°/СЃС‡РµС‚С‡РёРєР° 1 
+ISR(TIMER1_COMPA_vect) {                      // Вектор прерывания от таймера/счетчика 1 
  if (AutoWindStart) 
  {
   Motor_Num = 0;
@@ -510,8 +528,8 @@ ISR(TIMER1_COMPA_vect) {                      // Р’РµРєС‚РѕСЂ РїСЂРµСЂС‹РІР°РЅРё
     NSteps++;
   }
   
-  i++;                                        // РЎС‡РµС‚С‡РёРє РєРѕР»-РІР° Р·Р°С…РѕРґРѕРІ РІ РїСЂРµСЂС‹РІР°РЅРёРµ
-  DC =! DC;                                   // РџРµСЂРІРѕРµ РїСЂРµСЂС‹РІР°РЅРёРµ СѓСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ STEP СЃР»РµРґСѓСЋС‰РµРµ - СЃР±СЂР°СЃС‹РІР°РµС‚
+  i++;                                        // Счетчик кол-ва заходов в прерывание
+  DC =! DC;                                   // Первое прерывание устанавливает STEP следующее - сбрасывает
     if      (Motor_Num == 1) {
       if (DC == true) {PORTD |= 0b00010000;}  // STEP_Z
       else            {PORTD &= 0b11101111;}}
