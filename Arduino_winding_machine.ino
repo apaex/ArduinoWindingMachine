@@ -61,6 +61,11 @@
 byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // Создаем свой символ ? для LCD
 byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100};   // Создаем свой символ ? для LCD
 
+//const byte CH_UP = '^';
+//const byte CH_DW = 'v';
+const byte CH_UP = 0;
+const byte CH_DW = 1;
+
 volatile int Encoder_Dir;                                 // Направление вращения энкодера
 volatile boolean Push_Button, Var_Set, DC, AutoWindStart; // Нажатие кнопки; режим установки значения; формирование сигнала STEP; работает подпрограмма автонамотки 
 volatile boolean Pause;                                   // Флаг паузы в режиме автонамотка   
@@ -296,9 +301,9 @@ void PrintScreen() // Подпрограмма: Выводим экран на LCD
       PrintSymbol(0, i, (i == cur) ? 0x3E : 0x20); 
 
   if (page > 0)                             // Выводим стрелки ?? на соответствующих строках меню
-    PrintSymbol(NCOL-1, 0, 0);
+    PrintSymbol(NCOL-1, 0, CH_UP);
   if (Menu[first + NROW].Screen == scr)
-    PrintSymbol(NCOL-1, NROW-1, 1); 
+    PrintSymbol(NCOL-1, NROW-1, CH_DW); 
 
 }
                                                                                                           
