@@ -135,13 +135,13 @@ const struct MenuType Menu[] = {        // Объявляем переменну
 
   {16, 0,  "AUTOWINDING DONE     ", ""      ,NULL,        0,      0,      0        },    // "AUTOWINDING DONE" 
   {16, 1,  "PRESS CONTINUE       ", ""      ,NULL,        0,      0,      0        }};   // "PRESS CONTINUE  "
-  
-LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7); // Назначаем пины для управления LCD 
-//LiquidCrystal_I2C lcd(0x27,20,4); // 0x3F I2C адрес для PCF8574AT, дисплей 16 символов 2 строки 
 
 
 #define NCOL 20
-#define NROW 4
+#define NROW 4 
+
+LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7); // Назначаем пины для управления LCD 
+//LiquidCrystal_I2C lcd(0x27, NCOLS, NROWS); // 0x3F I2C адрес для PCF8574AT, дисплей 16 символов 2 строки 
 
 
 void setup() {
@@ -186,8 +186,7 @@ digitalWrite(STOP_BT, HIGH);
   TCCR1B=(0<<WGM13)|(1<<WGM12)|(0<<CS12)|(0<<CS11)|(1<<CS10);                   // Режим работы таймера/счетчика - CTC (очистить таймер при достижении значения в регистре сравнения OCR1A)
   OCR1A = 20000;                                                                // Значение в регистре OCR1A определяет частоту входа в прерывание таймера и устанавливает скрость вращения двигателей
 
-  lcd.begin(20,4);                                                              // Инициализация LCD Дисплей 20 символов 4 строки   
-// lcd.begin(16,2);                                                             // Инициализация LCD Дисплей 16 символов 2 строки                                                              
+  lcd.begin(NCOLS,NROWS);                                                              // Инициализация LCD Дисплей 20 символов 4 строки   
   
   PrintScreen();
   sei();
