@@ -157,6 +157,8 @@ const int MENU_COUNT = sizeof(Menu)/sizeof(*Menu);
 const char *LINE1_FORMAT = "T%03d/%03d L%02d/%02d";
 const char *LINE2_FORMAT = "Sp%03d St0.%04d";
 const char *LINE3_FORMAT = "Winding %d  % 4dT";
+const char *STRING_1 = "AUTOWINDING DONE";
+const char *STRING_2 = "PRESS CONTINUE  ";
 
 
 byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // Создаем свой символ ⯅ для LCD
@@ -531,7 +533,7 @@ void AutoWindingPrg()                                             // Подпр�
     if (current.layers == w.layers) continue; 
     
     lcd.setCursor(0, 1); 
-    sprintf(Str_Buffer, "PRESS CONTINUE  ");                            // "PRESS CONTINUE  "
+    sprintf(Str_Buffer, STRING_2);                            // "PRESS CONTINUE  "
     lcd.print(Str_Buffer);
     
     WaitButton();
@@ -556,7 +558,7 @@ void AutoWindingPrg()                                             // Подпр�
   digitalWrite(EN_STEP, HIGH);
 
   lcd.setCursor(0, 1); 
-  sprintf(Str_Buffer, "AUTOWINDING DONE");                             // "AUTOWINDING DONE"
+  sprintf(Str_Buffer, STRING_1);                             // "AUTOWINDING DONE"
   lcd.print(Str_Buffer);
   
   WaitButton();
