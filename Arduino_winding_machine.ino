@@ -154,6 +154,10 @@ struct MenuType Menu[] = {              // Объявляем переменну
 
 const int MENU_COUNT = sizeof(Menu)/sizeof(*Menu);
 
+const char *LINE1_FORMAT = "T%03d/%03d L%02d/%02d";
+const char *LINE2_FORMAT = "Sp%03d St0.%04d";
+const char *LINE3_FORMAT = "Winding %d  % 4dT";
+
 
 byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // Создаем свой символ ⯅ для LCD
 byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100};   // Создаем свой символ ⯆ для LCD
@@ -249,9 +253,13 @@ void loop()
       case Autowinding3: 
               currentTransformer = Menu_Index - Autowinding1; 
               Menu_Index = Winding1;   
-              Menu[Winding1].param = (int*)&params[currentTransformer][0].turns;   
-              Menu[Winding2].param = (int*)&params[currentTransformer][1].turns;                                              
-              Menu[Winding3].param = (int*)&params[currentTransformer][2].turns;                          
+
+              for (int i=0; i<WINDING_COUNT; ++i)
+              {
+                Menu[Winding1 + i].param = (int*)&params[currentTransformer][i].turns;   
+                Menu[Winding1 + i].type = ' ';
+                sprintf(Menu[Winding1 + i].format, LINE3_FORMAT, i+1, params[currentTransformer][i].turns * params[currentTransformer][i].layers); 
+              }                                
               break;
       case Winding1:     
       case Winding2: 
@@ -278,8 +286,9 @@ void loop()
                 PrintDirection(12, 0, Steppers_Dir);
               }
               break;                          
-      case Start:        SaveSettings(); Push_Button = false; mode = mdRun; AutoWindingPrg(); mode = mdMenu; lcd.clear();   Menu_Index = Autowinding1;      break; 
+      case Start:        SaveSettings(); Push_Button = false; mode = mdRun; AutoWindingPrg(); mode = mdMenu; lcd.clear();   Menu_Index = Winding1 + currentWinding;      break; 
       case Cancel:       SaveSettings(); Menu_Index = Winding1 + currentWinding;                                                                     break;
+
       case ShaftPos:     SetQuote(9,14); Push_Button=false; mode = mdVarEdit; digitalWrite(EN_STEP, LOW); Motor_Num = 1; OCR1A = 200000/Step_Mult;
                         while(!Push_Button){LCD_Print_Var(); ActualShaftPos=MotorMove(*Menu[Menu_Index].param * MicroSteps, ActualShaftPos);} 
                         mode = mdMenu; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                                break;   
@@ -397,10 +406,10 @@ void PrintWendingScreen()  // Подпрограмма вывода экрана
   Winding &w = params[currentTransformer][currentWinding];
 
   lcd.clear();
-  sprintf(Str_Buffer, "T%03d/%03d L%02d/%02d", Actual_Turn, w.turns, Actual_Layer, w.layers);
+  sprintf(Str_Buffer, LINE1_FORMAT, Actual_Turn, w.turns, Actual_Layer, w.layers);
   lcd.print(Str_Buffer);
   lcd.setCursor(0, 1);
-  sprintf(Str_Buffer, "SP%03d ST0.%04d", w.speed, w.step*ShaftStep);
+  sprintf(Str_Buffer, LINE2_FORMAT, w.speed, w.step*ShaftStep);
   lcd.print(Str_Buffer);  
 }
 
@@ -516,7 +525,7 @@ void AutoWindingPrg()                                             // Подпр�
       Push_Button = false; 
       
       lcd.setCursor(0, 1);
-      sprintf(Str_Buffer, Menu[15].format, w.speed, w.step*ShaftStep);
+      sprintf(Str_Buffer, LINE2_FORMAT, w.speed, w.step*ShaftStep);
       lcd.print(Str_Buffer);
       
       w.dir = !w.dir;     // вот тут дичь - параметры настроек изменяются
