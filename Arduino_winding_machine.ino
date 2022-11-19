@@ -40,11 +40,12 @@ https://cxem.net/arduino/arduino245.php
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <LiquidCrystalCyr.h>
+//#include <LiquidCrystal.h>
 //#include <LiquidCrystal_I2C.h>
 //#include <Wire.h>
 #include <HardwareSerial.h>
-#include "winding.h"
+#include "Winding.h"
+#include "LiquidCrystalCyr.h"
 
 #define ENC_CLK   2 // Даем имена номерам пинов
 #define ENC_SW    3
@@ -81,8 +82,6 @@ volatile int Encoder_Dir;                                 // Направлен�
 volatile boolean Push_Button, DC;                         // Нажатие кнопки; формирование сигнала STEP
 volatile boolean Pause;                                   // Флаг паузы в режиме автонамотка   
 volatile int i;                                           // Счетчик кол-ва заходов в прерывание таймера
-char Str_Buffer[22];                                      // Буфер для функции sprintf 
-
 byte Motor_Num;                                           // номер шагового двигателя
 int32_t ActualShaftPos, ActualLayerPos;                   // Текущие позиции двигателей вала и укладчика
 Winding current;                                          // Текущий виток и слой при автонамотке
@@ -181,14 +180,14 @@ void setup()
 
   pinMode(ENC_CLK, INPUT);    // Инициализация входов/выходов  
   pinMode(ENC_SW,  INPUT);
-  pinMode(STEP_Z,  OUTPUT);
   pinMode(ENC_DT,  INPUT);
+  pinMode(STOP_BT, INPUT);
+  pinMode(STEP_Z,  OUTPUT);
   pinMode(DIR_Z,   OUTPUT);
   pinMode(EN_STEP, OUTPUT);
   pinMode(STEP_A,  OUTPUT);
   pinMode(DIR_A,   OUTPUT); 
   pinMode(BUZZ_OUT,OUTPUT);
-  pinMode(STOP_BT, INPUT);
   pinMode(RS,      OUTPUT);
   pinMode(EN,      OUTPUT);
   pinMode(D4,      OUTPUT);
@@ -330,8 +329,7 @@ void PrintScreen() // Подпрограмма: Выводим экран на L
       switch (m.type)
       {
       case 'i':
-        sprintf(Str_Buffer,m.format, *m.param * m.param_coef);
-        lcd.print(Str_Buffer);
+        lcd.printf(m.format, *m.param * m.param_coef);
         break;
       case 'b':
         lcd.print(m.format);
@@ -397,9 +395,7 @@ void LCD_Print_Var()                                             // Подпро
   
   byte cur = Menu[Menu_Index].string_number % NROW;
 
-  lcd.setCursor(10, cur);
-  sprintf(Str_Buffer, Menu[Menu_Index].format_Set_var, *Menu[Menu_Index].param * Menu[Menu_Index].param_coef);
-  lcd.print(Str_Buffer);
+  lcd.printfAt(10, cur, Menu[Menu_Index].format_Set_var, *Menu[Menu_Index].param * Menu[Menu_Index].param_coef);
   Previous_Param = *Menu[Menu_Index].param;  
 }
 
@@ -408,11 +404,8 @@ void PrintWendingScreen()  // Подпрограмма вывода экрана
   const Winding &w = params[currentTransformer][currentWinding];
 
   lcd.clear();
-  sprintf(Str_Buffer, LINE1_FORMAT, current.turns, w.turns, current.layers, w.layers);
-  lcd.print(Str_Buffer);
-  lcd.setCursor(0, 1);
-  sprintf(Str_Buffer, LINE2_FORMAT, current.speed, w.step*ShaftStep);
-  lcd.print(Str_Buffer);  
+  lcd.printfAt(0,0, LINE1_FORMAT, current.turns, w.turns, current.layers, w.layers);
+  lcd.printfAt(0,1, LINE2_FORMAT, current.speed, w.step*ShaftStep);  
 }
 
 
@@ -481,9 +474,7 @@ void AutoWindingPrg()                                             // Подпр�
         current.speed = Set_Speed_INT;      
         EIMSK = 0b00000011;
         
-        lcd.setCursor(2, 1); 
-        sprintf(Str_Buffer, "%03d", current.speed);
-        lcd.print(Str_Buffer);
+        lcd.printfAt(2, 1, "%03d", current.speed);
 
         OCR1A_NOM = 4800000 / (current.speed*MicroSteps); 
           
@@ -500,9 +491,7 @@ void AutoWindingPrg()                                             // Подпр�
       digitalWrite(EN_STEP, LOW);
       TIMSK1=2;                
        
-      lcd.setCursor(1, 0); 
-      sprintf(Str_Buffer, "%03d", current.turns); 
-      lcd.print(Str_Buffer);
+      lcd.printfAt(1, 0, "%03d", current.turns);
       
       EIMSK = 0b00000010;
       current.speed = Set_Speed_INT;
@@ -510,9 +499,7 @@ void AutoWindingPrg()                                             // Подпр�
       
       if (current.turns > 1)
       {
-        lcd.setCursor(2, 1); 
-        sprintf(Str_Buffer, "%03d", current.speed);
-        lcd.print(Str_Buffer);
+        lcd.printfAt(2, 1, "%03d", current.speed);
 
         OCR1A_NOM = 4800000/(current.speed*MicroSteps);
       }
@@ -520,46 +507,33 @@ void AutoWindingPrg()                                             // Подпр�
 
     TIMSK1=0;
     
-    lcd.setCursor(1, 0); 
-    sprintf(Str_Buffer, "%03d", current.turns); 
-    lcd.print(Str_Buffer);
+    lcd.printfAt(1, 0, "%03d", current.turns);
     
     current.layers++;
 
-    lcd.setCursor(10, 0); 
-    sprintf(Str_Buffer, "%02d", current.layers);
-    lcd.print(Str_Buffer);
+    lcd.printfAt(10, 0, "%02d", current.layers);
     
     if (current.layers == w.layers) continue; 
     
-    lcd.setCursor(0, 1); 
-    sprintf(Str_Buffer, STRING_2);                            // "PRESS CONTINUE  "
-    lcd.print(Str_Buffer);
+    lcd.printfAt(0, 1, STRING_2);           // "PRESS CONTINUE  "
     
     WaitButton();
     
-    lcd.setCursor(0, 1);
-    sprintf(Str_Buffer, LINE2_FORMAT, current.speed, w.step*ShaftStep);
-    lcd.print(Str_Buffer);
+    lcd.printfAt(0, 1, LINE2_FORMAT, current.speed, w.step*ShaftStep);
     
     current.dir = !current.dir;
 
     if (current.dir) PORTB &= 0b11011111; 
     else PORTB |= 0b00100000;
      
-
-    lcd.setCursor(1, 0); 
-    sprintf(Str_Buffer, "%03d", current.turns); 
-    lcd.print(Str_Buffer);
+    lcd.printfAt(1, 0, "%03d", current.turns);
     
     TIMSK1=2;        
   }
      
   digitalWrite(EN_STEP, HIGH);
 
-  lcd.setCursor(0, 1); 
-  sprintf(Str_Buffer, STRING_1);                             // "AUTOWINDING DONE"
-  lcd.print(Str_Buffer);
+  lcd.printfAt(0, 1, STRING_1);             // "AUTOWINDING DONE"
   
   WaitButton();
 }

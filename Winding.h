@@ -1,11 +1,13 @@
+#pragma once 
+
 #include <EEPROM.h>
 
-    template< typename T > void EEPROM_save( int idx, const T &t ){
-        T v = 0;
-        EEPROM.get(idx, v);
-        if (t != v)
-          EEPROM.put(idx, t);
-    }
+template< typename T > void EEPROM_save( int idx, const T &t ){
+    T v = 0;
+    EEPROM.get(idx, v);
+    if (t != v)
+      EEPROM.put(idx, t);
+}
 
 
 struct Winding
