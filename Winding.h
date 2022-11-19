@@ -37,3 +37,19 @@ struct Winding
     EEPROM_save(p, dir);          p+=1;   
   }
 };
+
+
+struct Settings 
+{
+  bool stopPerLayer = 0;
+
+  void Load(int &p)
+  {
+    EEPROM.get(p, stopPerLayer);        p+=1;
+  }
+
+  void Save(int &p)
+  {
+    EEPROM_save(p, stopPerLayer);        p+=1; 
+  }
+};

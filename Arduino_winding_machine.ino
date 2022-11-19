@@ -107,7 +107,9 @@ int16_t SpeedIncrease, SpeedDecrease;
 volatile int X,Y;
 volatile int Set_Speed_INT;
 
-enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, Winding1, Winding2, Winding3, WindingBack, TurnsSet, StepSet, SpeedSet, LaySet, Direction, Start, Cancel, ShaftPos, LayPos, StepMul, PosCancel}; // Нумерованный список строк экрана
+Settings settings;
+
+enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, miSettings, Winding1, Winding2, Winding3, WindingBack, TurnsSet, StepSet, SpeedSet, LaySet, Direction, Start, Cancel, ShaftPos, LayPos, StepMul, PosCancel, miSettingsStopPerLevel, miSettingsBack}; // Нумерованный список строк экрана
 
 struct MenuType {                       // Структура описывающая меню
   byte Screen;                          // Индекс экрана
@@ -115,16 +117,18 @@ struct MenuType {                       // Структура описывающ
   char type;
   char format[22];                      // Формат строки
   char format_Set_var[6];               // Формат значения при вводе переменной
-  int  *param;                          // Указатель на адрес текущей переменной изменяемой на экране
+  void *param;                          // Указатель на адрес текущей переменной изменяемой на экране
   int  var_Min;                         // Ограничение значения переменной снизу
   int  var_Max;                         // Ограничение значения переменной сверху
-  byte param_coef;};                    // Размерный коэффициент значения переменной
+  byte param_coef;                      // Размерный коэффициент значения переменной
+};
 
 struct MenuType Menu[] = {              // Объявляем переменную Menu пользовательского типа MenuType и доступную только для чтения
   {0,  0,  ' ', "Setup 1            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
   {0,  1,  ' ', "Setup 2            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
   {0,  2,  ' ', "Setup 3            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
   {0,  3,  ' ', "Pos control        ", ""      ,NULL,        0,      0,      0        },    // "> POS CONTROL   "
+  {0,  4,  ' ', "Settings           ", ""      ,NULL,        0,      0,      0        },    // "> POS CONTROL   "
 
   {1,  0,  'i', "Winding 1  % 3dT   ", ""      ,NULL,        0,      0,      1        },    // "> AUTOWINDING   "
   {1,  1,  'i', "Winding 2  % 3dT   ", ""      ,NULL,        0,      0,      1        },    // "> AUTOWINDING   "
@@ -135,7 +139,7 @@ struct MenuType Menu[] = {              // Объявляем переменну
   {2,  1,  'i', "Step: 0.%04d       ", "%04d"  ,NULL,        1,      200,    ShaftStep},    // "> STEP:>0.0000<↓"  
   {2,  2,  'i', "Speed:  %03d       ", "%03d"  ,NULL,        1,      300,    1        },    // "> SPEED: >000< ↑"
   {2,  3,  'i', "Layers: %02d       ", "%02d"  ,NULL,        1,      99,     1        },    // "> LAYERS:>00<  ↓" 
-  {2,  4,  'b', "Direction >$>      ", ""      ,NULL,        0,      1,      1        },    // "> DIRECTION >>>↑"
+  {2,  4,  'd', "Direction >$>      ", ""      ,NULL,        0,      1,      1        },    // "> DIRECTION >>>↑"
   {2,  5,  ' ', "Start              ", ""      ,NULL,        0,      0,      0        },    // "> START        ↓" 
   {2,  6,  ' ', "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL       ↑" 
 
@@ -143,6 +147,9 @@ struct MenuType Menu[] = {              // Объявляем переменну
   {10, 1,  'i', "LA pos: %+04d      ", "%+04d" ,&Lay_Pos,    -999,   999,    1        },    // "> LA POS:>±000<↓" 
   {10, 2,  'i', "StpMul: %03d       ", "%03d"  ,&Step_Mult,  1,      100,    1        },    // "> STPMUL:>000< ↑"
   {10, 3,  ' ', "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
+
+  {11, 0,  'b', "LayerStop          ", "%1d"  ,&settings.stopPerLayer,  0,   0,    1        },    // "> SH POS:>±000< "
+  {11, 1,  ' ', "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
 
 //  {14, 0,  "T%03d/%03d L%02d/%02d", ""      ,NULL,        0,      0,      0        },    // "T000/000 L00/00 "
 //  {14, 1,  "SP%03d ST0.%04d      ", ""      ,NULL,        0,      0,      0        },    // "SP000 ST0.0000  " 
@@ -155,7 +162,12 @@ const int MENU_COUNT = sizeof(Menu)/sizeof(*Menu);
 
 const char *LINE1_FORMAT = "T%03d/%03d L%02d/%02d";
 const char *LINE2_FORMAT = "Sp%03d St0.%04d";
+const char *LINE4_FORMAT = "%03d";
+const char *LINE5_FORMAT = "%02d";
+const char *LINE6_FORMAT = "%03d";
+
 const char *LINE3_FORMAT = "Winding %d  % 4dT";
+
 const char *STRING_1 = "AUTOWINDING DONE";
 const char *STRING_2 = "PRESS CONTINUE  ";
 
@@ -284,20 +296,28 @@ void loop()
                 bool &Steppers_Dir = *(bool*)Menu[Direction].param;
                 Push_Button = false; 
                 Steppers_Dir = !Steppers_Dir;
-                PrintDirection(12, 0, Steppers_Dir);
+                PrintDirection(Steppers_Dir);
               }
               break;                          
       case Start:        SaveSettings(); Push_Button = false; mode = mdRun; AutoWindingPrg(); mode = mdMenu; lcd.clear();   Menu_Index = Winding1 + currentWinding;      break; 
       case Cancel:       SaveSettings(); Menu_Index = Winding1 + currentWinding;                                                                     break;
 
       case ShaftPos:     SetQuote(9,14); Push_Button=false; mode = mdVarEdit; digitalWrite(EN_STEP, LOW); Motor_Num = 1; OCR1A = 200000/Step_Mult;
-                        while(!Push_Button){LCD_Print_Var(); ActualShaftPos=MotorMove(*Menu[Menu_Index].param * MicroSteps, ActualShaftPos);} 
+                        while(!Push_Button){LCD_Print_Var(); ActualShaftPos=MotorMove(*(int*)Menu[Menu_Index].param * MicroSteps, ActualShaftPos);} 
                         mode = mdMenu; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                                break;   
       case LayPos:       SetQuote(9,14); Push_Button=false; mode = mdVarEdit; digitalWrite(EN_STEP, LOW); Motor_Num = 2; OCR1A = 200000/Step_Mult;
-                        while(!Push_Button){LCD_Print_Var(); ActualLayerPos=MotorMove(*Menu[Menu_Index].param * MicroSteps, ActualLayerPos);} 
+                        while(!Push_Button){LCD_Print_Var(); ActualLayerPos=MotorMove(*(int*)Menu[Menu_Index].param * MicroSteps, ActualLayerPos);} 
                         mode = mdMenu; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                                break;                                                               
       case StepMul:      SetQuote(9,13);Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(9,13);  break;    
-      case PosCancel:    Menu_Index = Autowinding1; Shaft_Pos = 0; Lay_Pos = 0; Step_Mult = 1; ActualShaftPos = 0; ActualLayerPos = 0;               break;
+      case PosCancel:    Menu_Index = PosControl; Shaft_Pos = 0; Lay_Pos = 0; Step_Mult = 1; ActualShaftPos = 0; ActualLayerPos = 0;               break;
+      
+      case miSettings:   Menu_Index = miSettingsStopPerLevel; break;
+      case miSettingsStopPerLevel: 
+              Push_Button = false; 
+              settings.stopPerLayer = !settings.stopPerLayer;
+              PrintBool(settings.stopPerLayer);
+              break;
+      case miSettingsBack: Menu_Index = miSettings; break;
     }
     Push_Button = false; 
     PrintScreen();
@@ -329,11 +349,15 @@ void PrintScreen() // Подпрограмма: Выводим экран на L
       switch (m.type)
       {
       case 'i':
-        lcd.printf(m.format, *m.param * m.param_coef);
+        lcd.printf(m.format, *(int*)m.param * m.param_coef);
+        break;
+      case 'd':
+        lcd.print(m.format);
+        PrintDirection(12, i, *(bool*)m.param);
         break;
       case 'b':
         lcd.print(m.format);
-        PrintDirection(12, i, *m.param);
+        PrintBool(12, i, *(bool*)m.param);
         break;
       default:
         lcd.print(m.format);
@@ -356,18 +380,24 @@ void PrintScreen() // Подпрограмма: Выводим экран на L
 
 
                                                                     
-void PrintSymbol(byte LCD_Column, byte LCD_Row, byte Symbol_Code) // Подпрограмма: Выводим символ на экран
+void PrintSymbol(byte col, byte row, byte Symbol_Code) // Подпрограмма: Выводим символ на экран
 { 
-  lcd.setCursor(LCD_Column, LCD_Row); 
+  lcd.setCursor(col, row); 
   lcd.write(byte(Symbol_Code));
 }
 
-void PrintDirection(byte c, byte r, bool d)
+void PrintDirection(byte col, byte row, bool b)
 {
-  char ch = (d) ? 0x3E : 0x3C;  
-  PrintSymbol(c, r, ch); 
-  PrintSymbol(c+1, r, ch); 
-  PrintSymbol(c+2, r, ch); 
+  char ch = b ? 0x3E : 0x3C;  
+  PrintSymbol(col+0, row, ch); 
+  PrintSymbol(col+1, row, ch); 
+  PrintSymbol(col+2, row, ch); 
+}
+
+void PrintBool(byte col, byte row, bool b)
+{
+  lcd.setCursor(col, row); 
+  lcd.print(b ? "ON " : "OFF"); 
 }
 
 void SetQuote   (int First_Cur, int Second_Cur)                  // Подпрограмма: Выводим выделение изменяемой переменной на LCD
@@ -390,24 +420,53 @@ void LCD_Print_Var()                                             // Подпро
 {
   static int Previous_Param;
 
-  if (*Menu[Menu_Index].param == Previous_Param)
+  if (*(int*)Menu[Menu_Index].param == Previous_Param)
     return;
   
   byte cur = Menu[Menu_Index].string_number % NROW;
 
-  lcd.printfAt(10, cur, Menu[Menu_Index].format_Set_var, *Menu[Menu_Index].param * Menu[Menu_Index].param_coef);
-  Previous_Param = *Menu[Menu_Index].param;  
+  lcd.printfAt(10, cur, Menu[Menu_Index].format_Set_var, *(int*)Menu[Menu_Index].param * Menu[Menu_Index].param_coef);
+  Previous_Param = *(int*)Menu[Menu_Index].param;  
 }
 
-void PrintWendingScreen()  // Подпрограмма вывода экрана автонамотки
+void PrintDirection(bool b)
+{
+  byte cur = Menu[Menu_Index].string_number % NROW;
+  PrintDirection(12, cur, b);
+}
+
+void PrintBool(bool b)
+{
+  byte cur = Menu[Menu_Index].string_number % NROW;
+  PrintBool(12, cur, b);
+}
+
+void PrintWindingScreen()  // Подпрограмма вывода экрана автонамотки
 {  
   const Winding &w = params[currentTransformer][currentWinding];
 
   lcd.clear();
   lcd.printfAt(0,0, LINE1_FORMAT, current.turns, w.turns, current.layers, w.layers);
   lcd.printfAt(0,1, LINE2_FORMAT, current.speed, w.step*ShaftStep);  
+  PrintWindingTurns();
+  PrintWindingLayers();
+  PrintWindingSpeed();
 }
 
+void PrintWindingTurns()  
+{  
+  lcd.printfAt(1, 0, LINE4_FORMAT, current.turns+1);
+}
+
+void PrintWindingLayers()  
+{  
+  lcd.printfAt(10, 0, LINE5_FORMAT, current.layers+1);
+}
+
+void PrintWindingSpeed()  
+{  
+  lcd.printfAt(2, 1, LINE6_FORMAT, current.speed);
+}
 
 void LoadSettings()
 {
@@ -420,6 +479,8 @@ void LoadSettings()
   for (int i=0; i<TRANSFORMER_COUNT; ++i)
     for (int j=0; j<WINDING_COUNT; ++j)
       params[i][j].Load(p);
+
+  //settings.Load(p);
 }
 
 void SaveSettings()
@@ -431,6 +492,8 @@ void SaveSettings()
   for (int i=0; i<TRANSFORMER_COUNT; ++i)
     for (int j=0; j<WINDING_COUNT; ++j)
       params[i][j].Save(p);
+
+  //settings.Save(p);
 }
 
 
@@ -450,16 +513,16 @@ void AutoWindingPrg()                                             // Подпр�
   digitalWrite(DIR_Z, HIGH);  
   if (w.dir) PORTB &= 0b11011111; 
   else PORTB |= 0b00100000;
-
-  PrintWendingScreen();
   
   Push_Button = false; 
  
   Set_Speed_INT = current.speed;
 
   while (current.layers < w.layers)                                 // Пока текущее кол-во слоев меньше заданного проверяем сколько сейчас витков
-  {
+  { 
     current.turns = 0;   
+    PrintWindingScreen();
+
     OCR1A = 65535;
     OCR1A_NOM = 4800000 / (current.speed*MicroSteps); 
 
@@ -474,7 +537,7 @@ void AutoWindingPrg()                                             // Подпр�
         current.speed = Set_Speed_INT;      
         EIMSK = 0b00000011;
         
-        lcd.printfAt(2, 1, "%03d", current.speed);
+        PrintWindingSpeed();
 
         OCR1A_NOM = 4800000 / (current.speed*MicroSteps); 
           
@@ -491,7 +554,7 @@ void AutoWindingPrg()                                             // Подпр�
       digitalWrite(EN_STEP, LOW);
       TIMSK1=2;                
        
-      lcd.printfAt(1, 0, "%03d", current.turns);
+      PrintWindingTurns();
       
       EIMSK = 0b00000010;
       current.speed = Set_Speed_INT;
@@ -499,42 +562,32 @@ void AutoWindingPrg()                                             // Подпр�
       
       if (current.turns > 1)
       {
-        lcd.printfAt(2, 1, "%03d", current.speed);
+        PrintWindingSpeed();
 
         OCR1A_NOM = 4800000/(current.speed*MicroSteps);
       }
     }  
 
     TIMSK1=0;
-    
-    lcd.printfAt(1, 0, "%03d", current.turns);
-    
-    current.layers++;
-
-    lcd.printfAt(10, 0, "%02d", current.layers);
-    
+        
+    current.layers++;    
     if (current.layers == w.layers) continue; 
     
-    lcd.printfAt(0, 1, STRING_2);           // "PRESS CONTINUE  "
-    
-    WaitButton();
-    
-    lcd.printfAt(0, 1, LINE2_FORMAT, current.speed, w.step*ShaftStep);
-    
-    current.dir = !current.dir;
+    if (settings.stopPerLayer) {
+      lcd.printfAt(0, 1, STRING_2);           // "PRESS CONTINUE  "    
+      WaitButton();
+    }
 
+    current.dir = !current.dir;
     if (current.dir) PORTB &= 0b11011111; 
     else PORTB |= 0b00100000;
-     
-    lcd.printfAt(1, 0, "%03d", current.turns);
-    
+         
     TIMSK1=2;        
   }
      
   digitalWrite(EN_STEP, HIGH);
 
-  lcd.printfAt(0, 1, STRING_1);             // "AUTOWINDING DONE"
-  
+  lcd.printfAt(0, 1, STRING_1);             // "AUTOWINDING DONE"  
   WaitButton();
 }
 
@@ -581,8 +634,8 @@ ISR(INT0_vect)   // Вектор прерывания от энкодера
                                         
   if (mode == mdVarEdit && Encoder_Dir != 0) 
   {                                                                                                                      // Если находимся в режиме изменения переменной 
-    *Menu[Menu_Index].param += Encoder_Dir; Encoder_Dir = 0;                                                             // то меняем ее сразу и
-    *Menu[Menu_Index].param = constrain(*Menu[Menu_Index].param, Menu[Menu_Index].var_Min, Menu[Menu_Index].var_Max);    // ограничиваем в диапазоне var_Min ÷ var_Max
+    *(int*)Menu[Menu_Index].param += Encoder_Dir; Encoder_Dir = 0;                                                             // то меняем ее сразу и
+    *(int*)Menu[Menu_Index].param = constrain(*(int*)Menu[Menu_Index].param, Menu[Menu_Index].var_Min, Menu[Menu_Index].var_Max);    // ограничиваем в диапазоне var_Min ÷ var_Max
   } 
 }
 
