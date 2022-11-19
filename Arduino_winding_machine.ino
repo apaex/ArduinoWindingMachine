@@ -85,7 +85,7 @@ char Str_Buffer[22];                                      // Буфер для �
 
 byte Motor_Num;                                           // номер шагового двигателя
 int32_t ActualShaftPos, ActualLayerPos;                   // Текущие позиции двигателей вала и укладчика
-int Actual_Turn = 0, Actual_Layer = 0;                    // Текущий виток и слой при автонамотке
+Winding current;                                          // Текущий виток и слой при автонамотке
 int Shaft_Pos, Lay_Pos, Step_Mult=1;                      // Переменные изменяемые на экране
 byte Menu_Index = 0;                                      // Переменная хранит номер текущей строки меню
 int32_t Steps, Step_Accel, Step_Decel;
@@ -403,13 +403,13 @@ void LCD_Print_Var()                                             // Подпро
 
 void PrintWendingScreen()  // Подпрограмма вывода экрана автонамотки
 {  
-  Winding &w = params[currentTransformer][currentWinding];
+  const Winding &w = params[currentTransformer][currentWinding];
 
   lcd.clear();
-  sprintf(Str_Buffer, LINE1_FORMAT, Actual_Turn, w.turns, Actual_Layer, w.layers);
+  sprintf(Str_Buffer, LINE1_FORMAT, current.turns, w.turns, current.layers, w.layers);
   lcd.print(Str_Buffer);
   lcd.setCursor(0, 1);
-  sprintf(Str_Buffer, LINE2_FORMAT, w.speed, w.step*ShaftStep);
+  sprintf(Str_Buffer, LINE2_FORMAT, current.speed, w.step*ShaftStep);
   lcd.print(Str_Buffer);  
 }
 
@@ -441,113 +441,132 @@ void SaveSettings()
 
 void AutoWindingPrg()                                             // Подпрограмма автоматической намотки
 {    
-  Winding &w = params[currentTransformer][currentWinding];
+  const Winding &w = params[currentTransformer][currentWinding];
 
   Serial.println("Start");
+
+  current.turns = 0;
+  current.layers = 0;
+  current.speed = w.speed;
+  current.dir = w.dir;
+  current.step = w.step;
    
   digitalWrite(EN_STEP, LOW);   // Разрешение управления двигателями
   digitalWrite(DIR_Z, HIGH);  
   if (w.dir) PORTB &= 0b11011111; 
   else PORTB |= 0b00100000;
+
   PrintWendingScreen();
+  
   Push_Button = false; 
  
-  Set_Speed_INT = w.speed;
+  Set_Speed_INT = current.speed;
 
-  while (Actual_Layer < w.layers)                                 // Пока текущее кол-во слоев меньше заданного проверяем сколько сейчас витков
-    {
-          OCR1A = 65535;
-          OCR1A_NOM = 4800000 / (w.speed*MicroSteps); 
+  while (current.layers < w.layers)                                 // Пока текущее кол-во слоев меньше заданного проверяем сколько сейчас витков
+  {
+    current.turns = 0;   
+    OCR1A = 65535;
+    OCR1A_NOM = 4800000 / (current.speed*MicroSteps); 
 
-      while (Actual_Turn < w.turns)                               // Пока текущее кол-во витков меньше заданного продолжаем мотать
-        {     
-       run_btn = PINB & 0b00001000;
-       while (run_btn)
+    while (current.turns < w.turns)                               // Пока текущее кол-во витков меньше заданного продолжаем мотать
+    {     
+      run_btn = PINB & 0b00001000;
+      while (run_btn)
+      {
+        TIMSK1=0; 
+        run_btn = PINB & 0b00001000;   
+        EIMSK = 0b00000010;
+        current.speed = Set_Speed_INT;      
+        EIMSK = 0b00000011;
+        
+        lcd.setCursor(2, 1); 
+        sprintf(Str_Buffer, "%03d", current.speed);
+        lcd.print(Str_Buffer);
+
+        OCR1A_NOM = 4800000 / (current.speed*MicroSteps); 
+          
+        if (Pause)
         {
-          TIMSK1=0; 
-          run_btn = PINB & 0b00001000;   
-          EIMSK = 0b00000010;
-          w.speed = Set_Speed_INT;      // ещё дичь - меняются настройки
-          EIMSK = 0b00000011;
-          
-          lcd.setCursor(2, 1); 
-          sprintf(Str_Buffer, "%03d", w.speed);
-          lcd.print(Str_Buffer);
-          OCR1A_NOM = 4800000 / (w.speed*MicroSteps); 
-          
-          if (Pause == true)
-            {
-              static boolean EN_D;
-              Push_Button = false;
-              Pause = false;
-              if (EN_D) digitalWrite(EN_STEP, HIGH);
-              else digitalWrite(EN_STEP, LOW);
-              EN_D = !EN_D;
-            }
+          static boolean EN_D;
+          Push_Button = false;
+          Pause = false;
+          digitalWrite(EN_STEP, EN_D ? HIGH: LOW);
+          EN_D = !EN_D;
         }
-       digitalWrite(EN_STEP, LOW);
-       TIMSK1=2;                
-       sprintf(Str_Buffer, "%03d", Actual_Turn); 
-       lcd.setCursor(1, 0); 
-       lcd.print(Str_Buffer);
+      }
+
+      digitalWrite(EN_STEP, LOW);
+      TIMSK1=2;                
        
-       EIMSK = 0b00000010;
-       w.speed = Set_Speed_INT;
-       EIMSK = 0b00000011;
-       
-       if (Actual_Turn > 1)
+      lcd.setCursor(1, 0); 
+      sprintf(Str_Buffer, "%03d", current.turns); 
+      lcd.print(Str_Buffer);
+      
+      EIMSK = 0b00000010;
+      current.speed = Set_Speed_INT;
+      EIMSK = 0b00000011;
+      
+      if (current.turns > 1)
       {
         lcd.setCursor(2, 1); 
-        sprintf(Str_Buffer, "%03d", w.speed);
+        sprintf(Str_Buffer, "%03d", current.speed);
         lcd.print(Str_Buffer);
-        OCR1A_NOM = 4800000/(w.speed*MicroSteps);
-      }
-          }   
-      TIMSK1=0;
-      
-      sprintf(Str_Buffer, "%03d", Actual_Turn); 
-      lcd.setCursor(1, 0); 
-      lcd.print(Str_Buffer);
-      
-      Actual_Layer++;
-      lcd.setCursor(10, 0); 
-      sprintf(Str_Buffer, "%02d", Actual_Layer);
-      lcd.print(Str_Buffer);
-      
-      if (Actual_Layer == w.layers) continue; 
-      
-      lcd.setCursor(0, 1); 
-      sprintf(Str_Buffer, "PRESS CONTINUE  ");                            // "PRESS CONTINUE  "
-      lcd.print(Str_Buffer);
-      
-      Push_Button = false;
-      while(!Push_Button){}
-      Push_Button = false; 
-      
-      lcd.setCursor(0, 1);
-      sprintf(Str_Buffer, LINE2_FORMAT, w.speed, w.step*ShaftStep);
-      lcd.print(Str_Buffer);
-      
-      w.dir = !w.dir;     // вот тут дичь - параметры настроек изменяются
 
-      if (w.dir) PORTB &= 0b11011111; 
-      else PORTB |= 0b00100000;
-      Actual_Turn = 0;        
-      sprintf(Str_Buffer, "%03d", Actual_Turn); 
-      lcd.setCursor(1, 0); 
-      lcd.print(Str_Buffer);
-      TIMSK1=2;        
-     }
-     
-    digitalWrite(EN_STEP, HIGH);
-    lcd.setCursor(0, 1); 
-    sprintf(Str_Buffer, "AUTOWINDING DONE");                             // "AUTOWINDING DONE"
+        OCR1A_NOM = 4800000/(current.speed*MicroSteps);
+      }
+    }  
+
+    TIMSK1=0;
+    
+    lcd.setCursor(1, 0); 
+    sprintf(Str_Buffer, "%03d", current.turns); 
     lcd.print(Str_Buffer);
-    Push_Button = false;
-    while (Push_Button == false) {}
-    Push_Button = false;
-    Pause = false; 
-    Actual_Layer = 0;     
+    
+    current.layers++;
+
+    lcd.setCursor(10, 0); 
+    sprintf(Str_Buffer, "%02d", current.layers);
+    lcd.print(Str_Buffer);
+    
+    if (current.layers == w.layers) continue; 
+    
+    lcd.setCursor(0, 1); 
+    sprintf(Str_Buffer, "PRESS CONTINUE  ");                            // "PRESS CONTINUE  "
+    lcd.print(Str_Buffer);
+    
+    WaitButton();
+    
+    lcd.setCursor(0, 1);
+    sprintf(Str_Buffer, LINE2_FORMAT, current.speed, w.step*ShaftStep);
+    lcd.print(Str_Buffer);
+    
+    current.dir = !current.dir;
+
+    if (current.dir) PORTB &= 0b11011111; 
+    else PORTB |= 0b00100000;
+     
+
+    lcd.setCursor(1, 0); 
+    sprintf(Str_Buffer, "%03d", current.turns); 
+    lcd.print(Str_Buffer);
+    
+    TIMSK1=2;        
+  }
+     
+  digitalWrite(EN_STEP, HIGH);
+
+  lcd.setCursor(0, 1); 
+  sprintf(Str_Buffer, "AUTOWINDING DONE");                             // "AUTOWINDING DONE"
+  lcd.print(Str_Buffer);
+  
+  WaitButton();
+}
+
+void WaitButton()
+{
+  Push_Button = false;
+  while (!Push_Button);
+  Push_Button = false;
 }
 
 int MotorMove(int32_t Move_Var, int32_t Actual_Rot)                     // Подпрограмма: Движение шагового двигателя до заданной координаты
@@ -610,22 +629,20 @@ ISR(INT1_vect)                               // Вектор прерывани�
 
 ISR(TIMER1_COMPA_vect)                       // Вектор прерывания от таймера/счетчика 1 
 {
-  Winding &w = params[currentTransformer][currentWinding];
-
  if (mode == mdRun) 
  {
   Motor_Num = 0;
   if (NSteps < 200 * MicroSteps) 
   {
    PORTD |= 0b00010000;
-   if (NTurn>>4 > 200 - w.step) PORTB |= 0b00010000;
+   if (NTurn>>4 > 200 - current.step) PORTB |= 0b00010000;
    while (i<6) {i++;} i=0;
    PORTD &= 0b11101111; 
-   if (NTurn>>4 > 200 - w.step) PORTB &= 0b11101111;
+   if (NTurn>>4 > 200 - current.step) PORTB &= 0b11101111;
    NTurn++;
-   if (NTurn>>4 > 200) {NTurn=0; Actual_Turn++;}
+   if (NTurn>>4 > 200) {NTurn=0; current.turns++;}
 
-  INCR = w.speed * 5 / (MicroSteps);
+  INCR = current.speed * 5 / (MicroSteps);
   Temp = NSteps * INCR;
   OCR1A_TEMP = 300000 * 1000 / Temp;
   OCR1A = min (65535, OCR1A_TEMP);
@@ -634,12 +651,12 @@ ISR(TIMER1_COMPA_vect)                       // Вектор прерывани�
   {
    OCR1A = OCR1A_NOM;
    PORTD |= 0b00010000;
-   if (NTurn>>4 > 200 - w.step) PORTB |= 0b00010000;
+   if (NTurn>>4 > 200 - current.step) PORTB |= 0b00010000;
    while (i<6) {i++;} i=0;
    PORTD &= 0b11101111; 
-   if (NTurn>>4 > 200 - w.step) PORTB &= 0b11101111;
+   if (NTurn>>4 > 200 - current.step) PORTB &= 0b11101111;
    NTurn++;
-   if (NTurn>>4 > 200) {NTurn=0; Actual_Turn++;}
+   if (NTurn>>4 > 200) {NTurn=0; current.turns++;}
   }
     NSteps++;
   }
