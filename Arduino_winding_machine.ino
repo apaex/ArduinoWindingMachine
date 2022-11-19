@@ -78,34 +78,24 @@ Winding params[TRANSFORMER_COUNT][WINDING_COUNT];
 byte currentTransformer = -1;
 byte currentWinding = -1;
 
+byte Menu_Index = 0;                                      // Переменная хранит номер текущей строки меню
 volatile int Encoder_Dir;                                 // Направление вращения энкодера
-volatile boolean Push_Button, DC;                         // Нажатие кнопки; формирование сигнала STEP
-volatile boolean Pause;                                   // Флаг паузы в режиме автонамотка   
+volatile bool Push_Button;                                // Нажатие кнопки
+
+volatile bool DC;                                         // формирование сигнала STEP
+volatile bool Pause;                                      // Флаг паузы в режиме автонамотка   
 volatile int i;                                           // Счетчик кол-ва заходов в прерывание таймера
 byte Motor_Num;                                           // номер шагового двигателя
 int32_t ActualShaftPos, ActualLayerPos;                   // Текущие позиции двигателей вала и укладчика
 Winding current;                                          // Текущий виток и слой при автонамотке
 int Shaft_Pos, Lay_Pos, Step_Mult=1;                      // Переменные изменяемые на экране
-byte Menu_Index = 0;                                      // Переменная хранит номер текущей строки меню
-int32_t Steps, Step_Accel, Step_Decel;
-
 volatile uint16_t OCR1A_NOM;
-volatile uint32_t OCR1A_TEMP;
-volatile uint32_t INCR;
-volatile uint32_t NSteps;
-volatile uint32_t Temp;
-int V;
-volatile int NTurn;
-uint8_t run_btn;
- 
-uint8_t MicroSteps = 16;
-long SteppersPositions[2];
-int Pitch = 1;
-
+uint8_t run_btn; 
+const uint8_t MicroSteps = 16;
 int16_t SpeedIncrease, SpeedDecrease;
-
-volatile int X,Y;
 volatile int Set_Speed_INT;
+
+
 
 Settings settings;
 
@@ -155,8 +145,7 @@ struct MenuType Menu[] = {              // Объявляем переменну
 //  {14, 1,  "SP%03d ST0.%04d      ", ""      ,NULL,        0,      0,      0        },    // "SP000 ST0.0000  " 
 //  {16, 0,  "AUTOWINDING DONE     ", ""      ,NULL,        0,      0,      0        },    // "AUTOWINDING DONE" 
 //  {16, 1,  "PRESS CONTINUE       ", ""      ,NULL,        0,      0,      0        },    // "PRESS CONTINUE  "
-};  
-
+}; 
 
 const int MENU_COUNT = sizeof(Menu)/sizeof(*Menu);
 
@@ -171,14 +160,8 @@ const char *LINE3_FORMAT = "Winding %d  % 4dT";
 const char *STRING_1 = "AUTOWINDING DONE";
 const char *STRING_2 = "PRESS CONTINUE  ";
 
-
-byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // Создаем свой символ ⯅ для LCD
-byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100};   // Создаем свой символ ⯆ для LCD
-
-//const byte CH_UP = '^';
-//const byte CH_DW = 'v';
-const byte CH_UP = 0;
-const byte CH_DW = 1;
+#define CH_UP 0
+#define CH_DW 1
 
 LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7);                  // Назначаем пины для управления LCD 
 //LiquidCrystal_I2C lcd(0x27, NCOL, NROW);                // 0x3F I2C адрес для PCF8574AT
@@ -216,6 +199,9 @@ void setup()
   
  // lcd.init(); 
   
+  byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // Создаем свой символ ⯅ для LCD
+  byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100};   // Создаем свой символ ⯆ для LCD
+
   lcd.createChar(0, up);       // Записываем символ ⯅ в память LCD
   lcd.createChar(1, down);     // Записываем символ ⯆ в память LCD
 
@@ -511,9 +497,7 @@ void AutoWindingPrg()                                             // Подпр�
    
   digitalWrite(EN_STEP, LOW);   // Разрешение управления двигателями
   digitalWrite(DIR_Z, HIGH);  
-  if (w.dir) PORTB &= 0b11011111; 
-  else PORTB |= 0b00100000;
-  
+ 
   Push_Button = false; 
  
   Set_Speed_INT = current.speed;
@@ -522,6 +506,9 @@ void AutoWindingPrg()                                             // Подпр�
   { 
     current.turns = 0;   
     PrintWindingScreen();
+
+    if (w.dir) PORTB &= 0b11011111; 
+    else PORTB |= 0b00100000;
 
     OCR1A = 65535;
     OCR1A_NOM = 4800000 / (current.speed*MicroSteps); 
@@ -571,7 +558,7 @@ void AutoWindingPrg()                                             // Подпр�
     TIMSK1=0;
         
     current.layers++;    
-    if (current.layers == w.layers) continue; 
+    if (current.layers == w.layers) break; 
     
     if (settings.stopPerLayer) {
       lcd.printfAt(0, 1, STRING_2);           // "PRESS CONTINUE  "    
@@ -579,8 +566,6 @@ void AutoWindingPrg()                                             // Подпр�
     }
 
     current.dir = !current.dir;
-    if (current.dir) PORTB &= 0b11011111; 
-    else PORTB |= 0b00100000;
          
     TIMSK1=2;        
   }
@@ -658,38 +643,45 @@ ISR(INT1_vect)                               // Вектор прерывани�
 
 ISR(TIMER1_COMPA_vect)                       // Вектор прерывания от таймера/счетчика 1 
 {
- if (mode == mdRun) 
- {
-  Motor_Num = 0;
-  if (NSteps < 200 * MicroSteps) 
-  {
-   PORTD |= 0b00010000;
-   if (NTurn>>4 > 200 - current.step) PORTB |= 0b00010000;
-   while (i<6) {i++;} i=0;
-   PORTD &= 0b11101111; 
-   if (NTurn>>4 > 200 - current.step) PORTB &= 0b11101111;
-   NTurn++;
-   if (NTurn>>4 > 200) {NTurn=0; current.turns++;}
+  static uint32_t OCR1A_TEMP;
+  static uint32_t NSteps;
+  static int NTurn;
+  static uint32_t INCR;
+  static uint32_t Temp;
 
-  INCR = current.speed * 5 / (MicroSteps);
-  Temp = NSteps * INCR;
-  OCR1A_TEMP = 300000 * 1000 / Temp;
-  OCR1A = min (65535, OCR1A_TEMP);
-  } 
-  if (NSteps >= 200 * MicroSteps) 
+  if (mode == mdRun) 
   {
-   OCR1A = OCR1A_NOM;
-   PORTD |= 0b00010000;
-   if (NTurn>>4 > 200 - current.step) PORTB |= 0b00010000;
-   while (i<6) {i++;} i=0;
-   PORTD &= 0b11101111; 
-   if (NTurn>>4 > 200 - current.step) PORTB &= 0b11101111;
-   NTurn++;
-   if (NTurn>>4 > 200) {NTurn=0; current.turns++;}
-  }
+    Motor_Num = 0;
+    if (NSteps < 200 * MicroSteps) 
+    {
+      PORTD |= 0b00010000;
+      if (NTurn>>4 > 200 - current.step) PORTB |= 0b00010000;
+      while (i<6) {i++;} 
+      i=0;
+      PORTD &= 0b11101111; 
+      if (NTurn>>4 > 200 - current.step) PORTB &= 0b11101111;
+      NTurn++;
+      if (NTurn>>4 > 200) {NTurn=0; current.turns++;}
+
+      INCR = current.speed * 5 / (MicroSteps);
+      Temp = NSteps * INCR;
+      OCR1A_TEMP = 300000 * 1000 / Temp;
+      OCR1A = min (65535, OCR1A_TEMP);
+    } 
+    if (NSteps >= 200 * MicroSteps) 
+    {
+      OCR1A = OCR1A_NOM;
+      PORTD |= 0b00010000;
+      if (NTurn>>4 > 200 - current.step) PORTB |= 0b00010000;
+      while (i<6) {i++;} i=0;
+      PORTD &= 0b11101111; 
+      if (NTurn>>4 > 200 - current.step) PORTB &= 0b11101111;
+      NTurn++;
+      if (NTurn>>4 > 200) {NTurn=0; current.turns++;}
+    }
     NSteps++;
   }
-  
+
   i++;                                        // Счетчик кол-ва заходов в прерывание
   DC = !DC;                                   // Первое прерывание устанавливает STEP следующее - сбрасывает
     if      (Motor_Num == 1) {
