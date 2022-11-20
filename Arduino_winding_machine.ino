@@ -70,7 +70,7 @@ https://cxem.net/arduino/arduino245.php
 
 #define STEPPERS_STEPS_MULT 64
 #define STEPPERS_STEPS_COUNT 200 * STEPPERS_STEPS_MULT
-
+const uint8_t MicroSteps = 16;
 
 enum Mode {mdMenu, mdVarEdit, mdRun} mode;                // режим установки значения; работает подпрограмма автонамотки 
 
@@ -86,22 +86,19 @@ byte Menu_Index = 0;                                      // Переменна�
 volatile int Encoder_Dir;                                 // Направление вращения энкодера
 volatile bool Push_Button;                                // Нажатие кнопки
 
-volatile bool DC;                                         // формирование сигнала STEP
 volatile bool Pause;                                      // Флаг паузы в режиме автонамотка   
-volatile int i;                                           // Счетчик кол-ва заходов в прерывание таймера
 Winding current;                                          // Текущий виток и слой при автонамотке
-int Shaft_Pos, Lay_Pos, Step_Mult=1;                      // Переменные изменяемые на экране
+int Shaft_Pos = 0, Lay_Pos = 0;                           // Переменные изменяемые на экране
+
 volatile uint16_t OCR1A_NOM;
 uint8_t run_btn; 
-const uint8_t MicroSteps = 16;
-int16_t SpeedIncrease, SpeedDecrease;
 volatile int Set_Speed_INT;
 
 
 
 Settings settings;
 
-enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, miSettings, Winding1, Winding2, Winding3, WindingBack, TurnsSet, StepSet, SpeedSet, LaySet, Direction, Start, Cancel, ShaftPos, LayPos, StepMul, PosCancel, miSettingsStopPerLevel, miSettingsBack}; // Нумерованный список строк экрана
+enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, miSettings, Winding1, Winding2, Winding3, WindingBack, TurnsSet, StepSet, SpeedSet, LaySet, Direction, Start, Cancel, ShaftPos, ShaftStepMul, LayerPos, LayerStepMul, PosCancel, miSettingsStopPerLevel, miSettingsBack}; // Нумерованный список строк экрана
 
 struct MenuType {                       // Структура описывающая меню
   byte Screen;                          // Индекс экрана
@@ -113,35 +110,37 @@ struct MenuType {                       // Структура описывающ
   int  var_Min;                         // Ограничение значения переменной снизу
   int  var_Max;                         // Ограничение значения переменной сверху
   byte param_coef;                      // Размерный коэффициент значения переменной
+  byte increment;
 };
 
 struct MenuType Menu[] = {              // Объявляем переменную Menu пользовательского типа MenuType и доступную только для чтения
-  {0,  0,  ' ', "Setup 1            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {0,  1,  ' ', "Setup 2            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {0,  2,  ' ', "Setup 3            ", ""      ,NULL,        0,      0,      0        },    // "> AUTOWINDING   "
-  {0,  3,  ' ', "Pos control        ", ""      ,NULL,        0,      0,      0        },    // "> POS CONTROL   "
-  {0,  4,  ' ', "Settings           ", ""      ,NULL,        0,      0,      0        },    // "> POS CONTROL   "
+  {0,  0,  ' ', "Setup 1            ", ""      ,NULL,        0,      0,      0,        0},    // "> AUTOWINDING   "
+  {0,  1,  ' ', "Setup 2            ", ""      ,NULL,        0,      0,      0,        0},    // "> AUTOWINDING   "
+  {0,  2,  ' ', "Setup 3            ", ""      ,NULL,        0,      0,      0,        0},    // "> AUTOWINDING   "
+  {0,  3,  ' ', "Pos control        ", ""      ,NULL,        0,      0,      0,        0},    // "> POS CONTROL   "
+  {0,  4,  ' ', "Settings           ", ""      ,NULL,        0,      0,      0,        0},    // "> POS CONTROL   "
 
-  {1,  0,  'i', "Winding 1  % 3dT   ", ""      ,NULL,        0,      0,      1        },    // "> AUTOWINDING   "
-  {1,  1,  'i', "Winding 2  % 3dT   ", ""      ,NULL,        0,      0,      1        },    // "> AUTOWINDING   "
-  {1,  2,  'i', "Winding 3  % 3dT   ", ""      ,NULL,        0,      0,      1        },    // "> AUTOWINDING   "
-  {1,  3,  ' ', "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
+  {1,  0,  'i', "Winding 1  % 3dT   ", ""      ,NULL,        0,      0,      1,        0},    // "> AUTOWINDING   "
+  {1,  1,  'i', "Winding 2  % 3dT   ", ""      ,NULL,        0,      0,      1,        0},    // "> AUTOWINDING   "
+  {1,  2,  'i', "Winding 3  % 3dT   ", ""      ,NULL,        0,      0,      1,        0},    // "> AUTOWINDING   "
+  {1,  3,  ' ', "Back               ", ""      ,NULL,        0,      0,      0,        0},    // "> CANCEL        "  
   
-  {2,  0,  'i', "Turns:  %03d       ", "%03d"  ,NULL,        1,      999,    1        },    // "> TURNS: >000<  "
-  {2,  1,  'i', "Step: 0.%04d       ", "%04d"  ,NULL,        1,      200,    ShaftStep},    // "> STEP:>0.0000<↓"  
-  {2,  2,  'i', "Speed:  %03d       ", "%03d"  ,NULL,        1,      300,    1        },    // "> SPEED: >000< ↑"
-  {2,  3,  'i', "Layers: %02d       ", "%02d"  ,NULL,        1,      99,     1        },    // "> LAYERS:>00<  ↓" 
-  {2,  4,  'd', "Direction >$>      ", ""      ,NULL,        0,      1,      1        },    // "> DIRECTION >>>↑"
-  {2,  5,  ' ', "Start              ", ""      ,NULL,        0,      0,      0        },    // "> START        ↓" 
-  {2,  6,  ' ', "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL       ↑" 
+  {2,  0,  'i', "Turns:  %03d       ", "%03d"  ,NULL,        1,      999,    1,        1},    // "> TURNS: >000<  "
+  {2,  1,  'i', "Step: 0.%04d       ", "%04d"  ,NULL,        1,      200,    ShaftStep,1},    // "> STEP:>0.0000<↓"  
+  {2,  2,  'i', "Speed:  %03d       ", "%03d"  ,NULL,        1,      300,    1,        1},    // "> SPEED: >000< ↑"
+  {2,  3,  'i', "Layers: %02d       ", "%02d"  ,NULL,        1,      99,     1,        1},    // "> LAYERS:>00<  ↓" 
+  {2,  4,  'd', "Direction >$>      ", ""      ,NULL,        0,      1,      1,        0},    // "> DIRECTION >>>↑"
+  {2,  5,  ' ', "Start              ", ""      ,NULL,        0,      0,      0,        0},    // "> START        ↓" 
+  {2,  6,  ' ', "Back               ", ""      ,NULL,        0,      0,      0,        0},    // "> CANCEL       ↑" 
 
-  {10, 0,  'i', "SH pos: %+04d      ", "%+04d" ,&Shaft_Pos,  -999,   999,    1        },    // "> SH POS:>±000< "
-  {10, 1,  'i', "LA pos: %+04d      ", "%+04d" ,&Lay_Pos,    -999,   999,    1        },    // "> LA POS:>±000<↓" 
-  {10, 2,  'i', "StpMul: %03d       ", "%03d"  ,&Step_Mult,  1,      100,    1        },    // "> STPMUL:>000< ↑"
-  {10, 3,  ' ', "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
+  {10, 0,  'i', "SH pos: %+04d      ", "%+04d" ,&Shaft_Pos,  -999,   999,    1,        1},    // "> SH POS:>±000< "
+  {10, 1,  'i', "StpMul: %03d       ", "%03d"  ,&settings.shaftStep,  1,      100,    1,        1},    // "> STPMUL:>000< ↑"
+  {10, 2,  'i', "LA pos: %+04d      ", "%+04d" ,&Lay_Pos,    -999,   999,    1,        1},    // "> LA POS:>±000<↓" 
+  {10, 3,  'i', "StpMul: %03d       ", "%03d"  ,&settings.layerStep,  1,      100,    1,        1},    // "> STPMUL:>000< ↑"
+  {10, 4,  ' ', "Back               ", ""      ,NULL,        0,      0,      0,        0},    // "> CANCEL        "  
 
-  {11, 0,  'b', "LayerStop          ", "%1d"  ,&settings.stopPerLayer,  0,   0,    1        },    // "> SH POS:>±000< "
-  {11, 1,  ' ', "Back               ", ""      ,NULL,        0,      0,      0        },    // "> CANCEL        "  
+  {11, 0,  'b', "LayerStop          ", "%1d"  ,&settings.stopPerLayer,  0,   0,    1,        0},    // "> SH POS:>±000< "
+  {11, 1,  ' ', "Back               ", ""      ,NULL,        0,      0,      0,        0},    // "> CANCEL        "  
 
 //  {14, 0,  "T%03d/%03d L%02d/%02d", ""      ,NULL,        0,      0,      0        },    // "T000/000 L00/00 "
 //  {14, 1,  "SP%03d ST0.%04d      ", ""      ,NULL,        0,      0,      0        },    // "SP000 ST0.0000  " 
@@ -295,8 +294,9 @@ void loop()
       case Cancel:       SaveSettings(); Menu_Index = Winding1 + currentWinding;                                                                     break;
 
       case ShaftPos:
-      case LayPos:     { 
-                          Stepper &stepper = (Menu_Index == LayPos) ? layerStepper : shaftStepper;
+      case LayerPos:     { 
+                          Stepper &stepper = (Menu_Index == LayerPos) ? layerStepper : shaftStepper;
+                          int Step_Mult = *(int*)Menu[Menu_Index+1].param;
 
                           SetQuote(9,14); 
                           Push_Button=false; 
@@ -313,15 +313,37 @@ void loop()
                             {
                               stepper.step((oldPos - newPos) * STEPPERS_STEPS_MULT * Step_Mult);
                               oldPos = newPos;
-                            }
+                            }                            
                           } 
                           mode = mdMenu; 
                           digitalWrite(EN_STEP, HIGH); 
                           ClearQuote(9,14);
                         }
                           break;
-                                                                                      
-      case StepMul:      SetQuote(9,13);Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(9,13);  break;    
+
+      case ShaftStepMul:                                                                         
+      case LayerStepMul:  /*    
+                        {
+                            Push_Button=false;
+
+                            int values[] = {1,10,100};
+                            // переделать на индексы
+
+                            int &value =  *(int*)Menu[Menu_Index].param;
+                            switch (value)
+                            {
+                            case 1: value = 10;  break;
+                            case 10: value = 100;  break;
+                            case 100: value = 1;  break;
+                            }
+
+                            Menu[Menu_Index-1].param_coef = value;
+                            LCD_Print_Var();
+                        }
+                        break;  */
+                            SetQuote(9,13);Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(9,13);  
+                            Menu[Menu_Index-1].increment = *(byte*)Menu[Menu_Index].param;
+                            break;    
       case PosCancel:    Menu_Index = PosControl; Shaft_Pos = 0; Lay_Pos = 0; break;
       
       case miSettings:   Menu_Index = miSettingsStopPerLevel; break;
@@ -631,7 +653,7 @@ ISR(INT0_vect)   // Вектор прерывания от энкодера
                                         
   if (mode == mdVarEdit && Encoder_Dir != 0) 
   {                                                                                                                      // Если находимся в режиме изменения переменной 
-    *(int*)Menu[Menu_Index].param += Encoder_Dir; Encoder_Dir = 0;                                                             // то меняем ее сразу и
+    *(int*)Menu[Menu_Index].param += Encoder_Dir * Menu[Menu_Index].increment; Encoder_Dir = 0;                                                             // то меняем ее сразу и
     *(int*)Menu[Menu_Index].param = constrain(*(int*)Menu[Menu_Index].param, Menu[Menu_Index].var_Min, Menu[Menu_Index].var_Max);    // ограничиваем в диапазоне var_Min ÷ var_Max
   } 
 }
@@ -660,6 +682,7 @@ ISR(TIMER1_COMPA_vect)                       // Вектор прерывани�
   static int NTurn;
   static uint32_t INCR;
   static uint32_t Temp;
+  static int i;                                           // Счетчик кол-ва заходов в прерывание таймера
 
   if (mode == mdRun) 
   {
@@ -684,7 +707,8 @@ ISR(TIMER1_COMPA_vect)                       // Вектор прерывани�
       OCR1A = OCR1A_NOM;
       PORTD |= 0b00010000;
       if (NTurn>>4 > 200 - current.step) PORTB |= 0b00010000;
-      while (i<6) {i++;} i=0;
+      while (i<6) {i++;} 
+      i=0;
       PORTD &= 0b11101111; 
       if (NTurn>>4 > 200 - current.step) PORTB &= 0b11101111;
       NTurn++;
@@ -694,8 +718,6 @@ ISR(TIMER1_COMPA_vect)                       // Вектор прерывани�
   }
 
   i++;                                        // Счетчик кол-ва заходов в прерывание
-  DC = !DC;                                   // Первое прерывание устанавливает STEP следующее - сбрасывает
-
 }
 
 

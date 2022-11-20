@@ -42,6 +42,8 @@ struct Winding
 struct Settings 
 {
   bool stopPerLayer = 0;
+  int shaftStep = 1;
+  int layerStep = 1;
 
   void Load(int &p)
   {
