@@ -101,4 +101,26 @@ private:
 
         return _gen[c] - 1;
     }
+
+    
+public:
+    void PrintSymbol(byte col, byte row, byte Symbol_Code) // Подпрограмма: Выводим символ на экран
+    {
+        setCursor(col, row);
+        write(byte(Symbol_Code));
+    }
+
+    void PrintDirection(byte col, byte row, bool b)
+    {
+        char ch = b ? 0x3E : 0x3C;
+        PrintSymbol(col + 0, row, ch);
+        PrintSymbol(col + 1, row, ch);
+        PrintSymbol(col + 2, row, ch);
+    }
+
+    void PrintBool(byte col, byte row, bool b)
+    {
+        setCursor(col, row);
+        print(b ? "ON " : "OFF");
+    }
 };

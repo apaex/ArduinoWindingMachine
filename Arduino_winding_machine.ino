@@ -45,6 +45,7 @@ https://cxem.net/arduino/arduino245.php
 //#include <Wire.h>
 #include <Stepper.h>
 #include <HardwareSerial.h>
+#include "Menu.h"
 #include "Winding.h"
 #include "LiquidCrystalCyr.h"
 
@@ -82,7 +83,6 @@ Winding params[TRANSFORMER_COUNT][WINDING_COUNT];
 byte currentTransformer = -1;
 byte currentWinding = -1;
 
-byte Menu_Index = 0;                                      // Переменная хранит номер текущей строки меню
 volatile int Encoder_Dir;                                 // Направление вращения энкодера
 volatile bool Push_Button;                                // Нажатие кнопки
 
@@ -100,18 +100,7 @@ Settings settings;
 
 enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, miSettings, Winding1, Winding2, Winding3, WindingBack, TurnsSet, StepSet, SpeedSet, LaySet, Direction, Start, Cancel, ShaftPos, ShaftStepMul, LayerPos, LayerStepMul, PosCancel, miSettingsStopPerLevel, miSettingsBack}; // Нумерованный список строк экрана
 
-struct MenuType {                       // Структура описывающая меню
-  byte Screen;                          // Индекс экрана
-  byte string_number;                   // Номер строки на экране
-  char type;
-  char format[22];                      // Формат строки
-  char format_Set_var[6];               // Формат значения при вводе переменной
-  void *param;                          // Указатель на адрес текущей переменной изменяемой на экране
-  int  var_Min;                         // Ограничение значения переменной снизу
-  int  var_Max;                         // Ограничение значения переменной сверху
-  byte param_coef;                      // Размерный коэффициент значения переменной
-  byte increment;
-};
+
 
 struct MenuType Menu[] = {              // Объявляем переменную Menu пользовательского типа MenuType и доступную только для чтения
   {0,  0,  ' ', "Setup 1            ", ""      ,NULL,        0,      0,      0,        0},    // "> AUTOWINDING   "
@@ -147,8 +136,10 @@ struct MenuType Menu[] = {              // Объявляем переменну
 //  {16, 0,  "AUTOWINDING DONE     ", ""      ,NULL,        0,      0,      0        },    // "AUTOWINDING DONE" 
 //  {16, 1,  "PRESS CONTINUE       ", ""      ,NULL,        0,      0,      0        },    // "PRESS CONTINUE  "
 }; 
-
 const int MENU_COUNT = sizeof(Menu)/sizeof(*Menu);
+
+MainMenu menu(Menu, MENU_COUNT);
+
 
 const char *LINE1_FORMAT = "T%03d/%03d L%02d/%02d";
 const char *LINE2_FORMAT = "Sp%03d St0.%04d";
@@ -160,9 +151,6 @@ const char *LINE3_FORMAT = "Winding %d  % 4dT";
 
 const char *STRING_1 = "AUTOWINDING DONE";
 const char *STRING_2 = "PRESS CONTINUE  ";
-
-#define CH_UP 0
-#define CH_DW 1
 
 LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7);                  // Назначаем пины для управления LCD 
 //LiquidCrystal_I2C lcd(0x27, NCOL, NROW);                // 0x3F I2C адрес для PCF8574AT
@@ -220,43 +208,30 @@ void setup()
 
   lcd.begin(NCOL, NROW);                                                        // Инициализация LCD Дисплей 20 символов 4 строки   
   
-  PrintScreen();
+  menu.InitRender(lcd, NCOL, NROW);
+  menu.Update();
   sei();
 } 
 
-// для текущего меню получаем индекс первого элемента
-byte GetFirstMenuIndex()
-{
-  return Menu_Index - Menu[Menu_Index].string_number;
-}
-
-// для текущего меню получаем индекс последнего элемента
-byte GetLastMenuIndex()
-{
-  byte scr = Menu[Menu_Index].Screen;
-  byte r = Menu_Index;
-  while ((r+1 < MENU_COUNT) && (Menu[r+1].Screen == scr)) ++r;
-  return r;
-}
 
 void loop() 
 {
   if (mode == mdMenu && Encoder_Dir != 0)                               // Проверяем изменение позиции энкодера   
   {                                                                               
-    Menu_Index = constrain(Menu_Index + Encoder_Dir, GetFirstMenuIndex(), GetLastMenuIndex()); // Если позиция энкодера изменена то меняем Menu_Index и выводим экран
+    menu.index = constrain(menu.index + Encoder_Dir, menu.GetFirstIndex(), menu.GetLastIndex()); // Если позиция энкодера изменена то меняем menu.index и выводим экран
     Encoder_Dir = 0; 
-    PrintScreen();   
+    menu.Update();   
   }
 
   if (mode == mdMenu && Push_Button)                                    // Проверяем нажатие кнопки
   {  
-    switch (Menu_Index)                                                 // Если было нажатие то выполняем действие соответствующее текущей позиции курсора
+    switch (menu.index)                                                 // Если было нажатие то выполняем действие соответствующее текущей позиции курсора
     {  
       case Autowinding1:  
       case Autowinding2: 
       case Autowinding3: 
-              currentTransformer = Menu_Index - Autowinding1; 
-              Menu_Index = Winding1;   
+              currentTransformer = menu.index - Autowinding1; 
+              menu.index = Winding1;   
 
               for (int i=0; i<WINDING_COUNT; ++i)
               {
@@ -268,47 +243,47 @@ void loop()
       case Winding1:     
       case Winding2: 
       case Winding3:     
-              currentWinding = Menu_Index - Winding1; 
-              Menu_Index = TurnsSet;                                                          
+              currentWinding = menu.index - Winding1; 
+              menu.index = TurnsSet;                                                          
               Menu[TurnsSet].param = (int*)&params[currentTransformer][currentWinding].turns;
               Menu[StepSet].param = (int*)&params[currentTransformer][currentWinding].step;
               Menu[SpeedSet].param = (int*)&params[currentTransformer][currentWinding].speed;
               Menu[LaySet].param = (int*)&params[currentTransformer][currentWinding].layers;              
               Menu[Direction].param = (int*)&params[currentTransformer][currentWinding].dir;
               break;
-      case WindingBack:  Menu_Index = Autowinding1 + currentTransformer;                                                                             break;
-      case PosControl:   Menu_Index = ShaftPos;                                                                                                      break;
-      case TurnsSet:     SetQuote(9,13); Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(9,13); break;
-      case StepSet:      SetQuote(7,14); Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(7,14); break;  
-      case SpeedSet:     SetQuote(9,13); Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(9,13); break;
-      case LaySet:       SetQuote(9,12); Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(9,12); break;   
+      case WindingBack:  menu.index = Autowinding1 + currentTransformer;                                                                             break;
+      case PosControl:   menu.index = ShaftPos;                                                                                                      break;
+      case TurnsSet:     menu.SetQuote(9,13); Push_Button=false; mode = mdVarEdit; while(!Push_Button){menu.LCD_Print_Var();} mode = mdMenu; menu.ClearQuote(9,13); break;
+      case StepSet:      menu.SetQuote(7,14); Push_Button=false; mode = mdVarEdit; while(!Push_Button){menu.LCD_Print_Var();} mode = mdMenu; menu.ClearQuote(7,14); break;  
+      case SpeedSet:     menu.SetQuote(9,13); Push_Button=false; mode = mdVarEdit; while(!Push_Button){menu.LCD_Print_Var();} mode = mdMenu; menu.ClearQuote(9,13); break;
+      case LaySet:       menu.SetQuote(9,12); Push_Button=false; mode = mdVarEdit; while(!Push_Button){menu.LCD_Print_Var();} mode = mdMenu; menu.ClearQuote(9,12); break;   
       case Direction:
               {
                 bool &Steppers_Dir = *(bool*)Menu[Direction].param;
                 Push_Button = false; 
                 Steppers_Dir = !Steppers_Dir;
-                PrintDirection(Steppers_Dir);
+                menu.PrintDirection(Steppers_Dir);
               }
               break;                          
-      case Start:        SaveSettings(); Push_Button = false; mode = mdRun; AutoWindingPrg(); mode = mdMenu; lcd.clear();   Menu_Index = Winding1 + currentWinding;      break; 
-      case Cancel:       SaveSettings(); Menu_Index = Winding1 + currentWinding;                                                                     break;
+      case Start:        SaveSettings(); Push_Button = false; mode = mdRun; AutoWindingPrg(); mode = mdMenu; lcd.clear();   menu.index = Winding1 + currentWinding;      break; 
+      case Cancel:       SaveSettings(); menu.index = Winding1 + currentWinding;                                                                     break;
 
       case ShaftPos:
       case LayerPos:     { 
-                          Stepper &stepper = (Menu_Index == LayerPos) ? layerStepper : shaftStepper;
-                          int Step_Mult = *(int*)Menu[Menu_Index+1].param;
+                          Stepper &stepper = (menu.index == LayerPos) ? layerStepper : shaftStepper;
+                          int Step_Mult = *(int*)Menu[menu.index+1].param;
 
-                          SetQuote(9,14); 
+                          menu.SetQuote(9,14); 
                           Push_Button=false; 
                           mode = mdVarEdit; 
                           digitalWrite(EN_STEP, LOW); 
                           stepper.setSpeed(30);
 
-                          int oldPos = *(int*)Menu[Menu_Index].param;
+                          int oldPos = *(int*)Menu[menu.index].param;
                           while(!Push_Button)
                           {
-                            LCD_Print_Var(); 
-                            int newPos = *(int*)Menu[Menu_Index].param;
+                            menu.LCD_Print_Var(); 
+                            int newPos = *(int*)Menu[menu.index].param;
                             if (newPos != oldPos)
                             {
                               stepper.step((oldPos - newPos) * STEPPERS_STEPS_MULT * Step_Mult);
@@ -317,7 +292,7 @@ void loop()
                           } 
                           mode = mdMenu; 
                           digitalWrite(EN_STEP, HIGH); 
-                          ClearQuote(9,14);
+                          menu.ClearQuote(9,14);
                         }
                           break;
 
@@ -329,7 +304,7 @@ void loop()
                             int values[] = {1,10,100};
                             // переделать на индексы
 
-                            int &value =  *(int*)Menu[Menu_Index].param;
+                            int &value =  *(int*)Menu[menu.index].param;
                             switch (value)
                             {
                             case 1: value = 10;  break;
@@ -337,144 +312,30 @@ void loop()
                             case 100: value = 1;  break;
                             }
 
-                            Menu[Menu_Index-1].param_coef = value;
+                            Menu[menu.index-1].param_coef = value;
                             LCD_Print_Var();
                         }
                         break;  */
-                            SetQuote(9,13);Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(9,13);  
-                            Menu[Menu_Index-1].increment = *(byte*)Menu[Menu_Index].param;
+                            menu.SetQuote(9,13);Push_Button=false; mode = mdVarEdit; while(!Push_Button){menu.LCD_Print_Var();} mode = mdMenu; menu.ClearQuote(9,13);  
+                            Menu[menu.index-1].increment = *(byte*)Menu[menu.index].param;
                             break;    
-      case PosCancel:    Menu_Index = PosControl; Shaft_Pos = 0; Lay_Pos = 0; break;
+      case PosCancel:    menu.index = PosControl; Shaft_Pos = 0; Lay_Pos = 0; break;
       
-      case miSettings:   Menu_Index = miSettingsStopPerLevel; break;
+      case miSettings:   menu.index = miSettingsStopPerLevel; break;
       case miSettingsStopPerLevel: 
               Push_Button = false; 
               settings.stopPerLayer = !settings.stopPerLayer;
-              PrintBool(settings.stopPerLayer);
+              menu.PrintBool(settings.stopPerLayer);
               break;
-      case miSettingsBack: Menu_Index = miSettings; break;
+      case miSettingsBack: menu.index = miSettings; break;
     }
     Push_Button = false; 
-    PrintScreen();
+    menu.Update();
   }
 }
 
-void PrintScreen() // Подпрограмма: Выводим экран на LCD
-{                          
-  byte scr = Menu[Menu_Index].Screen;
-  byte page = Menu[Menu_Index].string_number / NROW;
-  byte cur = Menu[Menu_Index].string_number % NROW;  
-  byte first = Menu_Index - Menu[Menu_Index].string_number + page * NROW;
-
-  static byte prev_screen = -1;
-  static byte prev_page = -1;
-
-  if (scr != prev_screen || page != prev_page) 
-  {
-    lcd.clear();
-
-    for (int i = 0; i < NROW; ++i)
-    {
-      MenuType &m = Menu[first + i];
-
-      if (m.Screen != scr)
-        break;     
-
-      lcd.setCursor(2, i); 
-      switch (m.type)
-      {
-      case 'i':
-        lcd.printf(m.format, *(int*)m.param * m.param_coef);
-        break;
-      case 'd':
-        lcd.print(m.format);
-        PrintDirection(12, i, *(bool*)m.param);
-        break;
-      case 'b':
-        lcd.print(m.format);
-        PrintBool(12, i, *(bool*)m.param);
-        break;
-      default:
-        lcd.print(m.format);
-      }
-    }
-
-    prev_screen = scr;
-    prev_page = page;
-  }
-  
-  for (int i = 0; i < NROW; ++i)
-      PrintSymbol(0, i, (i == cur) ? 0x3E : 0x20); 
-
-  if (page > 0)                                                   // Выводим стрелки ⯅⯆ на соответствующих строках меню
-    PrintSymbol(NCOL-1, 0, CH_UP);
-  if (Menu[first + NROW].Screen == scr)
-    PrintSymbol(NCOL-1, NROW-1, CH_DW); 
-
-}
 
 
-                                                                    
-void PrintSymbol(byte col, byte row, byte Symbol_Code) // Подпрограмма: Выводим символ на экран
-{ 
-  lcd.setCursor(col, row); 
-  lcd.write(byte(Symbol_Code));
-}
-
-void PrintDirection(byte col, byte row, bool b)
-{
-  char ch = b ? 0x3E : 0x3C;  
-  PrintSymbol(col+0, row, ch); 
-  PrintSymbol(col+1, row, ch); 
-  PrintSymbol(col+2, row, ch); 
-}
-
-void PrintBool(byte col, byte row, bool b)
-{
-  lcd.setCursor(col, row); 
-  lcd.print(b ? "ON " : "OFF"); 
-}
-
-void SetQuote   (int First_Cur, int Second_Cur)                  // Подпрограмма: Выводим выделение изменяемой переменной на LCD
-{
-  byte cur = Menu[Menu_Index].string_number % NROW;  
-  PrintSymbol(First_Cur,  cur,0x3E);   // Выводим символ >
-  PrintSymbol(Second_Cur, cur,0x3C);   // Выводим символ <
-  PrintSymbol(0,          cur,0x20);   // Стираем основной курсор
-}
-
-void ClearQuote (int First_Cur, int Second_Cur)                  // Подпрограмма: Стираем выделение изменяемой переменной на LCD
-{
-  byte cur = Menu[Menu_Index].string_number % NROW;  
-  PrintSymbol(First_Cur,  cur,0x20);   // Стираем символ >
-  PrintSymbol(Second_Cur, cur,0x20);   // Стираем символ <
-  PrintSymbol(0,          cur,0x3E);   // Выводим основной курсор     
-}
-
-void LCD_Print_Var()                                             // Подпрограмма: Выводим новое значение переменной на LCD
-{
-  static int Previous_Param;
-
-  if (*(int*)Menu[Menu_Index].param == Previous_Param)
-    return;
-  
-  byte cur = Menu[Menu_Index].string_number % NROW;
-
-  lcd.printfAt(10, cur, Menu[Menu_Index].format_Set_var, *(int*)Menu[Menu_Index].param * Menu[Menu_Index].param_coef);
-  Previous_Param = *(int*)Menu[Menu_Index].param;  
-}
-
-void PrintDirection(bool b)
-{
-  byte cur = Menu[Menu_Index].string_number % NROW;
-  PrintDirection(12, cur, b);
-}
-
-void PrintBool(bool b)
-{
-  byte cur = Menu[Menu_Index].string_number % NROW;
-  PrintBool(12, cur, b);
-}
 
 void PrintWindingScreen()  // Подпрограмма вывода экрана автонамотки
 {  
@@ -653,8 +514,8 @@ ISR(INT0_vect)   // Вектор прерывания от энкодера
                                         
   if (mode == mdVarEdit && Encoder_Dir != 0) 
   {                                                                                                                      // Если находимся в режиме изменения переменной 
-    *(int*)Menu[Menu_Index].param += Encoder_Dir * Menu[Menu_Index].increment; Encoder_Dir = 0;                                                             // то меняем ее сразу и
-    *(int*)Menu[Menu_Index].param = constrain(*(int*)Menu[Menu_Index].param, Menu[Menu_Index].var_Min, Menu[Menu_Index].var_Max);    // ограничиваем в диапазоне var_Min ÷ var_Max
+    *(int*)Menu[menu.index].param += Encoder_Dir * Menu[menu.index].increment; Encoder_Dir = 0;                                                             // то меняем ее сразу и
+    *(int*)Menu[menu.index].param = constrain(*(int*)Menu[menu.index].param, Menu[menu.index].var_Min, Menu[menu.index].var_Max);    // ограничиваем в диапазоне var_Min ÷ var_Max
   } 
 }
 
