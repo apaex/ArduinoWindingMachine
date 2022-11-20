@@ -43,6 +43,7 @@ https://cxem.net/arduino/arduino245.php
 //#include <LiquidCrystal.h>
 //#include <LiquidCrystal_I2C.h>
 //#include <Wire.h>
+#include <Stepper.h>
 #include <HardwareSerial.h>
 #include "Winding.h"
 #include "LiquidCrystalCyr.h"
@@ -67,6 +68,9 @@ https://cxem.net/arduino/arduino245.php
 #define NCOL 20
 #define NROW 4 
 
+#define STEPPERS_STEPS_MULT 64
+#define STEPPERS_STEPS_COUNT 200 * STEPPERS_STEPS_MULT
+
 
 enum Mode {mdMenu, mdVarEdit, mdRun} mode;                // режим установки значения; работает подпрограмма автонамотки 
 
@@ -85,8 +89,6 @@ volatile bool Push_Button;                                // Нажатие кн
 volatile bool DC;                                         // формирование сигнала STEP
 volatile bool Pause;                                      // Флаг паузы в режиме автонамотка   
 volatile int i;                                           // Счетчик кол-ва заходов в прерывание таймера
-byte Motor_Num;                                           // номер шагового двигателя
-int32_t ActualShaftPos, ActualLayerPos;                   // Текущие позиции двигателей вала и укладчика
 Winding current;                                          // Текущий виток и слой при автонамотке
 int Shaft_Pos, Lay_Pos, Step_Mult=1;                      // Переменные изменяемые на экране
 volatile uint16_t OCR1A_NOM;
@@ -166,6 +168,10 @@ const char *STRING_2 = "PRESS CONTINUE  ";
 LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7);                  // Назначаем пины для управления LCD 
 //LiquidCrystal_I2C lcd(0x27, NCOL, NROW);                // 0x3F I2C адрес для PCF8574AT
 
+
+Stepper shaftStepper(STEPPERS_STEPS_COUNT, DIR_Z, STEP_Z);
+Stepper layerStepper(STEPPERS_STEPS_COUNT, DIR_A, STEP_A);
+#define motorInterfaceType 1
 
 void setup() 
 {
@@ -288,14 +294,35 @@ void loop()
       case Start:        SaveSettings(); Push_Button = false; mode = mdRun; AutoWindingPrg(); mode = mdMenu; lcd.clear();   Menu_Index = Winding1 + currentWinding;      break; 
       case Cancel:       SaveSettings(); Menu_Index = Winding1 + currentWinding;                                                                     break;
 
-      case ShaftPos:     SetQuote(9,14); Push_Button=false; mode = mdVarEdit; digitalWrite(EN_STEP, LOW); Motor_Num = 1; OCR1A = 200000/Step_Mult;
-                        while(!Push_Button){LCD_Print_Var(); ActualShaftPos=MotorMove(*(int*)Menu[Menu_Index].param * MicroSteps, ActualShaftPos);} 
-                        mode = mdMenu; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                                break;   
-      case LayPos:       SetQuote(9,14); Push_Button=false; mode = mdVarEdit; digitalWrite(EN_STEP, LOW); Motor_Num = 2; OCR1A = 200000/Step_Mult;
-                        while(!Push_Button){LCD_Print_Var(); ActualLayerPos=MotorMove(*(int*)Menu[Menu_Index].param * MicroSteps, ActualLayerPos);} 
-                        mode = mdMenu; digitalWrite(EN_STEP, HIGH); ClearQuote(9,14);                                                                break;                                                               
+      case ShaftPos:
+      case LayPos:     { 
+                          Stepper &stepper = (Menu_Index == LayPos) ? layerStepper : shaftStepper;
+
+                          SetQuote(9,14); 
+                          Push_Button=false; 
+                          mode = mdVarEdit; 
+                          digitalWrite(EN_STEP, LOW); 
+                          stepper.setSpeed(30);
+
+                          int oldPos = *(int*)Menu[Menu_Index].param;
+                          while(!Push_Button)
+                          {
+                            LCD_Print_Var(); 
+                            int newPos = *(int*)Menu[Menu_Index].param;
+                            if (newPos != oldPos)
+                            {
+                              stepper.step((oldPos - newPos) * STEPPERS_STEPS_MULT * Step_Mult);
+                              oldPos = newPos;
+                            }
+                          } 
+                          mode = mdMenu; 
+                          digitalWrite(EN_STEP, HIGH); 
+                          ClearQuote(9,14);
+                        }
+                          break;
+                                                                                      
       case StepMul:      SetQuote(9,13);Push_Button=false; mode = mdVarEdit; while(!Push_Button){LCD_Print_Var();} mode = mdMenu; ClearQuote(9,13);  break;    
-      case PosCancel:    Menu_Index = PosControl; Shaft_Pos = 0; Lay_Pos = 0; Step_Mult = 1; ActualShaftPos = 0; ActualLayerPos = 0;               break;
+      case PosCancel:    Menu_Index = PosControl; Shaft_Pos = 0; Lay_Pos = 0; break;
       
       case miSettings:   Menu_Index = miSettingsStopPerLevel; break;
       case miSettingsStopPerLevel: 
@@ -583,21 +610,6 @@ void WaitButton()
   Push_Button = false;
 }
 
-int MotorMove(int32_t Move_Var, int32_t Actual_Rot)                     // Подпрограмма: Движение шагового двигателя до заданной координаты
-{ 
-  long Rotation;        
-  Rotation = Move_Var * Step_Mult - Actual_Rot;
-  switch(Motor_Num) {
-    case 1: if      (Rotation > 0) {PORTD |= 0b10000000; TCNT1=0; TIMSK1=2; while(i<2){} TIMSK1=0; TCNT1=0; Actual_Rot++; i=0; DC=false;} 
-            else if (Rotation < 0) {PORTD &= 0b01111111; TCNT1=0; TIMSK1=2; while(i<2){} TIMSK1=0; TCNT1=0; Actual_Rot--; i=0; DC=false;} 
-            else     TIMSK1 = 0; i = 0; DC = false; break; 
-    case 2: if      (Rotation > 0) {PORTB |= 0b00100000; TCNT1=0; TIMSK1=2; while(i<2){} TIMSK1=0; TCNT1=0; Actual_Rot++; i=0; DC=false;} 
-            else if (Rotation < 0) {PORTB &= 0b11011111; TCNT1=0; TIMSK1=2; while(i<2){} TIMSK1=0; TCNT1=0; Actual_Rot--; i=0; DC=false;}
-            else     TIMSK1 = 0; i = 0; DC = false; break;}                    
-  return Actual_Rot;
-}
-
-
 
 ISR(INT0_vect)   // Вектор прерывания от энкодера
 {
@@ -651,7 +663,6 @@ ISR(TIMER1_COMPA_vect)                       // Вектор прерывани�
 
   if (mode == mdRun) 
   {
-    Motor_Num = 0;
     if (NSteps < 200 * MicroSteps) 
     {
       PORTD |= 0b00010000;
@@ -684,12 +695,7 @@ ISR(TIMER1_COMPA_vect)                       // Вектор прерывани�
 
   i++;                                        // Счетчик кол-ва заходов в прерывание
   DC = !DC;                                   // Первое прерывание устанавливает STEP следующее - сбрасывает
-    if      (Motor_Num == 1) {
-      if (DC == true) {PORTD |= 0b00010000;}  // STEP_Z
-      else            {PORTD &= 0b11101111;}}
-    else if (Motor_Num == 2) {
-      if (DC == true) {PORTB |= 0b00010000;}  // STEP_A
-      else            {PORTB &= 0b11101111;}}
+
 }
 
 
