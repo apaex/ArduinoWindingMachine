@@ -43,7 +43,7 @@ https://cxem.net/arduino/arduino245.php
 //#include <LiquidCrystal.h>
 //#include <LiquidCrystal_I2C.h>
 //#include <Wire.h>
-#include <Stepper.h>
+#include <GyverStepper2.h>
 #include <HardwareSerial.h>
 #include "Menu.h"
 #include "Winding.h"
@@ -69,9 +69,8 @@ https://cxem.net/arduino/arduino245.php
 #define NCOL 20
 #define NROW 4 
 
-#define STEPPERS_STEPS_MULT 64
-#define STEPPERS_STEPS_COUNT 200 * STEPPERS_STEPS_MULT
-const uint8_t MicroSteps = 16;
+#define STEPPERS_MICROSTEPS 16
+#define STEPPERS_STEPS_COUNT 200 * STEPPERS_MICROSTEPS
 
 enum Mode {mdMenu, mdVarEdit, mdRun} mode;                // режим установки значения; работает подпрограмма автонамотки 
 
@@ -103,6 +102,7 @@ enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, miSettin
 
 
 struct MenuType Menu[] = {              // Объявляем переменную Menu пользовательского типа MenuType и доступную только для чтения
+
   {0,  0,  ' ', "Setup 1            ", ""      ,NULL,        0,      0,      0,        0},    // "> AUTOWINDING   "
   {0,  1,  ' ', "Setup 2            ", ""      ,NULL,        0,      0,      0,        0},    // "> AUTOWINDING   "
   {0,  2,  ' ', "Setup 3            ", ""      ,NULL,        0,      0,      0,        0},    // "> AUTOWINDING   "
@@ -156,9 +156,9 @@ LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7);                  // Назначаем 
 //LiquidCrystal_I2C lcd(0x27, NCOL, NROW);                // 0x3F I2C адрес для PCF8574AT
 
 
-Stepper shaftStepper(STEPPERS_STEPS_COUNT, DIR_Z, STEP_Z);
-Stepper layerStepper(STEPPERS_STEPS_COUNT, DIR_A, STEP_A);
-#define motorInterfaceType 1
+GStepper2<STEPPER2WIRE> shaftStepper(STEPPERS_STEPS_COUNT, STEP_Z, DIR_Z, EN_STEP);
+GStepper2<STEPPER2WIRE> layerStepper(STEPPERS_STEPS_COUNT, STEP_A, DIR_A, EN_STEP);
+
 
 void setup() 
 {
@@ -178,10 +178,11 @@ void setup()
   pinMode(BUZZ_OUT,OUTPUT);
   pinMode(RS,      OUTPUT);
   pinMode(EN,      OUTPUT);
-  pinMode(D4,      OUTPUT);
-  pinMode(D5,      OUTPUT);
-  pinMode(D6,      OUTPUT);
-  pinMode(D7,      OUTPUT);
+  //pinMode(D4,      OUTPUT);
+  //pinMode(D5,      OUTPUT);
+  //pinMode(D6,      OUTPUT);
+  //pinMode(D7,      OUTPUT);
+
 
   digitalWrite(EN_STEP, HIGH); // Запрет управления двигателями  
 
@@ -189,7 +190,7 @@ void setup()
   //digitalWrite(ENC_SW, HIGH);   
   //digitalWrite(ENC_DT, HIGH);    
   digitalWrite(STOP_BT, HIGH);   
-  
+
  // lcd.init(); 
   
   byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // Создаем свой символ ⯅ для LCD
@@ -270,24 +271,31 @@ void loop()
 
       case ShaftPos:
       case LayerPos:     { 
-                          Stepper &stepper = (menu.index == LayerPos) ? layerStepper : shaftStepper;
+                          GStepper2<STEPPER2WIRE> &stepper = (menu.index == LayerPos) ? layerStepper : shaftStepper;
                           
                           menu.SetQuote(9,14); 
                           Push_Button=false; 
                           mode = mdVarEdit; 
                           digitalWrite(EN_STEP, LOW); 
-                          stepper.setSpeed(30);
 
+                          stepper.setAcceleration(STEPPERS_STEPS_COUNT/2);
+                          stepper.setMaxSpeed(STEPPERS_STEPS_COUNT/2);
+    
                           int oldPos = *(int*)Menu[menu.index].param;
+                          stepper.setTarget(oldPos * STEPPERS_MICROSTEPS * 2);
+                      
                           while(!Push_Button)
                           {
-                            menu.LCD_Print_Var(); 
+                            stepper.tick();
+
                             int newPos = *(int*)Menu[menu.index].param;
-                            if (newPos != oldPos)
-                            {
-                              stepper.step((oldPos - newPos) * STEPPERS_STEPS_MULT);
+                            if (newPos != oldPos && stepper.ready())
+                            {                              
+                              stepper.setTarget(newPos * STEPPERS_MICROSTEPS * 2);
                               oldPos = newPos;
-                            }                            
+                            }    
+
+                            menu.LCD_Print_Var(); 
                           } 
                           mode = mdMenu; 
                           digitalWrite(EN_STEP, HIGH); 
@@ -409,8 +417,8 @@ void __AutoWindingPrg()                                             // Подп�
  
   Push_Button = false; 
  
-  shaftStepper.setSpeed(current.speed);
-  layerStepper.setSpeed(current.speed);
+  //shaftStepper.setSpeed(current.speed);
+  //layerStepper.setSpeed(current.speed);
 
   while (current.layers < w.layers)                                 // Пока текущее кол-во слоев меньше заданного проверяем сколько сейчас витков
   { 
@@ -423,8 +431,8 @@ void __AutoWindingPrg()                                             // Подп�
     {     
        for (int i=0; i<200; ++i) 
        {
-          shaftStepper.step(1*STEPPERS_STEPS_MULT);
-          layerStepper.step( (current.dir ? 1 : -1) *1*STEPPERS_STEPS_MULT /* current.step / ShaftStep / ShaftStep*/);       
+          //shaftStepper.step(1*STEPPERS_STEPS_MULT);
+          //layerStepper.step( (current.dir ? 1 : -1) *1*STEPPERS_STEPS_MULT /* current.step / ShaftStep / ShaftStep*/);       
        }
 
       PrintWindingTurns();
@@ -478,7 +486,7 @@ void AutoWindingPrg()                                             // Подпр�
     else PORTB |= 0b00100000;
 
     OCR1A = 65535;
-    OCR1A_NOM = 4800000 / (current.speed*MicroSteps); 
+    OCR1A_NOM = 4800000 / (current.speed*STEPPERS_MICROSTEPS); 
 
     while (current.turns < w.turns)                               // Пока текущее кол-во витков меньше заданного продолжаем мотать
     {     
@@ -493,7 +501,7 @@ void AutoWindingPrg()                                             // Подпр�
         
         PrintWindingSpeed();
 
-        OCR1A_NOM = 4800000 / (current.speed*MicroSteps); 
+        OCR1A_NOM = 4800000 / (current.speed*STEPPERS_MICROSTEPS); 
           
         if (Pause)
         {
@@ -518,7 +526,7 @@ void AutoWindingPrg()                                             // Подпр�
       {
         PrintWindingSpeed();
 
-        OCR1A_NOM = 4800000/(current.speed*MicroSteps);
+        OCR1A_NOM = 4800000/(current.speed*STEPPERS_MICROSTEPS);
       }
     }  
 
@@ -604,7 +612,7 @@ ISR(TIMER1_COMPA_vect)                       // Вектор прерывани�
 
   if (mode == mdRun) 
   {
-    if (NSteps < 200 * MicroSteps) 
+    if (NSteps < 200 * STEPPERS_MICROSTEPS) 
     {
       PORTD |= 0b00010000;
       if (NTurn>>4 > 200 - current.step) PORTB |= 0b00010000;
@@ -615,12 +623,12 @@ ISR(TIMER1_COMPA_vect)                       // Вектор прерывани�
       NTurn++;
       if (NTurn>>4 > 200) {NTurn=0; current.turns++;}
 
-      INCR = current.speed * 5 / (MicroSteps);
+      INCR = current.speed * 5 / (STEPPERS_MICROSTEPS);
       Temp = NSteps * INCR;
       OCR1A_TEMP = 300000 * 1000 / Temp;
       OCR1A = min (65535, OCR1A_TEMP);
     } 
-    if (NSteps >= 200 * MicroSteps) 
+    if (NSteps >= 200 * STEPPERS_MICROSTEPS) 
     {
       OCR1A = OCR1A_NOM;
       PORTD |= 0b00010000;
