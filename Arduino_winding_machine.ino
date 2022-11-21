@@ -271,8 +271,7 @@ void loop()
       case ShaftPos:
       case LayerPos:     { 
                           Stepper &stepper = (menu.index == LayerPos) ? layerStepper : shaftStepper;
-                          int Step_Mult = *(int*)Menu[menu.index+1].param;
-
+                          
                           menu.SetQuote(9,14); 
                           Push_Button=false; 
                           mode = mdVarEdit; 
@@ -286,7 +285,7 @@ void loop()
                             int newPos = *(int*)Menu[menu.index].param;
                             if (newPos != oldPos)
                             {
-                              stepper.step((oldPos - newPos) * STEPPERS_STEPS_MULT * Step_Mult);
+                              stepper.step((oldPos - newPos) * STEPPERS_STEPS_MULT);
                               oldPos = newPos;
                             }                            
                           } 
@@ -297,7 +296,7 @@ void loop()
                           break;
 
       case ShaftStepMul:                                                                         
-      case LayerStepMul:  /*    
+      case LayerStepMul:    
                         {
                             Push_Button=false;
 
@@ -312,13 +311,15 @@ void loop()
                             case 100: value = 1;  break;
                             }
 
-                            Menu[menu.index-1].param_coef = value;
-                            LCD_Print_Var();
+                            Menu[menu.index-1].increment = value;
+                            menu.LCD_Print_Var();
                         }
-                        break;  */
+                        break;  
+                        /*
                             menu.SetQuote(9,13);Push_Button=false; mode = mdVarEdit; while(!Push_Button){menu.LCD_Print_Var();} mode = mdMenu; menu.ClearQuote(9,13);  
                             Menu[menu.index-1].increment = *(byte*)Menu[menu.index].param;
                             break;    
+                            */
       case PosCancel:    menu.index = PosControl; Shaft_Pos = 0; Lay_Pos = 0; break;
       
       case miSettings:   menu.index = miSettingsStopPerLevel; break;
@@ -392,6 +393,62 @@ void SaveSettings()
   //settings.Save(p);
 }
 
+void __AutoWindingPrg()                                             // Подпрограмма автоматической намотки
+{    
+  const Winding &w = params[currentTransformer][currentWinding];
+
+  Serial.println("Start");
+
+  current.turns = 0;
+  current.layers = 0;
+  current.speed = w.speed;
+  current.dir = w.dir;
+  current.step = w.step;
+   
+  digitalWrite(EN_STEP, LOW);   // Разрешение управления двигателями
+ 
+  Push_Button = false; 
+ 
+  shaftStepper.setSpeed(current.speed);
+  layerStepper.setSpeed(current.speed);
+
+  while (current.layers < w.layers)                                 // Пока текущее кол-во слоев меньше заданного проверяем сколько сейчас витков
+  { 
+    current.turns = 0;   
+    PrintWindingScreen();
+
+
+
+    while (current.turns < w.turns)                               // Пока текущее кол-во витков меньше заданного продолжаем мотать
+    {     
+       for (int i=0; i<200; ++i) 
+       {
+          shaftStepper.step(1*STEPPERS_STEPS_MULT);
+          layerStepper.step( (current.dir ? 1 : -1) *1*STEPPERS_STEPS_MULT /* current.step / ShaftStep / ShaftStep*/);       
+       }
+
+      PrintWindingTurns();
+      current.turns++;
+    }  
+
+        
+    current.layers++;    
+    if (current.layers == w.layers) break; 
+    
+    if (settings.stopPerLayer) {
+      lcd.printfAt(0, 1, STRING_2);           // "PRESS CONTINUE  "    
+      WaitButton();
+    }
+
+    current.dir = !current.dir;
+    
+  }
+     
+  digitalWrite(EN_STEP, HIGH);
+
+  lcd.printfAt(0, 1, STRING_1);             // "AUTOWINDING DONE"  
+  WaitButton();
+}
 
 void AutoWindingPrg()                                             // Подпрограмма автоматической намотки
 {    
