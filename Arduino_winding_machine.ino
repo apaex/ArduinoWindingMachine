@@ -42,7 +42,6 @@ https://cxem.net/arduino/arduino245.php
 #include <avr/interrupt.h>
 //#include <LiquidCrystal.h>
 //#include <LiquidCrystal_I2C.h>
-//#include <Wire.h>
 #include <GyverStepper2.h>
 #include <HardwareSerial.h>
 #include "Menu.h"
@@ -170,18 +169,8 @@ void setup()
   pinMode(ENC_SW,  INPUT);
   pinMode(ENC_DT,  INPUT);
   pinMode(STOP_BT, INPUT);
-  pinMode(STEP_Z,  OUTPUT);
-  pinMode(DIR_Z,   OUTPUT);
   pinMode(EN_STEP, OUTPUT);
-  pinMode(STEP_A,  OUTPUT);
-  pinMode(DIR_A,   OUTPUT); 
   pinMode(BUZZ_OUT,OUTPUT);
-  pinMode(RS,      OUTPUT);
-  pinMode(EN,      OUTPUT);
-  //pinMode(D4,      OUTPUT);
-  //pinMode(D5,      OUTPUT);
-  //pinMode(D6,      OUTPUT);
-  //pinMode(D7,      OUTPUT);
 
 
   digitalWrite(EN_STEP, HIGH); // Запрет управления двигателями  
@@ -483,7 +472,7 @@ void AutoWindingPrg()                                             // Подпр�
     current.turns = 0;   
     PrintWindingScreen();
 
-    if (w.dir) PORTB &= 0b11011111; 
+    if (current.dir) PORTB &= 0b11011111; 
     else PORTB |= 0b00100000;
 
     OCR1A = 65535;
