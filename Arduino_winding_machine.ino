@@ -250,7 +250,6 @@ void loop()
       case Direction:
               {
                 bool &Steppers_Dir = *(bool*)Menu[Direction].param;
-                Push_Button = false; 
                 Steppers_Dir = !Steppers_Dir;
                 menu.PrintDirection(Steppers_Dir);
               }
@@ -296,8 +295,6 @@ void loop()
       case ShaftStepMul:                                                                         
       case LayerStepMul:    
                         {
-                            Push_Button=false;
-
                             int values[] = {1,10,100};
                             // переделать на индексы
 
@@ -322,7 +319,6 @@ void loop()
       
       case miSettings:   menu.index = miSettingsStopPerLevel; break;
       case miSettingsStopPerLevel: 
-              Push_Button = false; 
               settings.stopPerLayer = !settings.stopPerLayer;
               menu.PrintBool(settings.stopPerLayer);
               break;
