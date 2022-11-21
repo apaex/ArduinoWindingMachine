@@ -14,8 +14,8 @@ struct Winding
 {
   uint16_t turns=0;
   uint16_t step=0;
-  uint16_t speed=1;
-  uint16_t layers=1;
+  uint16_t speed=30;
+  uint16_t layers=0;
   bool dir=1;
   static const byte version = 3;
 

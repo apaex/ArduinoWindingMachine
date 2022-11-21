@@ -270,7 +270,7 @@ void loop()
       case Cancel:       SaveSettings(); menu.index = Winding1 + currentWinding;                                                                     break;
 
       case ShaftPos:
-      case LayerPos:     { 
+      case LayerPos:    { 
                           GStepper2<STEPPER2WIRE> &stepper = (menu.index == LayerPos) ? layerStepper : shaftStepper;
                           
                           menu.SetQuote(9,14); 
@@ -281,17 +281,18 @@ void loop()
                           stepper.setAcceleration(STEPPERS_STEPS_COUNT/2);
                           stepper.setMaxSpeed(STEPPERS_STEPS_COUNT/2);
     
-                          int oldPos = *(int*)Menu[menu.index].param;
-                          stepper.setTarget(oldPos * STEPPERS_MICROSTEPS * 2);
+                          int oldPos = -*(int*)Menu[menu.index].param * STEPPERS_MICROSTEPS * 2;
+                          stepper.setCurrent(oldPos);
+                          stepper.setTarget(oldPos);
                       
-                          while(!Push_Button)
+                          while(!Push_Button || stepper.getStatus() != 0)
                           {
                             stepper.tick();
 
-                            int newPos = *(int*)Menu[menu.index].param;
-                            if (newPos != oldPos && stepper.ready())
+                            int newPos = -*(int*)Menu[menu.index].param * STEPPERS_MICROSTEPS * 2;
+                            if (newPos != oldPos)
                             {                              
-                              stepper.setTarget(newPos * STEPPERS_MICROSTEPS * 2);
+                              stepper.setTarget(newPos);
                               oldPos = newPos;
                             }    
 
@@ -301,7 +302,7 @@ void loop()
                           digitalWrite(EN_STEP, HIGH); 
                           menu.ClearQuote(9,14);
                         }
-                          break;
+                        break;
 
       case ShaftStepMul:                                                                         
       case LayerStepMul:    
@@ -565,10 +566,10 @@ ISR(INT0_vect)   // Вектор прерывания от энкодера
 
   byte Enc_Temp = PIND & 0b00100100;                                     // Маскируем все пины порта D кроме PD2 и PD5      
 
-  if (Enc_Temp==0b00100000 && Enc_Temp_prev==0b00000100) {Encoder_Dir = -1;} // -1 - шаг против часовой
-  else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00100100) {Encoder_Dir =  1;} // +1 - шаг по часовой
-  else if (Enc_Temp==0b00100000 && Enc_Temp_prev==0b00100100) {Encoder_Dir = -1;}
-  else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00000100) {Encoder_Dir =  1;}
+  if (Enc_Temp==0b00100000 && Enc_Temp_prev==0b00000100) {Encoder_Dir += -1;} // -1 - шаг против часовой
+  else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00100100) {Encoder_Dir +=  1;} // +1 - шаг по часовой
+  else if (Enc_Temp==0b00100000 && Enc_Temp_prev==0b00100100) {Encoder_Dir += -1;}
+  else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00000100) {Encoder_Dir +=  1;}
 
   Enc_Temp_prev = Enc_Temp;
 
