@@ -88,11 +88,12 @@ volatile bool Pause;                                      // Флаг паузы
 Winding current;                                          // Текущий виток и слой при автонамотке
 int Shaft_Pos = 0, Lay_Pos = 0;                           // Переменные изменяемые на экране
 
-volatile uint16_t OCR1A_NOM;
-uint8_t run_btn; 
 volatile int Set_Speed_INT;
 
 
+volatile uint32_t NSteps;
+volatile int NTurn;
+volatile int i_;                                           // Счетчик кол-ва заходов в прерывание таймера
 
 Settings settings;
 
@@ -446,6 +447,10 @@ void __AutoWindingPrg()                                             // Подп�
 
 void AutoWindingPrg()                                             // Подпрограмма автоматической намотки
 {    
+  NSteps = 0;
+  NTurn = 0;
+  i_ = 0;                                           
+
   const Winding &w = params[currentTransformer][currentWinding];
 
   Serial.println("Start");
@@ -472,28 +477,22 @@ void AutoWindingPrg()                                             // Подпр�
     else PORTB |= 0b00100000;
 
     OCR1A = 65535;
-    OCR1A_NOM = 4800000 / (current.speed*STEPPERS_MICROSTEPS); 
 
     while (current.turns < w.turns)                               // Пока текущее кол-во витков меньше заданного продолжаем мотать
     {     
-      run_btn = PINB & 0b00001000;
-      while (run_btn)
+      while (PINB & 0b00001000)
       {
         TIMSK1=0; 
-        run_btn = PINB & 0b00001000;   
+
         EIMSK = 0b00000010;
         current.speed = Set_Speed_INT;      
         EIMSK = 0b00000011;
-        
         PrintWindingSpeed();
 
-        OCR1A_NOM = 4800000 / (current.speed*STEPPERS_MICROSTEPS); 
-          
-        if (Pause)
+        if (Push_Button)
         {
-          static boolean EN_D;
+          static bool EN_D;
           Push_Button = false;
-          Pause = false;
           digitalWrite(EN_STEP, EN_D ? HIGH: LOW);
           EN_D = !EN_D;
         }
@@ -507,13 +506,7 @@ void AutoWindingPrg()                                             // Подпр�
       EIMSK = 0b00000010;
       current.speed = Set_Speed_INT;
       EIMSK = 0b00000011;
-      
-      if (current.turns > 1)
-      {
-        PrintWindingSpeed();
-
-        OCR1A_NOM = 4800000/(current.speed*STEPPERS_MICROSTEPS);
-      }
+      PrintWindingSpeed();      
     }  
 
     TIMSK1=0;
@@ -579,9 +572,6 @@ ISR(INT1_vect)                               // Вектор прерывани�
   timer = millis();
 
   Push_Button = true;
-
-  if (mode == mdRun) 
-    Pause = true;  // Если нажать кнопку энкодера во время автонамотки то выставляем флаг паузы 
 }
 
 
@@ -589,47 +579,33 @@ ISR(INT1_vect)                               // Вектор прерывани�
 
 ISR(TIMER1_COMPA_vect)                       // Вектор прерывания от таймера/счетчика 1 
 {
-  static uint32_t OCR1A_TEMP;
-  static uint32_t NSteps;
-  static int NTurn;
-  static uint32_t INCR;
-  static uint32_t Temp;
-  static int i;                                           // Счетчик кол-ва заходов в прерывание таймера
-
   if (mode == mdRun) 
   {
     if (NSteps < 200 * STEPPERS_MICROSTEPS) 
     {
-      PORTD |= 0b00010000;
-      if (NTurn>>4 > 200 - current.step) PORTB |= 0b00010000;
-      while (i<6) {i++;} 
-      i=0;
-      PORTD &= 0b11101111; 
-      if (NTurn>>4 > 200 - current.step) PORTB &= 0b11101111;
-      NTurn++;
-      if (NTurn>>4 > 200) {NTurn=0; current.turns++;}
-
-      INCR = current.speed * 5 / (STEPPERS_MICROSTEPS);
-      Temp = NSteps * INCR;
-      OCR1A_TEMP = 300000 * 1000 / Temp;
-      OCR1A = min (65535, OCR1A_TEMP);
+      uint32_t INCR = current.speed * 5 / (STEPPERS_MICROSTEPS);
+      OCR1A = min (65535, 300000 * 1000 / (NSteps * INCR));
     } 
-    if (NSteps >= 200 * STEPPERS_MICROSTEPS) 
+    else
     {
-      OCR1A = OCR1A_NOM;
-      PORTD |= 0b00010000;
-      if (NTurn>>4 > 200 - current.step) PORTB |= 0b00010000;
-      while (i<6) {i++;} 
-      i=0;
-      PORTD &= 0b11101111; 
-      if (NTurn>>4 > 200 - current.step) PORTB &= 0b11101111;
-      NTurn++;
-      if (NTurn>>4 > 200) {NTurn=0; current.turns++;}
+      OCR1A = 4800000 / (current.speed*STEPPERS_MICROSTEPS);  // OCR1A_NOM;
     }
+
+    PORTD |= 0b00010000;
+    if (NTurn>>4 > 200 - current.step) PORTB |= 0b00010000;    
+    while (i_<6) {i_++;} 
+    i_=0;    
+    PORTD &= 0b11101111; 
+    if (NTurn>>4 > 200 - current.step) PORTB &= 0b11101111;
+
+    NTurn++;
+
+    if (NTurn>>4 > 200) {NTurn=0; current.turns++;}
+
     NSteps++;
   }
 
-  i++;                                        // Счетчик кол-ва заходов в прерывание
+  i_++;                                        // Счетчик кол-ва заходов в прерывание
 }
 
 
