@@ -99,43 +99,40 @@ Settings settings;
 
 enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, miSettings, Winding1, Winding2, Winding3, WindingBack, TurnsSet, StepSet, SpeedSet, LaySet, Direction, Start, Cancel, ShaftPos, ShaftStepMul, LayerPos, LayerStepMul, PosCancel, miSettingsStopPerLevel, miSettingsBack}; // Нумерованный список строк экрана
 
+const char * boolSet[] = {"OFF", "ON "};
+const char * dirSet[] = {">>>", "<<<"};
 
+MenuItem* Menu[] = {              // Объявляем переменную Menu пользовательского типа MenuType и доступную только для чтения
 
-struct MenuType Menu[] = {              // Объявляем переменную Menu пользовательского типа MenuType и доступную только для чтения
+  new MenuItem(0,  0,  "Setup 1"),
+  new MenuItem(0,  1,  "Setup 2"),
+  new MenuItem(0,  2,  "Setup 3"),
+  new MenuItem(0,  3,  "Pos control"),
+  new MenuItem(0,  4,  "Settings"),
 
-  {0,  0,  ' ', "Setup 1            ", ""      ,NULL,        0,      0,      0,        0},    // "> AUTOWINDING   "
-  {0,  1,  ' ', "Setup 2            ", ""      ,NULL,        0,      0,      0,        0},    // "> AUTOWINDING   "
-  {0,  2,  ' ', "Setup 3            ", ""      ,NULL,        0,      0,      0,        0},    // "> AUTOWINDING   "
-  {0,  3,  ' ', "Pos control        ", ""      ,NULL,        0,      0,      0,        0},    // "> POS CONTROL   "
-  {0,  4,  ' ', "Settings           ", ""      ,NULL,        0,      0,      0,        0},    // "> POS CONTROL   "
-
-  {1,  0,  'i', "Winding 1  % 3dT   ", ""      ,NULL,        0,      0,      1,        0},    // "> AUTOWINDING   "
-  {1,  1,  'i', "Winding 2  % 3dT   ", ""      ,NULL,        0,      0,      1,        0},    // "> AUTOWINDING   "
-  {1,  2,  'i', "Winding 3  % 3dT   ", ""      ,NULL,        0,      0,      1,        0},    // "> AUTOWINDING   "
-  {1,  3,  ' ', "Back               ", ""      ,NULL,        0,      0,      0,        0},    // "> CANCEL        "  
+  new MenuItem(1,  0,  "Winding 1  % 3dT"),
+  new MenuItem(1,  1,  "Winding 2  % 3dT"),
+  new MenuItem(1,  2,  "Winding 3  % 3dT"),
+  new MenuItem(1,  3,  "Back"),
   
-  {2,  0,  'i', "Turns:  %03d       ", "%03d"  ,NULL,        1,      999,    1,        1},    // "> TURNS: >000<  "
-  {2,  1,  'i', "Step: 0.%04d       ", "%04d"  ,NULL,        1,      200,    ShaftStep,1},    // "> STEP:>0.0000<↓"  
-  {2,  2,  'i', "Speed:  %03d       ", "%03d"  ,NULL,        1,      300,    1,        1},    // "> SPEED: >000< ↑"
-  {2,  3,  'i', "Layers: %02d       ", "%02d"  ,NULL,        1,      99,     1,        1},    // "> LAYERS:>00<  ↓" 
-  {2,  4,  'd', "Direction >$>      ", ""      ,NULL,        0,      1,      1,        0},    // "> DIRECTION >>>↑"
-  {2,  5,  ' ', "Start              ", ""      ,NULL,        0,      0,      0,        0},    // "> START        ↓" 
-  {2,  6,  ' ', "Back               ", ""      ,NULL,        0,      0,      0,        0},    // "> CANCEL       ↑" 
+  new UIntMenuItem(2,  0,  "Turns:  %03d", "%03d"  ,NULL,        1,      999),
+  new UIntMenuItem(2,  1,  "Step: 0.%04d", "%04d"  ,NULL,        1,      199,    ShaftStep),
+  new ByteMenuItem(2,  2,  "Speed:  %03d", "%03d"  ,NULL,        1,      255),
+  new UIntMenuItem(2,  3,  "Layers: %02d", "%02d"  ,NULL,        1,      99),
+  new BoolMenuItem(2,  4,  "Direction >$>", NULL, dirSet),
+  new MenuItem(2,  5,  "Start"),
+  new MenuItem(2,  6,  "Back"),
 
-  {10, 0,  'i', "SH pos: %+04d      ", "%+04d" ,&Shaft_Pos,  -999,   999,    1,        1},    // "> SH POS:>±000< "
-  {10, 1,  'i', "StpMul: %03d       ", "%03d"  ,&settings.shaftStep,  1,      100,    1,        1},    // "> STPMUL:>000< ↑"
-  {10, 2,  'i', "LA pos: %+04d      ", "%+04d" ,&Lay_Pos,    -999,   999,    1,        1},    // "> LA POS:>±000<↓" 
-  {10, 3,  'i', "StpMul: %03d       ", "%03d"  ,&settings.layerStep,  1,      100,    1,        1},    // "> STPMUL:>000< ↑"
-  {10, 4,  ' ', "Back               ", ""      ,NULL,        0,      0,      0,        0},    // "> CANCEL        "  
+  new IntMenuItem(10, 0,  "SH pos: %+04d", "%+04d" ,&Shaft_Pos,  -999,   999),
+  new IntMenuItem(10, 1,  "StpMul: %03d", "%03d", &settings.shaftStep, 0,0),
+  new IntMenuItem(10, 2,  "LA pos: %+04d", "%+04d" ,&Lay_Pos,    -999,   999),
+  new IntMenuItem(10, 3,  "StpMul: %03d", "%03d", &settings.layerStep, 0,0),
+  new MenuItem(10, 4,  "Back"),
 
-  {11, 0,  'b', "LayerStop          ", "%1d"  ,&settings.stopPerLayer,  0,   0,    1,        0},    // "> SH POS:>±000< "
-  {11, 1,  ' ', "Back               ", ""      ,NULL,        0,      0,      0,        0},    // "> CANCEL        "  
-
-//  {14, 0,  "T%03d/%03d L%02d/%02d", ""      ,NULL,        0,      0,      0        },    // "T000/000 L00/00 "
-//  {14, 1,  "SP%03d ST0.%04d      ", ""      ,NULL,        0,      0,      0        },    // "SP000 ST0.0000  " 
-//  {16, 0,  "AUTOWINDING DONE     ", ""      ,NULL,        0,      0,      0        },    // "AUTOWINDING DONE" 
-//  {16, 1,  "PRESS CONTINUE       ", ""      ,NULL,        0,      0,      0        },    // "PRESS CONTINUE  "
+  new BoolMenuItem(11, 0,  "LayerStop", &settings.stopPerLayer, boolSet),
+  new MenuItem(11, 1,  "Back"),
 }; 
+
 const byte MENU_COUNT = sizeof(Menu)/sizeof(*Menu);
 
 MainMenu menu(Menu, MENU_COUNT);
@@ -229,9 +226,9 @@ void loop()
 
               for (int i=0; i<WINDING_COUNT; ++i)
               {
-                Menu[Winding1 + i].param = (int*)&params[currentTransformer][i].turns;   
-                Menu[Winding1 + i].type = ' ';
-                sprintf_P(Menu[Winding1 + i].format, LINE3_FORMAT, i+1, params[currentTransformer][i].turns * params[currentTransformer][i].layers); 
+                //Menu[Winding1 + i].param = (int*)&params[currentTransformer][i].turns;   
+                //Menu[Winding1 + i].type = ' ';
+                sprintf_P(Menu[Winding1 + i]->format, LINE3_FORMAT, i+1, params[currentTransformer][i].turns * params[currentTransformer][i].layers); 
               }                                
               break;
       case Winding1:     
@@ -239,23 +236,23 @@ void loop()
       case Winding3:     
               currentWinding = menu.index - Winding1; 
               menu.index = TurnsSet;                                                          
-              Menu[TurnsSet].param = (int*)&params[currentTransformer][currentWinding].turns;
-              Menu[StepSet].param = (int*)&params[currentTransformer][currentWinding].step;
-              Menu[SpeedSet].param = (int*)&params[currentTransformer][currentWinding].speed;
-              Menu[LaySet].param = (int*)&params[currentTransformer][currentWinding].layers;              
-              Menu[Direction].param = (int*)&params[currentTransformer][currentWinding].dir;
+              ((UIntMenuItem*)Menu[TurnsSet])->param = &params[currentTransformer][currentWinding].turns;
+              ((UIntMenuItem*)Menu[StepSet])->param = &params[currentTransformer][currentWinding].step;
+              ((ByteMenuItem*)Menu[SpeedSet])->param = &params[currentTransformer][currentWinding].speed;
+              ((UIntMenuItem*)Menu[LaySet])->param = &params[currentTransformer][currentWinding].layers;              
+              ((BoolMenuItem*)Menu[Direction])->value = &params[currentTransformer][currentWinding].dir;
               break;
       case WindingBack:  menu.index = Autowinding1 + currentTransformer;                                                                             break;
       case PosControl:   menu.index = ShaftPos;                                                                                                      break;
-      case TurnsSet:     menu.SetQuote(9,13); Push_Button=false; mode = mdVarEdit; while(!Push_Button){menu.LCD_Print_Var();} mode = mdMenu; menu.ClearQuote(9,13); break;
-      case StepSet:      menu.SetQuote(7,14); Push_Button=false; mode = mdVarEdit; while(!Push_Button){menu.LCD_Print_Var();} mode = mdMenu; menu.ClearQuote(7,14); break;  
-      case SpeedSet:     menu.SetQuote(9,13); Push_Button=false; mode = mdVarEdit; while(!Push_Button){menu.LCD_Print_Var();} mode = mdMenu; menu.ClearQuote(9,13); break;
-      case LaySet:       menu.SetQuote(9,12); Push_Button=false; mode = mdVarEdit; while(!Push_Button){menu.LCD_Print_Var();} mode = mdMenu; menu.ClearQuote(9,12); break;   
+      case TurnsSet:     menu.SetQuote(9,13); Push_Button=false; mode = mdVarEdit; while(!Push_Button){menu.UpdateCurrent();} mode = mdMenu; menu.ClearQuote(9,13); break;
+      case StepSet:      menu.SetQuote(7,14); Push_Button=false; mode = mdVarEdit; while(!Push_Button){menu.UpdateCurrent();} mode = mdMenu; menu.ClearQuote(7,14); break;  
+      case SpeedSet:     menu.SetQuote(9,13); Push_Button=false; mode = mdVarEdit; while(!Push_Button){menu.UpdateCurrent();} mode = mdMenu; menu.ClearQuote(9,13); break;
+      case LaySet:       menu.SetQuote(9,12); Push_Button=false; mode = mdVarEdit; while(!Push_Button){menu.UpdateCurrent();} mode = mdMenu; menu.ClearQuote(9,12); break;   
       case Direction:
               {
-                bool &Steppers_Dir = *(bool*)Menu[Direction].param;
-                Steppers_Dir = !Steppers_Dir;
-                menu.PrintDirection(Steppers_Dir);
+                BoolMenuItem* m = (BoolMenuItem*)Menu[menu.index];
+                *m->value = !*m->value;
+                menu.UpdateCurrent();
               }
               break;                          
       case Start:        SaveSettings(); Push_Button = false; mode = mdRun; AutoWindingPrg(); mode = mdMenu; lcd.clear();   menu.index = Winding1 + currentWinding;      break; 
@@ -266,6 +263,7 @@ void loop()
                           menu.SetQuote(9,14); 
                           mode = mdVarEdit; 
 
+                          IntMenuItem* m = (IntMenuItem*)Menu[menu.index];
                           GStepper2<STEPPER2WIRE> &stepper = (menu.index == LayerPos) ? layerStepper : shaftStepper;
                           
                           Push_Button=false; 
@@ -274,7 +272,7 @@ void loop()
                           stepper.setAcceleration(STEPPERS_STEPS_COUNT/2);
                           stepper.setMaxSpeed(STEPPERS_STEPS_COUNT/2);
     
-                          int oldPos = -*(int*)Menu[menu.index].param * STEPPERS_MICROSTEPS * 2;
+                          int oldPos = -*m->param * STEPPERS_MICROSTEPS * 2;
                           stepper.setCurrent(oldPos);
                           stepper.setTarget(oldPos);
                       
@@ -282,14 +280,14 @@ void loop()
                           {
                             stepper.tick();
 
-                            int newPos = -*(int*)Menu[menu.index].param * STEPPERS_MICROSTEPS * 2;
+                            int newPos = -*m->param * STEPPERS_MICROSTEPS * 2;
                             if (newPos != oldPos)
                             {                              
                               stepper.setTarget(newPos);
                               oldPos = newPos;
                             }    
 
-                            menu.LCD_Print_Var(); 
+                            menu.UpdateCurrent(); 
                           } 
                           digitalWrite(EN_STEP, HIGH); 
 
@@ -301,10 +299,12 @@ void loop()
       case ShaftStepMul:                                                                         
       case LayerStepMul:    
                         {
+                            IntMenuItem* m = (IntMenuItem*)Menu[menu.index];
+
                             int values[] = {1,10,100};
                             // переделать на индексы
 
-                            int &value =  *(int*)Menu[menu.index].param;
+                            int &value =  *m->param;
                             switch (value)
                             {
                             case 1: value = 10;  break;
@@ -312,12 +312,12 @@ void loop()
                             case 100: value = 1;  break;
                             }
 
-                            Menu[menu.index-1].increment = value;
-                            menu.LCD_Print_Var();
+                            ((IntMenuItem*)Menu[menu.index-1])->increment = value;
+                            menu.UpdateCurrent();
                         }
                         break;  
                         /*
-                            menu.SetQuote(9,13);Push_Button=false; mode = mdVarEdit; while(!Push_Button){menu.LCD_Print_Var();} mode = mdMenu; menu.ClearQuote(9,13);  
+                            menu.SetQuote(9,13);Push_Button=false; mode = mdVarEdit; while(!Push_Button){menu.UpdateCurrent();} mode = mdMenu; menu.ClearQuote(9,13);  
                             Menu[menu.index-1].increment = *(byte*)Menu[menu.index].param;
                             break;    
                             */
@@ -326,7 +326,7 @@ void loop()
       case miSettings:   menu.index = miSettingsStopPerLevel; break;
       case miSettingsStopPerLevel: 
               settings.stopPerLayer = !settings.stopPerLayer;
-              menu.PrintBool(settings.stopPerLayer);
+              menu.UpdateCurrent();
               break;
       case miSettingsBack: menu.index = miSettings; break;
     }
@@ -334,8 +334,6 @@ void loop()
     menu.Update();
   }
 }
-
-
 
 
 void PrintWindingScreen()  // Подпрограмма вывода экрана автонамотки
@@ -579,9 +577,9 @@ ISR(INT0_vect)   // Вектор прерывания от энкодера
   }
                                         
   if (mode == mdVarEdit && Encoder_Dir != 0) 
-  {                                                                                                                      // Если находимся в режиме изменения переменной 
-    *(int*)Menu[menu.index].param += Encoder_Dir * Menu[menu.index].increment; Encoder_Dir = 0;                                                             // то меняем ее сразу и
-    *(int*)Menu[menu.index].param = constrain(*(int*)Menu[menu.index].param, Menu[menu.index].var_Min, Menu[menu.index].var_Max);    // ограничиваем в диапазоне var_Min ÷ var_Max
+  {    
+    Menu[menu.index]->IncValue(Encoder_Dir);                                                                                                                  // Если находимся в режиме изменения переменной 
+    Encoder_Dir = 0;                                                             // то меняем ее сразу и
   } 
 }
 

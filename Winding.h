@@ -14,7 +14,7 @@ struct Winding
 {
   uint16_t turns=0;
   uint16_t step=0;
-  uint16_t speed=30;    // надо переделывать меню на byte сначала
+  uint8_t speed=30;    
   uint16_t layers=0;
   bool dir=1;
   static const byte version = 3;
@@ -23,7 +23,7 @@ struct Winding
   {
     EEPROM.get(p, turns);        p+=2;
     EEPROM.get(p, step);         p+=2;
-    EEPROM.get(p, speed);        p+=2;
+    EEPROM.get(p, speed);        p+=1;  
     EEPROM.get(p, layers);       p+=2;
     EEPROM.get(p, dir);          p+=1;   
   }
@@ -32,7 +32,7 @@ struct Winding
   {
     EEPROM_save(p, turns);        p+=2;
     EEPROM_save(p, step);         p+=2;
-    EEPROM_save(p, speed);        p+=2;
+    EEPROM_save(p, speed);        p+=1;
     EEPROM_save(p, layers);       p+=2;
     EEPROM_save(p, dir);          p+=1;   
   }
