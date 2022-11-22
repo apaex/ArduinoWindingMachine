@@ -39,20 +39,31 @@ public:
 
     void printf(const char *format, ...)
     {
-        char buf[80];
+        char buf[21];
         va_list args;
         va_start(args, format);
-        vsnprintf(buf, 80, format, args);
+        vsnprintf(buf, 21, format, args);
         va_end(args);
         print(buf);
     }
 
     void printfAt(uint8_t col, uint8_t row, const char *format, ...)
     {
-        char buf[80];
+        char buf[21];
         va_list args;
         va_start(args, format);
-        vsnprintf(buf, 80, format, args);
+        vsnprintf(buf, 21, format, args);
+        va_end(args);
+        setCursor(col, row);
+        print(buf);
+    }
+
+    void printfAt_P(uint8_t col, uint8_t row, PGM_P format, ...)
+    {
+        char buf[21];
+        va_list args;
+        va_start(args, format);
+        vsnprintf_P(buf, 21, format, args);
         va_end(args);
         setCursor(col, row);
         print(buf);
@@ -94,7 +105,7 @@ private:
                     _gen[i] = 0;
             _gen[c] = lcd_c;
 
-            this->createChar(lcd_c - 1, font[c]);
+            //this->createChar(lcd_c - 1, font[c]);   //  не будет работать, надо PROGMEM
             _row -= 8;
             LiquidCrystal::setCursor(_row, _col);
         }
