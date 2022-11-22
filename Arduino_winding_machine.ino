@@ -42,6 +42,7 @@ https://cxem.net/arduino/arduino245.php
 #include <avr/interrupt.h>
 //#include <LiquidCrystal.h>
 //#include <LiquidCrystal_I2C.h>
+#include <GyverPlanner2.h>
 #include <GyverStepper2.h>
 #include <HardwareSerial.h>
 #include "Menu.h"
@@ -69,7 +70,7 @@ https://cxem.net/arduino/arduino245.php
 #define NROW 4 
 
 #define STEPPERS_MICROSTEPS 16
-#define STEPPERS_STEPS_COUNT 200 * STEPPERS_MICROSTEPS
+#define STEPPERS_STEPS_COUNT (200L * STEPPERS_MICROSTEPS)
 
 enum Mode {mdMenu, mdVarEdit, mdRun} mode;                // режим установки значения; работает подпрограмма автонамотки 
 
@@ -78,22 +79,21 @@ enum Mode {mdMenu, mdVarEdit, mdRun} mode;                // режим уста
 
 Winding params[TRANSFORMER_COUNT][WINDING_COUNT];
 
-byte currentTransformer = -1;
-byte currentWinding = -1;
+int8_t currentTransformer = -1;
+int8_t currentWinding = -1;
 
-volatile int Encoder_Dir;                                 // Направление вращения энкодера
-volatile bool Push_Button;                                // Нажатие кнопки
+volatile int8_t Encoder_Dir = 0;                          // Направление вращения энкодера
+volatile bool Push_Button = false;                        // Нажатие кнопки
 
-volatile bool Pause;                                      // Флаг паузы в режиме автонамотка   
 Winding current;                                          // Текущий виток и слой при автонамотке
-int Shaft_Pos = 0, Lay_Pos = 0;                           // Переменные изменяемые на экране
+int Shaft_Pos = 0, Lay_Pos = 0;                           // Переменные, изменяемые на экране
 
 volatile int Set_Speed_INT;
 
 
 volatile uint32_t NSteps;
 volatile int NTurn;
-volatile int i_;                                           // Счетчик кол-ва заходов в прерывание таймера
+volatile int i_;                                          // Счетчик кол-ва заходов в прерывание таймера
 
 Settings settings;
 
@@ -136,21 +136,21 @@ struct MenuType Menu[] = {              // Объявляем переменну
 //  {16, 0,  "AUTOWINDING DONE     ", ""      ,NULL,        0,      0,      0        },    // "AUTOWINDING DONE" 
 //  {16, 1,  "PRESS CONTINUE       ", ""      ,NULL,        0,      0,      0        },    // "PRESS CONTINUE  "
 }; 
-const int MENU_COUNT = sizeof(Menu)/sizeof(*Menu);
+const byte MENU_COUNT = sizeof(Menu)/sizeof(*Menu);
 
 MainMenu menu(Menu, MENU_COUNT);
 
 
-const char *LINE1_FORMAT = "T%03d/%03d L%02d/%02d";
-const char *LINE2_FORMAT = "Sp%03d St0.%04d";
-const char *LINE4_FORMAT = "%03d";
-const char *LINE5_FORMAT = "%02d";
-const char *LINE6_FORMAT = "%03d";
+const char PROGMEM LINE1_FORMAT[] = "T%03d/%03d L%02d/%02d";
+const char PROGMEM LINE2_FORMAT[] = "Sp%03d St0.%04d";
+const char PROGMEM LINE4_FORMAT[] = "%03d";
+const char PROGMEM LINE5_FORMAT[] = "%02d";
+const char PROGMEM LINE6_FORMAT[] = "%03d";
 
-const char *LINE3_FORMAT = "Winding %d  % 4dT";
+const char PROGMEM LINE3_FORMAT[] = "Winding %d  % 4dT";
 
-const char *STRING_1 = "AUTOWINDING DONE";
-const char *STRING_2 = "PRESS CONTINUE  ";
+const char PROGMEM STRING_1[] = "AUTOWINDING DONE";
+const char PROGMEM STRING_2[] = "PRESS CONTINUE  ";
 
 LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7);                  // Назначаем пины для управления LCD 
 //LiquidCrystal_I2C lcd(0x27, NCOL, NROW);                // 0x3F I2C адрес для PCF8574AT
@@ -158,7 +158,7 @@ LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7);                  // Назначаем 
 
 GStepper2<STEPPER2WIRE> shaftStepper(STEPPERS_STEPS_COUNT, STEP_Z, DIR_Z, EN_STEP);
 GStepper2<STEPPER2WIRE> layerStepper(STEPPERS_STEPS_COUNT, STEP_A, DIR_A, EN_STEP);
-
+GPlanner2< STEPPER2WIRE, 2, 6 > planner;
 
 void setup() 
 {
@@ -189,13 +189,16 @@ void setup()
   lcd.createChar(0, up);       // Записываем символ ⯅ в память LCD
   lcd.createChar(1, down);     // Записываем символ ⯆ в память LCD
 
+  planner.addStepper(0, shaftStepper);
+  planner.addStepper(1, layerStepper);
+
   cli();                                                                        // Глобальный запрет прерываний
   EICRA = (1<<ISC11)|(0<<ISC10)|(0<<ISC01)|(1<<ISC00);                          // Настройка срабатывания прерываний: INT0 по изменению сигнала, INT1 по спаду сигнала; ATmega328/P DATASHEET стр.89
   EIMSK = (1<<INT0)|(1<<INT1);                                                  // Разрешение прерываний INT0 и INT1; ATmega328/P DATASHEET стр.90 
   EIFR = 0x00;                                                                  // Сбрасываем флаги внешних прерываний; ATmega328/P DATASHEET стр.91
-  TCCR1A=(0<<COM1A1)|(0<<COM1B1)|(0<<COM1A0)|(0<<COM1B0)|(0<<WGM11)|(0<<WGM10); // Настройка таймера/счетчика 1: нормальный режим работы порта, OC1A/OC1B отключены; ATmega328/P DATASHEET стр.170-172
-  TCCR1B=(0<<WGM13)|(1<<WGM12)|(0<<CS12)|(0<<CS11)|(1<<CS10);                   // Режим работы таймера/счетчика - CTC (очистить таймер при достижении значения в регистре сравнения OCR1A)
-  OCR1A = 20000;                                                                // Значение в регистре OCR1A определяет частоту входа в прерывание таймера и устанавливает скрость вращения двигателей
+  //TCCR1A=(0<<COM1A1)|(0<<COM1B1)|(0<<COM1A0)|(0<<COM1B0)|(0<<WGM11)|(0<<WGM10); // Настройка таймера/счетчика 1: нормальный режим работы порта, OC1A/OC1B отключены; ATmega328/P DATASHEET стр.170-172
+  //TCCR1B=(0<<WGM13)|(1<<WGM12)|(0<<CS12)|(0<<CS11)|(1<<CS10);                   // Режим работы таймера/счетчика - CTC (очистить таймер при достижении значения в регистре сравнения OCR1A)
+  //OCR1A = 20000;                                                                // Значение в регистре OCR1A определяет частоту входа в прерывание таймера и устанавливает скрость вращения двигателей
 
   lcd.begin(NCOL, NROW);                                                        // Инициализация LCD Дисплей 20 символов 4 строки   
   
@@ -228,7 +231,7 @@ void loop()
               {
                 Menu[Winding1 + i].param = (int*)&params[currentTransformer][i].turns;   
                 Menu[Winding1 + i].type = ' ';
-                sprintf(Menu[Winding1 + i].format, LINE3_FORMAT, i+1, params[currentTransformer][i].turns * params[currentTransformer][i].layers); 
+                sprintf_P(Menu[Winding1 + i].format, LINE3_FORMAT, i+1, params[currentTransformer][i].turns * params[currentTransformer][i].layers); 
               }                                
               break;
       case Winding1:     
@@ -260,11 +263,12 @@ void loop()
 
       case ShaftPos:
       case LayerPos:    { 
+                          menu.SetQuote(9,14); 
+                          mode = mdVarEdit; 
+
                           GStepper2<STEPPER2WIRE> &stepper = (menu.index == LayerPos) ? layerStepper : shaftStepper;
                           
-                          menu.SetQuote(9,14); 
                           Push_Button=false; 
-                          mode = mdVarEdit; 
                           digitalWrite(EN_STEP, LOW); 
 
                           stepper.setAcceleration(STEPPERS_STEPS_COUNT/2);
@@ -287,8 +291,9 @@ void loop()
 
                             menu.LCD_Print_Var(); 
                           } 
-                          mode = mdMenu; 
                           digitalWrite(EN_STEP, HIGH); 
+
+                          mode = mdMenu; 
                           menu.ClearQuote(9,14);
                         }
                         break;
@@ -338,8 +343,8 @@ void PrintWindingScreen()  // Подпрограмма вывода экрана
   const Winding &w = params[currentTransformer][currentWinding];
 
   lcd.clear();
-  lcd.printfAt(0,0, LINE1_FORMAT, current.turns, w.turns, current.layers, w.layers);
-  lcd.printfAt(0,1, LINE2_FORMAT, current.speed, w.step*ShaftStep);  
+  lcd.printfAt_P(0,0, LINE1_FORMAT, current.turns, w.turns, current.layers, w.layers);
+  lcd.printfAt_P(0,1, LINE2_FORMAT, current.speed, w.step*ShaftStep);  
   PrintWindingTurns();
   PrintWindingLayers();
   PrintWindingSpeed();
@@ -347,17 +352,17 @@ void PrintWindingScreen()  // Подпрограмма вывода экрана
 
 void PrintWindingTurns()  
 {  
-  lcd.printfAt(1, 0, LINE4_FORMAT, current.turns+1);
+  lcd.printfAt_P(1, 0, LINE4_FORMAT, current.turns+1);
 }
 
 void PrintWindingLayers()  
 {  
-  lcd.printfAt(10, 0, LINE5_FORMAT, current.layers+1);
+  lcd.printfAt_P(10, 0, LINE5_FORMAT, current.layers+1);
 }
 
 void PrintWindingSpeed()  
 {  
-  lcd.printfAt(2, 1, LINE6_FORMAT, current.speed);
+  lcd.printfAt_P(2, 1, LINE6_FORMAT, current.speed);
 }
 
 void LoadSettings()
@@ -388,11 +393,11 @@ void SaveSettings()
   //settings.Save(p);
 }
 
-void __AutoWindingPrg()                                             // Подпрограмма автоматической намотки
+void AutoWindingPrg()                                             // Подпрограмма автоматической намотки
 {    
   const Winding &w = params[currentTransformer][currentWinding];
 
-  Serial.println("Start");
+  Serial.println(F("Start"));
 
   current.turns = 0;
   current.layers = 0;
@@ -404,48 +409,65 @@ void __AutoWindingPrg()                                             // Подп�
  
   Push_Button = false; 
  
-  //shaftStepper.setSpeed(current.speed);
-  //layerStepper.setSpeed(current.speed);
+  planner.setAcceleration(STEPPERS_STEPS_COUNT / 2);
+  planner.setMaxSpeed(STEPPERS_STEPS_COUNT / 2);
+  //planner.setDtA(1.0);
+ 
+  int32_t dShaft = -STEPPERS_STEPS_COUNT * w.turns;
+  int32_t dLayer = -STEPPERS_STEPS_COUNT /200L * w.turns * w.step * (w.dir ? 1 : -1); 
+  int32_t p[] = {0, 0};
+  
+  planner.reset();
+  planner.addTarget(p, 0);  // начальная точка системы должна совпадать с первой точкой маршрута
 
-  while (current.layers < w.layers)                                 // Пока текущее кол-во слоев меньше заданного проверяем сколько сейчас витков
-  { 
-    current.turns = 0;   
-    PrintWindingScreen();
+  planner.start();
+  int i = 0;    // упреждающий счетчик слоёв
 
+  PrintWindingScreen();
+  
+  while (!planner.ready())
+  {
+    planner.tick();
 
+    if (planner.available() && (i < w.layers)) 
+    {
+      p[0] = dShaft;
+      p[1] = (i%2) ? -dLayer : dLayer;
+      ++i;
+      planner.addTarget(p, (i == w.layers), RELATIVE);    // в последней точке остановка
+    }    
 
-    while (current.turns < w.turns)                               // Пока текущее кол-во витков меньше заданного продолжаем мотать
-    {     
-       for (int i=0; i<200; ++i) 
-       {
-          //shaftStepper.step(1*STEPPERS_STEPS_MULT);
-          //layerStepper.step( (current.dir ? 1 : -1) *1*STEPPERS_STEPS_MULT /* current.step / ShaftStep / ShaftStep*/);       
-       }
+    static uint32_t tmr;
+    if (millis() - tmr >= 2000) {
+      tmr = millis();
 
+      int total_turns = -shaftStepper.pos / STEPPERS_STEPS_COUNT;
+      current.turns = total_turns % w.turns;
+      current.layers = total_turns / w.turns;
       PrintWindingTurns();
-      current.turns++;
-    }  
+      PrintWindingLayers();
 
-        
-    current.layers++;    
-    if (current.layers == w.layers) break; 
-    
-    if (settings.stopPerLayer) {
-      lcd.printfAt(0, 1, STRING_2);           // "PRESS CONTINUE  "    
-      WaitButton();
+      Serial.print(shaftStepper.pos);
+      Serial.print(',');
+      Serial.println(layerStepper.pos);        
     }
-
-    current.dir = !current.dir;
-    
   }
+
+  planner.stop();
+  /*
+  if (settings.stopPerLayer) {
+    lcd.printfAt_P(0, 1, STRING_2);           // "PRESS CONTINUE  "    
+    WaitButton();
+  }
+  */
      
   digitalWrite(EN_STEP, HIGH);
 
-  lcd.printfAt(0, 1, STRING_1);             // "AUTOWINDING DONE"  
+  lcd.printfAt_P(0, 1, STRING_1);             // "AUTOWINDING DONE"  
   WaitButton();
 }
 
-void AutoWindingPrg()                                             // Подпрограмма автоматической намотки
+void _AutoWindingPrg()                                             // Подпрограмма автоматической намотки
 {    
   NSteps = 0;
   NTurn = 0;
@@ -453,7 +475,7 @@ void AutoWindingPrg()                                             // Подпр�
 
   const Winding &w = params[currentTransformer][currentWinding];
 
-  Serial.println("Start");
+  Serial.println(F("Start"));
 
   current.turns = 0;
   current.layers = 0;
@@ -515,7 +537,7 @@ void AutoWindingPrg()                                             // Подпр�
     if (current.layers == w.layers) break; 
     
     if (settings.stopPerLayer) {
-      lcd.printfAt(0, 1, STRING_2);           // "PRESS CONTINUE  "    
+      lcd.printfAt_P(0, 1, STRING_2);           // "PRESS CONTINUE  "    
       WaitButton();
     }
 
@@ -526,7 +548,7 @@ void AutoWindingPrg()                                             // Подпр�
      
   digitalWrite(EN_STEP, HIGH);
 
-  lcd.printfAt(0, 1, STRING_1);             // "AUTOWINDING DONE"  
+  lcd.printfAt_P(0, 1, STRING_1);             // "AUTOWINDING DONE"  
   WaitButton();
 }
 
