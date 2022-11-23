@@ -14,13 +14,14 @@ class MenuItem
 
     MenuItem(byte screen_, byte num_, const char* text_) : Screen(screen_), string_number(num_), format(text_) {}
 
-    virtual void Draw(LiquidCrystalCyr &lcd, byte i)
+    virtual void Draw(LiquidCrystalCyr &lcd, byte row)
     {
-      lcd.setCursor(2, i);
+      lcd.setCursor(2, row);
       lcd.print(format);
+      Update(lcd, row);
     }
 
-    virtual void Update(LiquidCrystalCyr &lcd, byte i) {}
+    virtual void Update(LiquidCrystalCyr &lcd, byte row) {}
     virtual void IncValue(int8_t inc) {}
 };
 
@@ -32,17 +33,15 @@ class BoolMenuItem : public MenuItem
 
     BoolMenuItem(byte screen_, byte num_, const char* text_, bool * value_, const char ** setItem_) : MenuItem(screen_, num_, text_), value(value_), setItem(setItem_) {}
 
-    virtual void Draw(LiquidCrystalCyr &lcd, byte i)
+    virtual void Update(LiquidCrystalCyr &lcd, byte row) 
     {
-      lcd.setCursor(2, i);
-      lcd.print(format);
-      Update(lcd, i);
+      lcd.setCursor(12, row);
+      lcd.print(setItem[*value]);     
     }
 
-    virtual void Update(LiquidCrystalCyr &lcd, byte i) 
+    virtual void IncValue(int8_t )
     {
-      lcd.setCursor(12, i);
-      lcd.print(setItem[*value]);     
+      *value = !*value;
     }
 };
 
@@ -59,21 +58,9 @@ class ValueMenuItem : public MenuItem
 
     ValueMenuItem(byte screen_, byte num_, const char* text_, const char* format_, T* value_, T min_, T max_, T scale_ = 1, T increment_ = 1) : MenuItem(screen_, num_, text_), format_Set_var(format_), param(value_), var_Min(min_), var_Max(max_), param_coef(scale_), increment(increment_) {}
 
-    virtual void Draw(LiquidCrystalCyr &lcd, byte i)
+    virtual void Update(LiquidCrystalCyr &lcd, byte row)
     {
-      lcd.setCursor(2, i);
-      lcd.printf(format, *param * param_coef);      
-    }
-
-    virtual void Update(LiquidCrystalCyr &lcd, byte i)
-    {
-        static int Previous_Param;
-
-        if (*param == Previous_Param)
-            return;
-
-        lcd.printfAt(10, i, format_Set_var, *param * param_coef);
-        Previous_Param = *param;
+      lcd.printfAt(10, row, format_Set_var, int(*param) * param_coef);
     }
 
     virtual void IncValue(int8_t inc)
@@ -164,9 +151,11 @@ public:
     
 
 
-    void UpdateCurrent() // Подпрограмма: Выводим новое значение переменной на LCD
+    void IncCurrent(int8_t increment) 
     {
-        byte cur = items[index]->string_number % nRows;        
+        byte cur = items[index]->string_number % nRows;   
+
+        items[index]->IncValue(increment);     
         items[index]->Update(*lcd, cur);
     }
 
