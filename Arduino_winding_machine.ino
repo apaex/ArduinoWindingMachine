@@ -147,7 +147,6 @@ LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7);                  // Назначаем 
 
 GStepper2<STEPPER2WIRE> shaftStepper(STEPPERS_STEPS_COUNT, STEP_Z, DIR_Z, EN_STEP);
 GStepper2<STEPPER2WIRE> layerStepper(STEPPERS_STEPS_COUNT, STEP_A, DIR_A, EN_STEP);
-GPlanner2< STEPPER2WIRE, 2, 6 > planner;
 
 void setup() 
 {
@@ -178,8 +177,6 @@ void setup()
   lcd.createChar(0, up);       // Записываем символ ⯅ в память LCD
   lcd.createChar(1, down);     // Записываем символ ⯆ в память LCD
 
-  planner.addStepper(0, shaftStepper);
-  planner.addStepper(1, layerStepper);
 
   cli();                                                                        // Глобальный запрет прерываний
   EICRA = (1<<ISC11)|(0<<ISC10)|(0<<ISC01)|(1<<ISC00);                          // Настройка срабатывания прерываний: INT0 по изменению сигнала, INT1 по спаду сигнала; ATmega328/P DATASHEET стр.89
@@ -365,6 +362,10 @@ void SaveSettings()
 
 void AutoWindingPrg()                                             // Подпрограмма автоматической намотки
 {    
+  GPlanner2< STEPPER2WIRE, 2, 4 > planner;
+  planner.addStepper(0, shaftStepper);
+  planner.addStepper(1, layerStepper);
+
   int Set_Speed_INT;
   const Winding &w = params[currentTransformer][currentWinding];
 
@@ -391,12 +392,6 @@ void AutoWindingPrg()                                             // Подпр�
   planner.reset();
   planner.addTarget(p, 0);  // начальная точка системы должна совпадать с первой точкой маршрута
 
-// обход бага
-  int32_t p1[] = {1, 1};
-  planner.addTarget(p1, 0);
-  planner.addTarget(p, 0);
-// /обход бага
-
   planner.start();
   int i = 0;    // упреждающий счетчик слоёв
 
@@ -409,15 +404,17 @@ void AutoWindingPrg()                                             // Подпр�
       Encoder_Dir = 0; 
     }
 
-    planner.tick();
-
-    if (planner.available() && (i < w.layers)) 
+    while(planner.available() && (i < w.layers)) 
     {
       p[0] = dShaft;
       p[1] = (i%2) ? -dLayer : dLayer;
       ++i;
+      Serial.print(i);
+      Serial.println(F(" - AddTarget"));
       planner.addTarget(p, (i == w.layers), RELATIVE);    // в последней точке остановка
-    }    
+    }        
+    
+    planner.tick();
 
     static uint32_t tmr;
     if (millis() - tmr >= 2000) {
@@ -429,16 +426,10 @@ void AutoWindingPrg()                                             // Подпр�
       PrintWindingTurns();
       PrintWindingLayers();
 
-      Serial.print(shaftStepper.getStatus());
-      Serial.print(' ');
-      Serial.print(layerStepper.getStatus());
-      Serial.print(' ');      
-      Serial.print(planner.getStatus());
-      Serial.print(' ');
-
       Serial.print(shaftStepper.pos);
       Serial.print(',');
       Serial.println(layerStepper.pos);        
+      
     }
   }
 
