@@ -249,12 +249,9 @@ void loop()
 
       case ShaftPos:
       case LayerPos:    
-              { 
-                menu.SetQuote(9,14); 
-                IntMenuItem* m = (IntMenuItem*)Menu[menu.index];                          
-                MoveTo((menu.index == LayerPos) ? layerStepper : shaftStepper, *m->value);                         
-                menu.ClearQuote(9,14);
-              }
+              menu.SetQuote(9,14);                         
+              MoveTo((menu.index == LayerPos) ? layerStepper : shaftStepper, *((IntMenuItem*)Menu[menu.index])->value);                         
+              menu.ClearQuote(9,14);
               break;
 
       case ShaftStepMul:                                                                         
