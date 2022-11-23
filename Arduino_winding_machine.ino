@@ -87,11 +87,6 @@ volatile bool Push_Button = false;                        // Нажатие кн
 Winding current;                                          // Текущий виток и слой при автонамотке
 int Shaft_Pos = 0, Lay_Pos = 0;                           // Переменные, изменяемые на экране
 
-volatile uint32_t NSteps;
-volatile int NTurn;
-volatile int i_;                                          // Счетчик кол-ва заходов в прерывание таймера
-enum Mode {mdMenu, mdVarEdit, mdRun} _mode;                // режим установки значения; работает подпрограмма автонамотки 
-
 Settings settings;
 
 enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, miSettings, Winding1, Winding2, Winding3, WindingBack, TurnsSet, StepSet, SpeedSet, LaySet, Direction, Start, Cancel, ShaftPos, ShaftStepMul, LayerPos, LayerStepMul, PosCancel, miSettingsStopPerLevel, miSettingsBack}; // Нумерованный список строк экрана
@@ -99,7 +94,7 @@ enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, miSettin
 const char * boolSet[] = {"OFF", "ON "};
 const char * dirSet[] = {"<<<", ">>>"};
 
-MenuItem* Menu[] = {              // Объявляем переменную Menu пользовательского типа MenuType и доступную только для чтения
+MenuItem* menuItems[] = {              // Объявляем переменную Menu пользовательского типа MenuType и доступную только для чтения
 
   new MenuItem(0,  0,  "Setup 1"),
   new MenuItem(0,  1,  "Setup 2"),
@@ -130,9 +125,9 @@ MenuItem* Menu[] = {              // Объявляем переменную Men
   new MenuItem(11, 1,  "Back"),
 }; 
 
-const byte MENU_COUNT = sizeof(Menu)/sizeof(*Menu);
+const byte MENU_COUNT = sizeof(menuItems)/sizeof(*menuItems);
 
-MainMenu menu(Menu, MENU_COUNT);
+MainMenu menu(menuItems, MENU_COUNT);
 
 
 const char PROGMEM LINE1_FORMAT[] = "T%03d/%03d L%02d/%02d";
@@ -228,11 +223,11 @@ void loop()
       case Winding3:     
               currentWinding = menu.index - Winding1; 
               menu.index = TurnsSet;                                                          
-              ((UIntMenuItem*)Menu[TurnsSet])->value = &params[currentTransformer][currentWinding].turns;
-              ((ByteMenuItem*)Menu[StepSet])->value = &params[currentTransformer][currentWinding].step;
-              ((ByteMenuItem*)Menu[SpeedSet])->value = &params[currentTransformer][currentWinding].speed;
-              ((ByteMenuItem*)Menu[LaySet])->value = &params[currentTransformer][currentWinding].layers;              
-              ((BoolMenuItem*)Menu[Direction])->value = &params[currentTransformer][currentWinding].dir;
+              ((UIntMenuItem*)menu[TurnsSet])->value = &params[currentTransformer][currentWinding].turns;
+              ((ByteMenuItem*)menu[StepSet])->value = &params[currentTransformer][currentWinding].step;
+              ((ByteMenuItem*)menu[SpeedSet])->value = &params[currentTransformer][currentWinding].speed;
+              ((ByteMenuItem*)menu[LaySet])->value = &params[currentTransformer][currentWinding].layers;              
+              ((BoolMenuItem*)menu[Direction])->value = &params[currentTransformer][currentWinding].dir;
               break;
       case WindingBack:  menu.index = Autowinding1 + currentTransformer; break;
       case PosControl:   menu.index = ShaftPos; break;
@@ -247,14 +242,14 @@ void loop()
       case ShaftPos:
       case LayerPos:    
               menu.SetQuote(9,14);                         
-              MoveTo((menu.index == LayerPos) ? layerStepper : shaftStepper, *((IntMenuItem*)Menu[menu.index])->value);                         
+              MoveTo((menu.index == LayerPos) ? layerStepper : shaftStepper, *((IntMenuItem*)menu[menu.index])->value);                         
               menu.ClearQuote(9,14);
               break;
 
       case ShaftStepMul:                                                                         
       case LayerStepMul:    
               menu.IncCurrent(1);
-              ((IntMenuItem*)Menu[menu.index-1])->increment = *((SetMenuItem*)Menu[menu.index])->value;
+              ((IntMenuItem*)menu[menu.index-1])->increment = *((SetMenuItem*)menu[menu.index])->value;
               break;  
       case PosCancel:    menu.index = PosControl; Shaft_Pos = 0; Lay_Pos = 0; break;
       
@@ -281,7 +276,7 @@ void ValEditTick()
 
 void UpdateMenuItemText(byte i)
 {
-  sprintf_P(Menu[Winding1 + i]->format, LINE3_FORMAT, i+1, params[currentTransformer][i].turns * params[currentTransformer][i].layers); 
+  sprintf_P(menu[Winding1 + i]->format, LINE3_FORMAT, i+1, params[currentTransformer][i].turns * params[currentTransformer][i].layers); 
 }
 
 void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
@@ -461,104 +456,6 @@ void AutoWindingPrg()                                             // Подпр�
   WaitButton();
 }
 
-void _AutoWindingPrg()                                             // Подпрограмма автоматической намотки
-{    
-  cli();
-  TCCR1A=(0<<COM1A1)|(0<<COM1B1)|(0<<COM1A0)|(0<<COM1B0)|(0<<WGM11)|(0<<WGM10); // Настройка таймера/счетчика 1: нормальный режим работы порта, OC1A/OC1B отключены; ATmega328/P DATASHEET стр.170-172
-  TCCR1B=(0<<WGM13)|(1<<WGM12)|(0<<CS12)|(0<<CS11)|(1<<CS10);                   // Режим работы таймера/счетчика - CTC (очистить таймер при достижении значения в регистре сравнения OCR1A)
-  OCR1A = 20000;                                                                // Значение в регистре OCR1A определяет частоту входа в прерывание таймера и устанавливает скрость вращения двигателей
-  sei();
-
-  NSteps = 0;
-  NTurn = 0;
-  i_ = 0;                                           
-  int Set_Speed_INT;
-
-  const Winding &w = params[currentTransformer][currentWinding];
-
-  Serial.println(F("Start"));
-
-  current.turns = 0;
-  current.layers = 0;
-  current.speed = w.speed;
-  current.dir = w.dir;
-  current.step = w.step;
-   
-  digitalWrite(EN_STEP, LOW);   // Разрешение управления двигателями
-  digitalWrite(DIR_Z, HIGH);  
- 
-  Push_Button = false; 
-  _mode = mdRun;
- 
-  Set_Speed_INT = current.speed;
-
-  while (current.layers < w.layers)                                 // Пока текущее кол-во слоев меньше заданного проверяем сколько сейчас витков
-  { 
-    current.turns = 0;   
-    PrintWindingScreen();
-
-    if (current.dir) PORTB &= 0b11011111; 
-    else PORTB |= 0b00100000;
-
-    OCR1A = 65535;
-
-    while (current.turns < w.turns)                               // Пока текущее кол-во витков меньше заданного продолжаем мотать
-    {     
-      while (PINB & 0b00001000)
-      {
-        if (Encoder_Dir != 0) {                                                               // Если повернуть энкодер во время автонамотки 
-          Set_Speed_INT = constrain(Set_Speed_INT + Encoder_Dir, 1, 255);                     // то меняем значение скорости
-          Encoder_Dir = 0; 
-        }
-              
-        TIMSK1=0; 
-
-        EIMSK = 0b00000010;
-        current.speed = Set_Speed_INT;      
-        EIMSK = 0b00000011;
-        PrintWindingSpeed();
-
-        if (Push_Button)
-        {
-          static bool EN_D;
-          Push_Button = false;
-          digitalWrite(EN_STEP, EN_D ? HIGH: LOW);
-          EN_D = !EN_D;
-        }
-      }
-
-      digitalWrite(EN_STEP, LOW);
-      TIMSK1=2;                
-       
-      PrintWindingTurns();
-      
-      EIMSK = 0b00000010;
-      current.speed = Set_Speed_INT;
-      EIMSK = 0b00000011;
-      PrintWindingSpeed();      
-    }  
-
-    TIMSK1=0;
-        
-    current.layers++;    
-    if (current.layers == w.layers) break; 
-    
-    if (settings.stopPerLayer) {
-      lcd.printfAt_P(0, 1, STRING_2);           // "PRESS CONTINUE  "    
-      WaitButton();
-    }
-
-    current.dir = !current.dir;
-         
-    TIMSK1=2;        
-  }
-     
-  digitalWrite(EN_STEP, HIGH);
-
-  lcd.printfAt_P(0, 1, STRING_1);             // "AUTOWINDING DONE"  
-  WaitButton();
-  _mode = mdMenu;
-}
 
 void WaitButton()
 {
@@ -592,42 +489,6 @@ ISR(INT1_vect)                               // Вектор прерывани�
 
   Push_Button = true;
 }
-
-
-
-
-ISR(TIMER1_COMPA_vect)                       // Вектор прерывания от таймера/счетчика 1 
-{
-  if (_mode == mdRun) 
-  {
-    if (NSteps < 200 * STEPPERS_MICROSTEPS) 
-    {
-      uint32_t INCR = current.speed * 5 / (STEPPERS_MICROSTEPS);
-      OCR1A = min (65535, 300000 * 1000 / (NSteps * INCR));
-    } 
-    else
-    {
-      OCR1A = 4800000 / (current.speed*STEPPERS_MICROSTEPS);  // OCR1A_NOM;
-    }
-
-    PORTD |= 0b00010000;
-    if (NTurn>>4 > 200 - current.step) PORTB |= 0b00010000;    
-    while (i_<6) {i_++;} 
-    i_=0;    
-    PORTD &= 0b11101111; 
-    if (NTurn>>4 > 200 - current.step) PORTB &= 0b11101111;
-
-    NTurn++;
-
-    if (NTurn>>4 > 200) {NTurn=0; current.turns++;}
-
-    NSteps++;
-  }
-
-  i_++;                                        // Счетчик кол-ва заходов в прерывание
-}
-
-
 
 
 

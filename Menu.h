@@ -204,4 +204,6 @@ public:
         lcd->PrintSymbol(0, cur, 0x3E);          // Выводим основной курсор
     }
 
+    MenuItem* operator[](byte idx)       { return items[idx]; }
+    const MenuItem* operator[](byte idx) const { return items[idx]; }
 };
