@@ -88,9 +88,6 @@ volatile bool Push_Button = false;                        // Нажатие кн
 Winding current;                                          // Текущий виток и слой при автонамотке
 int Shaft_Pos = 0, Lay_Pos = 0;                           // Переменные, изменяемые на экране
 
-volatile int Set_Speed_INT;
-
-
 volatile uint32_t NSteps;
 volatile int NTurn;
 volatile int i_;                                          // Счетчик кол-ва заходов в прерывание таймера
@@ -393,6 +390,7 @@ void SaveSettings()
 
 void AutoWindingPrg()                                             // Подпрограмма автоматической намотки
 {    
+  int Set_Speed_INT;
   const Winding &w = params[currentTransformer][currentWinding];
 
   Serial.println(F("Start"));
@@ -425,6 +423,11 @@ void AutoWindingPrg()                                             // Подпр�
   
   while (!planner.ready())
   {
+    if (Encoder_Dir) {                                                                    // Если повернуть энкодер во время автонамотки 
+      Set_Speed_INT = constrain(Set_Speed_INT + Encoder_Dir, 1, 255);                     // то меняем значение скорости
+      Encoder_Dir = 0; 
+    }
+
     planner.tick();
 
     if (planner.available() && (i < w.layers)) 
@@ -470,6 +473,7 @@ void _AutoWindingPrg()                                             // Подпр
   NSteps = 0;
   NTurn = 0;
   i_ = 0;                                           
+  int Set_Speed_INT;
 
   const Winding &w = params[currentTransformer][currentWinding];
 
@@ -502,6 +506,11 @@ void _AutoWindingPrg()                                             // Подпр
     {     
       while (PINB & 0b00001000)
       {
+        if (Encoder_Dir != 0) {                                                               // Если повернуть энкодер во время автонамотки 
+          Set_Speed_INT = constrain(Set_Speed_INT + Encoder_Dir, 1, 255);                     // то меняем значение скорости
+          Encoder_Dir = 0; 
+        }
+              
         TIMSK1=0; 
 
         EIMSK = 0b00000010;
@@ -569,13 +578,7 @@ ISR(INT0_vect)   // Вектор прерывания от энкодера
   else if (Enc_Temp==0b00100000 && Enc_Temp_prev==0b00100100) {Encoder_Dir += -1;}
   else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00000100) {Encoder_Dir +=  1;}
 
-  Enc_Temp_prev = Enc_Temp;
-
-  if (mode == mdRun && Encoder_Dir != 0)                                                                        // Если повернуть энкодер во время автонамотки 
-  {
-    Set_Speed_INT += Encoder_Dir; Encoder_Dir = 0; Set_Speed_INT = constrain(Set_Speed_INT, 1, 300);                     // то меняем значение скорости
-  }
-                      
+  Enc_Temp_prev = Enc_Temp;         
 }
 
 
