@@ -15,16 +15,16 @@ struct Winding
   uint16_t turns=0;
   uint8_t step=0;
   uint8_t speed=30;    
-  uint16_t layers=0;
+  uint8_t layers=0;
   bool dir=1;
-  static const byte version = 4;
+  static const byte version = 5;
 
   void Load(int &p)
   {
     EEPROM.get(p, turns);        p+=2;
     EEPROM.get(p, step);         p+=1;
     EEPROM.get(p, speed);        p+=1;  
-    EEPROM.get(p, layers);       p+=2;
+    EEPROM.get(p, layers);       p+=1;
     EEPROM.get(p, dir);          p+=1;   
   }
 
@@ -33,7 +33,7 @@ struct Winding
     EEPROM_save(p, turns);        p+=2;
     EEPROM_save(p, step);         p+=1;
     EEPROM_save(p, speed);        p+=1;
-    EEPROM_save(p, layers);       p+=2;
+    EEPROM_save(p, layers);       p+=1;
     EEPROM_save(p, dir);          p+=1;   
   }
 };
@@ -42,8 +42,8 @@ struct Winding
 struct Settings 
 {
   bool stopPerLayer = 0;
-  uint16_t shaftStep = 1;
-  uint16_t layerStep = 1;
+  uint8_t shaftStep = 1;
+  uint8_t layerStep = 1;
 
   void Load(int &p)
   {

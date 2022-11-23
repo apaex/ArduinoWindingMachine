@@ -50,22 +50,48 @@ class ValueMenuItem : public MenuItem
 {    
   public:                   
     const char* format_Set_var; // Формат значения при вводе переменной
-    T *param;            // Указатель на адрес текущей переменной изменяемой на экране
+    T *value;            // Указатель на адрес текущей переменной изменяемой на экране
     T var_Min;            // Ограничение значения переменной снизу
     T var_Max;            // Ограничение значения переменной сверху
     T param_coef;        // Размерный коэффициент значения переменной
     T increment;
 
-    ValueMenuItem(byte screen_, byte num_, const char* text_, const char* format_, T* value_, T min_, T max_, T scale_ = 1, T increment_ = 1) : MenuItem(screen_, num_, text_), format_Set_var(format_), param(value_), var_Min(min_), var_Max(max_), param_coef(scale_), increment(increment_) {}
+    ValueMenuItem(byte screen_, byte num_, const char* text_, const char* format_, T* value_, T min_, T max_, T scale_ = 1, T increment_ = 1) : MenuItem(screen_, num_, text_), format_Set_var(format_), value(value_), var_Min(min_), var_Max(max_), param_coef(scale_), increment(increment_) {}
 
     virtual void Update(LiquidCrystalCyr &lcd, byte row)
     {
-      lcd.printfAt(10, row, format_Set_var, int(*param) * param_coef);
+      lcd.printfAt(10, row, format_Set_var, int(*value) * param_coef);
     }
 
     virtual void IncValue(int8_t inc)
     {       
-      *param = constrain(*param + inc * increment, var_Min, var_Max);    
+      *value = constrain(*value + inc * increment, var_Min, var_Max);    
+    }
+};
+
+class SetMenuItem : public MenuItem
+{  
+  public:
+    const char* format_Set_var; // Формат значения при вводе переменной
+    uint8_t* value;   
+
+    SetMenuItem(byte screen_, byte num_, const char* text_, const char* format_, uint8_t * value_) : MenuItem(screen_, num_, text_), format_Set_var(format_), value(value_) {}
+
+    virtual void Update(LiquidCrystalCyr &lcd, byte row) 
+    {
+      lcd.printfAt(10, row, format_Set_var, *value);
+    }
+
+    virtual void IncValue(int8_t )
+    {
+      uint8_t values[] = {1,10,100}; // переделать на индексы
+     
+      switch (*value)
+      {
+      case 1: *value = 10;  break;
+      case 10: *value = 100;  break;
+      case 100: *value = 1;  break;
+      }
     }
 };
 
