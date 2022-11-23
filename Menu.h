@@ -128,6 +128,9 @@ public:
 
             for (int i = 0; i < nRows; ++i)
             {
+                if (first + i >= nItems)
+                    break;
+                    
                 MenuItem *m = items[first + i];
 
                 if (m->Screen != scr)
