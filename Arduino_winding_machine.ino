@@ -428,6 +428,13 @@ void AutoWindingPrg()                                             // Подпр�
       PrintWindingTurns();
       PrintWindingLayers();
 
+      Serial.print(shaftStepper.getStatus());
+      Serial.print(' ');
+      Serial.print(layerStepper.getStatus());
+      Serial.print(' ');      
+      Serial.print(planner.getStatus());
+      Serial.print(' ');
+
       Serial.print(shaftStepper.pos);
       Serial.print(',');
       Serial.println(layerStepper.pos);        
@@ -450,11 +457,11 @@ void AutoWindingPrg()                                             // Подпр�
 
 void _AutoWindingPrg()                                             // Подпрограмма автоматической намотки
 {    
-  cli;
+  cli();
   TCCR1A=(0<<COM1A1)|(0<<COM1B1)|(0<<COM1A0)|(0<<COM1B0)|(0<<WGM11)|(0<<WGM10); // Настройка таймера/счетчика 1: нормальный режим работы порта, OC1A/OC1B отключены; ATmega328/P DATASHEET стр.170-172
   TCCR1B=(0<<WGM13)|(1<<WGM12)|(0<<CS12)|(0<<CS11)|(1<<CS10);                   // Режим работы таймера/счетчика - CTC (очистить таймер при достижении значения в регистре сравнения OCR1A)
   OCR1A = 20000;                                                                // Значение в регистре OCR1A определяет частоту входа в прерывание таймера и устанавливает скрость вращения двигателей
-  sei;
+  sei();
 
   NSteps = 0;
   NTurn = 0;
