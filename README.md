@@ -18,5 +18,5 @@
 ## Установка
 ### Необходимые библиотеки
 
-* LiquidCrystal 1.0.7
-* GyverStepper 2.6.2
+* LiquidCrystal 1.0.7 или новее
+* GyverStepper 2.6.2 или новее
