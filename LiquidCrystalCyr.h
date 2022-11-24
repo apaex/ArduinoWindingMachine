@@ -79,6 +79,12 @@ public:
         print(buf);
     }
 
+    void PrintSymbol(byte col, byte row, byte Symbol_Code) // Подпрограмма: Выводим символ на экран
+    {
+        setCursor(col, row);
+        write(byte(Symbol_Code));
+    }
+
 private:
     byte _row = 0;
     byte _col = 0;
@@ -122,13 +128,4 @@ private:
 
         return _gen[c] - 1;
     }
-
-    
-public:
-    void PrintSymbol(byte col, byte row, byte Symbol_Code) // Подпрограмма: Выводим символ на экран
-    {
-        setCursor(col, row);
-        write(byte(Symbol_Code));
-    }
-
 };

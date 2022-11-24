@@ -173,7 +173,7 @@ void setup()
   EIMSK = (1<<INT0)|(1<<INT1);                                                  // Разрешение прерываний INT0 и INT1; ATmega328/P DATASHEET стр.90 
   EIFR = 0x00;                                                                  // Сбрасываем флаги внешних прерываний; ATmega328/P DATASHEET стр.91
   
-  lcd.begin(NCOL, NROW);                                                        // Инициализация LCD Дисплей 20 символов 4 строки   
+  lcd.begin(NCOL, NROW);                                                        // Инициализация LCD Дисплей 
   
   menu.Draw();
   sei();
