@@ -34,7 +34,7 @@ https://cxem.net/arduino/arduino245.php
 
 //**************************************************************  
     
-#define ShaftStep 50 // ShaftStep = Шаг резьбы*50
+#define THREAD_PITCH 50 // ShaftStep = Шаг резьбы*50
 
 //**************************************************************
 
@@ -46,8 +46,10 @@ https://cxem.net/arduino/arduino245.php
 #include <GyverStepper2.h>
 #include <HardwareSerial.h>
 #include "Menu.h"
+#include "Screen.h"
 #include "Winding.h"
 #include "LiquidCrystalCyr.h"
+#include "strings.h"
 
 #define ENC_CLK   2 // Даем имена номерам пинов
 #define ENC_SW    3
@@ -84,66 +86,54 @@ int8_t currentWinding = -1;
 volatile int8_t Encoder_Dir = 0;                          // Направление вращения энкодера
 volatile bool Push_Button = false;                        // Нажатие кнопки
 
-Winding current;                                          // Текущий виток и слой при автонамотке
 int Shaft_Pos = 0, Lay_Pos = 0;                           // Переменные, изменяемые на экране
 
 Settings settings;
 
 enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, miSettings, Winding1, Winding2, Winding3, WindingBack, TurnsSet, StepSet, SpeedSet, LaySet, Direction, Start, Cancel, ShaftPos, ShaftStepMul, LayerPos, LayerStepMul, PosCancel, miSettingsStopPerLevel, miSettingsBack}; // Нумерованный список строк экрана
 
-const char * boolSet[] = {"OFF", "ON "};
-const char * dirSet[] = {"<<<", ">>>"};
+const char *boolSet[] = {"OFF", "ON "};
+const char *dirSet[] = {"<<<", ">>>"};
+const uint8_t *stepSet[] = {1, 10, 100};
 
 MenuItem* menuItems[] = {              // Объявляем переменную Menu пользовательского типа MenuType и доступную только для чтения
 
-  new MenuItem(0,  0,  "Setup 1"),
-  new MenuItem(0,  1,  "Setup 2"),
-  new MenuItem(0,  2,  "Setup 3"),
-  new MenuItem(0,  3,  "Pos control"),
-  new MenuItem(0,  4,  "Settings"),
+  new MenuItem(0, 0, "Setup 1"),
+  new MenuItem(0, 1, "Setup 2"),
+  new MenuItem(0, 2, "Setup 3"),
+  new MenuItem(0, 3, "Pos control"),
+  new MenuItem(0, 4, "Settings"),
 
-  new MenuItem(1,  0,  "Winding 1   0000T"),
-  new MenuItem(1,  1,  "Winding 2   0000T"),
-  new MenuItem(1,  2,  "Winding 3   0000T"),
-  new MenuItem(1,  3,  "Back"),
+  new MenuItem(1, 0, "Winding 1   0000T"),
+  new MenuItem(1, 1, "Winding 2   0000T"),
+  new MenuItem(1, 2, "Winding 3   0000T"),
+  new MenuItem(1, 3, "Back"),
   
-  new UIntMenuItem(2,  0,  "Turns:", "%03d", NULL, 1, 999),
-  new ByteMenuItem(2,  1,  "Step:", "0.%04d", NULL, 1, 199,    ShaftStep),
-  new ByteMenuItem(2,  2,  "Speed:", "%03d", NULL, 1, 255),
-  new ByteMenuItem(2,  3,  "Layers:", "%02d", NULL, 1, 99),
-  new BoolMenuItem(2,  4,  "Direction", NULL, dirSet),
-  new MenuItem(2,  5,  "Start"),
-  new MenuItem(2,  6,  "Back"),
+  new UIntMenuItem(2, 0, "Turns:", "%03d", NULL, 1, 999),
+  new ByteMenuItem(2, 1, "Step:", "0.%04d", NULL, 1, 199, THREAD_PITCH),
+  new ByteMenuItem(2, 2, "Speed:", "%03d", NULL, 0, 240, 30, 1),
+  new ByteMenuItem(2, 3, "Layers:", "%02d", NULL, 1, 99),
+  new BoolMenuItem(2, 4, "Direction", NULL, dirSet),
+  new MenuItem(2, 5, "Start"),
+  new MenuItem(2, 6, "Back"),
 
-  new IntMenuItem(10, 0,  "SH pos:", "%+04d" ,&Shaft_Pos,  -999,   999),
-  new SetMenuItem(10, 1,  "StpMul:", "%03d", &settings.shaftStep),
-  new IntMenuItem(10, 2,  "LA pos:", "%+04d" ,&Lay_Pos,    -999,   999),
-  new SetMenuItem(10, 3,  "StpMul:", "%03d", &settings.layerStep),
-  new MenuItem(10, 4,  "Back"),
+  new IntMenuItem(10, 0, "SH pos:", "%+04d" ,&Shaft_Pos, -999, 999),
+  new SetMenuItem(10, 1, "StpMul:", "%03d", &settings.shaftStep, stepSet, 3),
+  new IntMenuItem(10, 2, "LA pos:", "%+04d" ,&Lay_Pos, -999, 999),
+  new SetMenuItem(10, 3, "StpMul:", "%03d", &settings.layerStep, stepSet, 3),
+  new MenuItem(10, 4, "Back"),
 
-  new BoolMenuItem(11, 0,  "LayerStop", &settings.stopPerLayer, boolSet),
-  new MenuItem(11, 1,  "Back"),
+  new BoolMenuItem(11, 0, "LayerStop", &settings.stopPerLayer, boolSet),
+  new MenuItem(11, 1, "Back"),
 }; 
 
 const byte MENU_COUNT = sizeof(menuItems)/sizeof(*menuItems);
 
-MainMenu menu(menuItems, MENU_COUNT);
-
-
-const char PROGMEM LINE1_FORMAT[] = "T%03d/%03d L%02d/%02d";
-const char PROGMEM LINE2_FORMAT[] = "Sp%03d St0.%04d";
-const char PROGMEM LINE4_FORMAT[] = "%03d";
-const char PROGMEM LINE5_FORMAT[] = "%02d";
-const char PROGMEM LINE6_FORMAT[] = "%03d";
-
-const char PROGMEM LINE3_FORMAT[] = "Winding %d  % 4dT";
-
-const char PROGMEM STRING_1[] = "AUTOWINDING DONE";
-const char PROGMEM STRING_2[] = "PRESS CONTINUE  ";
 
 LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7);                  // Назначаем пины для управления LCD 
 //LiquidCrystal_I2C lcd(0x27, NCOL, NROW);                // 0x3F I2C адрес для PCF8574AT
 
+MainMenu menu(menuItems, MENU_COUNT, lcd);
 
 GStepper2<STEPPER2WIRE> shaftStepper(STEPPERS_STEPS_COUNT, STEP_Z, DIR_Z, EN_STEP);
 GStepper2<STEPPER2WIRE> layerStepper(STEPPERS_STEPS_COUNT, STEP_A, DIR_A, EN_STEP);
@@ -185,8 +175,7 @@ void setup()
   
   lcd.begin(NCOL, NROW);                                                        // Инициализация LCD Дисплей 20 символов 4 строки   
   
-  menu.InitRender(lcd, NCOL, NROW);
-  menu.Update();
+  menu.Draw();
   sei();
 } 
 
@@ -198,7 +187,7 @@ void loop()
   {                                                                               
     menu.index = constrain(menu.index + Encoder_Dir, menu.GetFirstIndex(), menu.GetLastIndex()); // Если позиция энкодера изменена то меняем menu.index и выводим экран
     Encoder_Dir = 0; 
-    menu.Update();   
+    menu.Draw();   
   }
 
   if (Push_Button)                                    // Проверяем нажатие кнопки
@@ -257,7 +246,7 @@ void loop()
       case miSettingsBack: menu.index = miSettings; break;
     }
     Push_Button = false; 
-    menu.Update();
+    menu.Draw();
   }
 }
 
@@ -273,7 +262,7 @@ void ValEditTick()
 
 void UpdateMenuItemText(byte i)
 {
-  sprintf_P(menu[Winding1 + i]->format, LINE3_FORMAT, i+1, params[currentTransformer][i].turns * params[currentTransformer][i].layers); 
+  sprintf_P(menu[Winding1 + i]->text, LINE3_FORMAT, i+1, params[currentTransformer][i].turns * params[currentTransformer][i].layers); 
 }
 
 void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
@@ -302,34 +291,6 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
     ValEditTick(); 
   } 
   digitalWrite(EN_STEP, HIGH); 
-}
-
-
-void PrintWindingScreen()  // Подпрограмма вывода экрана автонамотки
-{  
-  const Winding &w = params[currentTransformer][currentWinding];
-
-  lcd.clear();
-  lcd.printfAt_P(0,0, LINE1_FORMAT, current.turns, w.turns, current.layers, w.layers);
-  lcd.printfAt_P(0,1, LINE2_FORMAT, current.speed, w.step*ShaftStep);  
-  PrintWindingTurns();
-  PrintWindingLayers();
-  PrintWindingSpeed();
-}
-
-void PrintWindingTurns()  
-{  
-  lcd.printfAt_P(1, 0, LINE4_FORMAT, current.turns+1);
-}
-
-void PrintWindingLayers()  
-{  
-  lcd.printfAt_P(10, 0, LINE5_FORMAT, current.layers+1);
-}
-
-void PrintWindingSpeed()  
-{  
-  lcd.printfAt_P(2, 1, LINE6_FORMAT, current.speed);
 }
 
 void LoadSettings()
@@ -362,13 +323,14 @@ void SaveSettings()
 
 void AutoWindingPrg()                                             // Подпрограмма автоматической намотки
 {    
-  GPlanner2< STEPPER2WIRE, 2, 4 > planner;
+  Winding current;                                          // Текущий виток и слой при автонамотке
+ GPlanner2< STEPPER2WIRE, 2, 4 > planner;
   planner.addStepper(0, shaftStepper);
   planner.addStepper(1, layerStepper);
 
-  int Set_Speed_INT;
   const Winding &w = params[currentTransformer][currentWinding];
-
+  MainScreen screen(lcd, w, current);
+ 
   Serial.println(F("Start"));
 
   current.turns = 0;
@@ -382,8 +344,8 @@ void AutoWindingPrg()                                             // Подпр�
   Push_Button = false; 
  
   planner.setAcceleration(STEPPERS_STEPS_COUNT / 2);
-  planner.setMaxSpeed(STEPPERS_STEPS_COUNT / 2);
-  //planner.setDtA(1.0);
+  planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed *30 / 60);
+  //planner.setDtA(0.1);
  
   int32_t dShaft = -STEPPERS_STEPS_COUNT * w.turns;
   int32_t dLayer = -STEPPERS_STEPS_COUNT /200L * w.turns * w.step * (w.dir ? 1 : -1); 
@@ -395,13 +357,19 @@ void AutoWindingPrg()                                             // Подпр�
   planner.start();
   int i = 0;    // упреждающий счетчик слоёв
 
-  PrintWindingScreen();
+  screen.PrintWindingScreen();
   
   while (!planner.ready())
   {
     if (Encoder_Dir) {                                                                    // Если повернуть энкодер во время автонамотки 
-      Set_Speed_INT = constrain(Set_Speed_INT + Encoder_Dir, 1, 255);                     // то меняем значение скорости
+      current.speed = constrain(current.speed + Encoder_Dir, 1, 255);                     // то меняем значение скорости
+      planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed *30 / 60);
       Encoder_Dir = 0; 
+      //planner.calculate();
+      screen.PrintWindingSpeed();
+
+      Serial.print("Speed: ");
+      Serial.println(STEPPERS_STEPS_COUNT * current.speed / 60);
     }
 
     while(planner.available() && (i < w.layers)) 
@@ -412,20 +380,23 @@ void AutoWindingPrg()                                             // Подпр�
       Serial.print(i);
       Serial.println(F(" - AddTarget"));
       planner.addTarget(p, (i == w.layers), RELATIVE);    // в последней точке остановка
+      //planner.calculate();
     }        
     
     planner.tick();
 
     static uint32_t tmr;
-    if (millis() - tmr >= 2000) {
+    if (millis() - tmr >= 500) {
       tmr = millis();
 
       int total_turns = -shaftStepper.pos / STEPPERS_STEPS_COUNT;
       current.turns = total_turns % w.turns;
       current.layers = total_turns / w.turns;
-      PrintWindingTurns();
-      PrintWindingLayers();
+      screen.PrintWindingTurns();
+      screen.PrintWindingLayers();
 
+      Serial.print(planner.getStatus());
+      Serial.print(',');
       Serial.print(shaftStepper.pos);
       Serial.print(',');
       Serial.println(layerStepper.pos);        

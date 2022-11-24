@@ -18,6 +18,16 @@ public:
     LiquidCrystalCyr(uint8_t rs, uint8_t enable,
                      uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3) : LiquidCrystal(rs, enable, d0, d1, d2, d3){};
 
+    uint8_t nCols = 0;
+    uint8_t nRows = 0;
+
+    void begin(uint8_t cols, uint8_t rows)
+    {
+      nCols = cols;
+      nRows = rows;
+      LiquidCrystal::begin(cols, rows, LCD_5x8DOTS);
+    }
+
     void setCursor(uint8_t col, uint8_t row)
     {
         _col = col;

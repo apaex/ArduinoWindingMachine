@@ -1,5 +1,8 @@
 #pragma once
 
+// Этот файл сохранен в кодировке Windows 1251
+// This file is saved in Windows 1251 encoding
+
 const byte font[][8] PROGMEM = {
   //Б
   {
