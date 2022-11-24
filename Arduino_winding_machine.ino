@@ -334,7 +334,7 @@ void AutoWindingPrg()                                       // Подпрогр�
   planner.start();
   int i = 0;    // упреждающий счетчик слоёв
 
-  screen.PrintWindingScreen();
+  screen.Draw();
   
   while (!planner.ready())
   {
@@ -343,7 +343,7 @@ void AutoWindingPrg()                                       // Подпрогр�
       planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed *30 / 60);
       Encoder_Dir = 0; 
       //planner.calculate();
-      screen.PrintWindingSpeed();
+      screen.UpdateSpeed();
 
       Serial.print("Speed: ");
       Serial.println(STEPPERS_STEPS_COUNT * current.speed / 60);
@@ -369,8 +369,8 @@ void AutoWindingPrg()                                       // Подпрогр�
       int total_turns = -shaftStepper.pos / STEPPERS_STEPS_COUNT;
       current.turns = total_turns % w.turns;
       current.layers = total_turns / w.turns;
-      screen.PrintWindingTurns();
-      screen.PrintWindingLayers();
+      screen.UpdateTurns();
+      screen.UpdateLayers();
 
       Serial.print(planner.getStatus());
       Serial.print(',');
@@ -382,6 +382,7 @@ void AutoWindingPrg()                                       // Подпрогр�
   }
 
   planner.stop();
+  screen.Draw();
   /*
   if (settings.stopPerLayer) {
     lcd.printfAt_P(0, 1, STRING_2);           // "PRESS CONTINUE  "    
