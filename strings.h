@@ -1,6 +1,6 @@
 #pragma once
 
-// Р­С‚РѕС‚ С„Р°Р№Р» СЃРѕС…СЂР°РЅРµРЅ РІ РєРѕРґРёСЂРѕРІРєРµ Windows 1251
+// Этот файл сохранен в кодировке Windows 1251
 // This file is saved in Windows 1251 encoding
 
 const char PROGMEM LINE1_FORMAT[] = "T%03d/%03d L%02d/%02d";
