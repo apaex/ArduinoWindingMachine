@@ -4,20 +4,23 @@
 
 #define CH_UP 0
 #define CH_DW 1
+#define CH_QL 0x3C
+#define CH_QR 0x3E
+#define CH_CR 0x3C
 
 class MenuItem
 {                       
   public:
-    byte Screen;        // Индекс экрана
-    byte string_number; // Номер строки на экране
-    const char* format;        // Формат строки
+    byte screen;        // Индекс экрана
+    byte line; // Номер строки на экране
+    const char* text;        // Формат строки
 
-    MenuItem(byte screen_, byte num_, const char* text_) : Screen(screen_), string_number(num_), format(text_) {}
+    MenuItem(byte screen_, byte line_, const char* text_) : screen(screen_), line(line_), text(text_) {}
 
     virtual void Draw(LiquidCrystalCyr &lcd, byte row)
     {
       lcd.setCursor(2, row);
-      lcd.print(format);
+      lcd.print(text);
       Update(lcd, row);
     }
 
@@ -49,37 +52,37 @@ template <class T>
 class ValueMenuItem : public MenuItem
 {    
   public:                   
-    const char* format_Set_var; // Формат значения при вводе переменной
+    const char* format; // Формат значения при вводе переменной
     T *value;            // Указатель на адрес текущей переменной изменяемой на экране
-    T var_Min;            // Ограничение значения переменной снизу
-    T var_Max;            // Ограничение значения переменной сверху
-    T param_coef;        // Размерный коэффициент значения переменной
+    T minVal;            // Ограничение значения переменной снизу
+    T maxVal;            // Ограничение значения переменной сверху
+    T scale;        // Размерный коэффициент значения переменной
     T increment;
 
-    ValueMenuItem(byte screen_, byte num_, const char* text_, const char* format_, T* value_, T min_, T max_, T scale_ = 1, T increment_ = 1) : MenuItem(screen_, num_, text_), format_Set_var(format_), value(value_), var_Min(min_), var_Max(max_), param_coef(scale_), increment(increment_) {}
+    ValueMenuItem(byte screen_, byte num_, const char* text_, const char* format_, T* value_, T min_, T max_, T scale_ = 1, T increment_ = 1) : MenuItem(screen_, num_, text_), format(format_), value(value_), minVal(min_), maxVal(max_), scale(scale_), increment(increment_) {}
 
     virtual void Update(LiquidCrystalCyr &lcd, byte row)
     {
-      lcd.printfAt(10, row, format_Set_var, int(*value) * param_coef);
+      lcd.printfAt(10, row, format, int(*value) * scale);
     }
 
     virtual void IncValue(int8_t inc)
     {       
-      *value = constrain(*value + inc * increment, var_Min, var_Max);    
+      *value = constrain(*value + inc * increment, minVal, maxVal);    
     }
 };
 
 class SetMenuItem : public MenuItem
 {  
   public:
-    const char* format_Set_var; // Формат значения при вводе переменной
+    const char* format; // Формат значения при вводе переменной
     uint8_t* value;   
 
-    SetMenuItem(byte screen_, byte num_, const char* text_, const char* format_, uint8_t * value_) : MenuItem(screen_, num_, text_), format_Set_var(format_), value(value_) {}
+    SetMenuItem(byte screen_, byte num_, const char* text_, const char* format_, uint8_t * value_) : MenuItem(screen_, num_, text_), format(format_), value(value_) {}
 
     virtual void Update(LiquidCrystalCyr &lcd, byte row) 
     {
-      lcd.printfAt(10, row, format_Set_var, *value);
+      lcd.printfAt(10, row, format, *value);
     }
 
     virtual void IncValue(int8_t )
@@ -108,9 +111,6 @@ public:
     MenuItem **items;
     byte nItems;
 
-    byte nCols;
-    byte nRows;
-
     byte index = 0; // Переменная хранит номер текущей строки меню
 
     MainMenu(MenuItem **menu, byte count) : items(menu), nItems(count) {}
@@ -123,27 +123,27 @@ public:
     }
 
     // для текущего меню получаем индекс первого элемента
-    byte GetFirstIndex()
+    byte GetFirstIndex() const
     {
-        return index - items[index]->string_number;
+        return index - items[index]->line;
     }
 
     // для текущего меню получаем индекс последнего элемента
-    byte GetLastIndex()
+    byte GetLastIndex() const
     {
-        byte scr = items[index]->Screen;
+        byte scr = items[index]->screen;
         byte r = index;
-        while ((r + 1 < nItems) && (items[r + 1]->Screen == scr))
+        while ((r + 1 < nItems) && (items[r + 1]->screen == scr))
             ++r;
         return r;
     }
 
     void Update() // Подпрограмма: Выводим экран на LCD
     {
-        byte scr = items[index]->Screen;
-        byte page = items[index]->string_number / nRows;
-        byte cur = items[index]->string_number % nRows;
-        byte first = index - items[index]->string_number + page * nRows;
+        byte scr = items[index]->screen;
+        byte page = items[index]->line / nRows;
+        byte cur = items[index]->line % nRows;
+        byte first = index - items[index]->line + page * nRows;
 
         static byte prev_screen = -1;
         static byte prev_page = -1;
@@ -159,7 +159,7 @@ public:
                     
                 MenuItem *m = items[first + i];
 
-                if (m->Screen != scr)
+                if (m->screen != scr)
                     break;
 
                 m->Draw(*lcd, i);
@@ -170,40 +170,51 @@ public:
         }
 
         for (int i = 0; i < nRows; ++i)
-            lcd->PrintSymbol(0, i, (i == cur) ? 0x3E : 0x20);
+            lcd->PrintSymbol(0, i, (i == cur) ? CH_CR : ' ');
 
         if (page > 0) // Выводим стрелки ⯅⯆ на соответствующих строках меню
             lcd->PrintSymbol(nCols - 1, 0, CH_UP);
-        if (items[first + nRows]->Screen == scr)
+        if (items[first + nRows]->screen == scr)
             lcd->PrintSymbol(nCols - 1, nRows - 1, CH_DW);
     }
     
-
+    byte GetCursor() const
+    {
+      return items[index]->line % nRows;
+    }
 
     void IncCurrent(int8_t increment) 
     {
-        byte cur = items[index]->string_number % nRows;   
+        byte cur = GetCursor();  
 
         items[index]->IncValue(increment);     
         items[index]->Update(*lcd, cur);
     }
 
-    void SetQuote(int First_Cur, int Second_Cur) // Подпрограмма: Выводим выделение изменяемой переменной на LCD
+    void DrawQuotes(bool enable, byte leftPos, byte rightPos)
     {
-        byte cur = items[index]->string_number % nRows;
-        lcd->PrintSymbol(First_Cur, cur, 0x3E);  // Выводим символ >
-        lcd->PrintSymbol(Second_Cur, cur, 0x3C); // Выводим символ <
-        lcd->PrintSymbol(0, cur, 0x20);          // Стираем основной курсор
+        byte cur = GetCursor();
+        
+        lcd->PrintSymbol(leftPos, cur, enable ? CH_QR : ' ');  // Выводим символ >
+        lcd->PrintSymbol(rightPos, cur, enable ? CH_QL : ' '); // Выводим символ <
+        lcd->PrintSymbol(0, cur, !enable ? CH_CR : ' ');       // Стираем основной курсор
     }
 
-    void ClearQuote(int First_Cur, int Second_Cur) // Подпрограмма: Стираем выделение изменяемой переменной на LCD
+    void SetQuote(byte leftPos, byte rightPos) // Подпрограмма: Выводим выделение изменяемой переменной на LCD
     {
-        byte cur = items[index]->string_number % nRows;
-        lcd->PrintSymbol(First_Cur, cur, 0x20);  // Стираем символ >
-        lcd->PrintSymbol(Second_Cur, cur, 0x20); // Стираем символ <
-        lcd->PrintSymbol(0, cur, 0x3E);          // Выводим основной курсор
+        DrawQuotes(1, leftPos, rightPos);
+    }
+
+    void ClearQuote(byte leftPos, byte rightPos) // Подпрограмма: Стираем выделение изменяемой переменной на LCD
+    {
+        DrawQuotes(0, leftPos, rightPos);
     }
 
     MenuItem* operator[](byte idx)       { return items[idx]; }
     const MenuItem* operator[](byte idx) const { return items[idx]; }
+
+protected:
+    byte nCols;
+    byte nRows;
+
 };
