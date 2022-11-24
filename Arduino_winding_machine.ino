@@ -83,11 +83,6 @@ Winding params[TRANSFORMER_COUNT][WINDING_COUNT];
 int8_t currentTransformer = -1;
 int8_t currentWinding = -1;
 
-volatile int8_t Encoder_Dir = 0;                          // Направление вращения энкодера
-volatile bool Push_Button = false;                        // Нажатие кнопки
-
-int Shaft_Pos = 0, Lay_Pos = 0;                           // Переменные, изменяемые на экране
-
 Settings settings;
 
 enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, miSettings, Winding1, Winding2, Winding3, WindingBack, TurnsSet, StepSet, SpeedSet, LaySet, Direction, Start, Cancel, ShaftPos, ShaftStepMul, LayerPos, LayerStepMul, PosCancel, miSettingsStopPerLevel, miSettingsBack}; // Нумерованный список строк экрана
@@ -96,8 +91,8 @@ const char *boolSet[] = {"OFF", "ON "};
 const char *dirSet[] = {"<<<", ">>>"};
 const uint8_t *stepSet[] = {1, 10, 100};
 
-MenuItem* menuItems[] = {              // Объявляем переменную Menu пользовательского типа MenuType и доступную только для чтения
-
+MenuItem* menuItems[] = 
+{              
   new MenuItem(0, 0, "Setup 1"),
   new MenuItem(0, 1, "Setup 2"),
   new MenuItem(0, 2, "Setup 3"),
@@ -117,9 +112,9 @@ MenuItem* menuItems[] = {              // Объявляем переменну�
   new MenuItem(2, 5, "Start"),
   new MenuItem(2, 6, "Back"),
 
-  new IntMenuItem(10, 0, "SH pos:", "%+04d" ,&Shaft_Pos, -999, 999),
+  new IntMenuItem(10, 0, "SH pos:", "%+04d" ,&settings.shaftPos, -999, 999),
   new SetMenuItem(10, 1, "StpMul:", "%03d", &settings.shaftStep, stepSet, 3),
-  new IntMenuItem(10, 2, "LA pos:", "%+04d" ,&Lay_Pos, -999, 999),
+  new IntMenuItem(10, 2, "LA pos:", "%+04d" ,&settings.layerPos, -999, 999),
   new SetMenuItem(10, 3, "StpMul:", "%03d", &settings.layerStep, stepSet, 3),
   new MenuItem(10, 4, "Back"),
 
@@ -137,6 +132,9 @@ MainMenu menu(menuItems, MENU_COUNT, lcd);
 
 GStepper2<STEPPER2WIRE> shaftStepper(STEPPERS_STEPS_COUNT, STEP_Z, DIR_Z, EN_STEP);
 GStepper2<STEPPER2WIRE> layerStepper(STEPPERS_STEPS_COUNT, STEP_A, DIR_A, EN_STEP);
+
+volatile int8_t Encoder_Dir = 0;                          // Направление вращения энкодера
+volatile bool Push_Button = false;                        // Нажатие кнопки
 
 void setup() 
 {
@@ -185,14 +183,14 @@ void loop()
 {
   if (Encoder_Dir != 0)                               // Проверяем изменение позиции энкодера   
   {                                                                               
-    menu.index = constrain(menu.index + Encoder_Dir, menu.GetFirstIndex(), menu.GetLastIndex()); // Если позиция энкодера изменена то меняем menu.index и выводим экран
+    menu.index = constrain(menu.index + Encoder_Dir, menu.GetFirstIndex(), menu.GetLastIndex()); // Если позиция энкодера изменена, то меняем menu.index и выводим экран
     Encoder_Dir = 0; 
     menu.Draw();   
   }
 
   if (Push_Button)                                    // Проверяем нажатие кнопки
   {  
-    switch (menu.index)                                                 // Если было нажатие то выполняем действие соответствующее текущей позиции курсора
+    switch (menu.index)                               // Если было нажатие, то выполняем действие, соответствующее текущей позиции курсора
     {  
       case Autowinding1:  
       case Autowinding2: 
@@ -217,12 +215,12 @@ void loop()
               break;
       case WindingBack:  menu.index = Autowinding1 + currentTransformer; break;
       case PosControl:   menu.index = ShaftPos; break;
-      case TurnsSet:     menu.SetQuote(9,13); Push_Button=false; while(!Push_Button) { ValEditTick(); } menu.ClearQuote(9,13); break;
-      case StepSet:      menu.SetQuote(9,16); Push_Button=false; while(!Push_Button) { ValEditTick(); } menu.ClearQuote(9,16); break;  
-      case SpeedSet:     menu.SetQuote(9,13); Push_Button=false; while(!Push_Button) { ValEditTick(); } menu.ClearQuote(9,13); break;
-      case LaySet:       menu.SetQuote(9,12); Push_Button=false; while(!Push_Button) { ValEditTick(); } menu.ClearQuote(9,12); break;   
+      case TurnsSet:     menu.SetQuote(9,13); ValEdit(); menu.ClearQuote(9,13); break;
+      case StepSet:      menu.SetQuote(9,16); ValEdit(); menu.ClearQuote(9,16); break;  
+      case SpeedSet:     menu.SetQuote(9,13); ValEdit(); menu.ClearQuote(9,13); break;
+      case LaySet:       menu.SetQuote(9,12); ValEdit(); menu.ClearQuote(9,12); break;   
       case Direction:    menu.IncCurrent(1); break;                          
-      case Start:        SaveSettings(); Push_Button = false; AutoWindingPrg(); menu.index = Winding1 + currentWinding; UpdateMenuItemText(currentWinding); break; 
+      case Start:        SaveSettings(); AutoWindingPrg(); menu.index = Winding1 + currentWinding; UpdateMenuItemText(currentWinding); break; 
       case Cancel:       SaveSettings(); menu.index = Winding1 + currentWinding; UpdateMenuItemText(currentWinding); break;
 
       case ShaftPos:
@@ -237,7 +235,7 @@ void loop()
               menu.IncCurrent(1);
               ((IntMenuItem*)menu[menu.index-1])->increment = *((SetMenuItem*)menu[menu.index])->value;
               break;  
-      case PosCancel:    menu.index = PosControl; Shaft_Pos = 0; Lay_Pos = 0; break;
+      case PosCancel:    menu.index = PosControl; settings.shaftPos = 0; settings.layerPos = 0; break;
       
       case miSettings:   menu.index = miSettingsStopPerLevel; break;
       case miSettingsStopPerLevel: 
@@ -250,19 +248,16 @@ void loop()
   }
 }
 
-
-void ValEditTick()
-{
-  if (Encoder_Dir != 0) 
-  {    
-    menu.IncCurrent(Encoder_Dir);         
-    Encoder_Dir = 0;                                                                
-  } 
-}
-
 void UpdateMenuItemText(byte i)
 {
   sprintf_P(menu[Winding1 + i]->text, LINE3_FORMAT, i+1, params[currentTransformer][i].turns * params[currentTransformer][i].layers); 
+}
+
+void ValEdit()
+{
+  Push_Button=false; 
+  while(!Push_Button) 
+    ValEditTick(); 
 }
 
 void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
@@ -293,38 +288,20 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
   digitalWrite(EN_STEP, HIGH); 
 }
 
-void LoadSettings()
+void ValEditTick()
 {
-  int p=0;
-  byte v = 0;
-  EEPROM.get(p, v);          p+=1;
-  if (v != Winding::version)
-    return;
-
-  for (int i=0; i<TRANSFORMER_COUNT; ++i)
-    for (int j=0; j<WINDING_COUNT; ++j)
-      params[i][j].Load(p);
-
-  //settings.Load(p);
+  if (Encoder_Dir != 0) 
+  {    
+    menu.IncCurrent(Encoder_Dir);         
+    Encoder_Dir = 0;                                                                
+  } 
 }
 
-void SaveSettings()
-{
-  int p=0;
-  byte v = Winding::version;
-  EEPROM_save(p, v);          p+=1;   
 
-  for (int i=0; i<TRANSFORMER_COUNT; ++i)
-    for (int j=0; j<WINDING_COUNT; ++j)
-      params[i][j].Save(p);
-
-  //settings.Save(p);
-}
-
-void AutoWindingPrg()                                             // Подпрограмма автоматической намотки
+void AutoWindingPrg()                                       // Подпрограмма автоматической намотки
 {    
   Winding current;                                          // Текущий виток и слой при автонамотке
- GPlanner2< STEPPER2WIRE, 2, 4 > planner;
+  GPlanner2< STEPPER2WIRE, 2, 4 > planner;
   planner.addStepper(0, shaftStepper);
   planner.addStepper(1, layerStepper);
 
@@ -361,7 +338,7 @@ void AutoWindingPrg()                                             // Подпр�
   
   while (!planner.ready())
   {
-    if (Encoder_Dir) {                                                                    // Если повернуть энкодер во время автонамотки 
+    if (Encoder_Dir) {                                                                    // Если повернуть энкодер во время автонамотки, 
       current.speed = constrain(current.speed + Encoder_Dir, 1, 255);                     // то меняем значение скорости
       planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed *30 / 60);
       Encoder_Dir = 0; 
@@ -426,6 +403,33 @@ void WaitButton()
   Push_Button = false;
 }
 
+void LoadSettings()
+{
+  int p=0;
+  byte v = 0;
+  EEPROM.get(p, v);          p+=1;
+  if (v != Winding::version)
+    return;
+
+  for (int i=0; i<TRANSFORMER_COUNT; ++i)
+    for (int j=0; j<WINDING_COUNT; ++j)
+      params[i][j].Load(p);
+
+  //settings.Load(p);
+}
+
+void SaveSettings()
+{
+  int p=0;
+  byte v = Winding::version;
+  EEPROM_save(p, v);          p+=1;   
+
+  for (int i=0; i<TRANSFORMER_COUNT; ++i)
+    for (int j=0; j<WINDING_COUNT; ++j)
+      params[i][j].Save(p);
+
+  //settings.Save(p);
+}
 
 ISR(INT0_vect)   // Вектор прерывания от энкодера
 {

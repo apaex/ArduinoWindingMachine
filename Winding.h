@@ -44,6 +44,9 @@ struct Settings
   bool stopPerLayer = 0;
   uint8_t shaftStep = 1;
   uint8_t layerStep = 1;
+  int shaftPos = 0;
+  int layerPos = 0;
+
 
   void Load(int &p)
   {
