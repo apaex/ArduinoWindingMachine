@@ -5,4 +5,4 @@
 * [Намоточный станок на Arduino версия 2.0](https://cxem.net/arduino/arduino235.php)
 * [Намоточный станок на Arduino](https://cxem.net/arduino/arduino245.php)
 
-
+Прошивка сейчас в разработке, немного подождите.
