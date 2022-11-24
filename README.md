@@ -1,1 +1,1 @@
-# Arduino-Winding-Machine
+# Arduino Winding Machine
