@@ -84,6 +84,19 @@ public:
         LiquidCrystal::write((byte)c);        
     }
 
+    void print_P(PGM_P s)
+    {
+      char buf[strlen_P(s)+1];
+      strcpy_P(buf, s); 
+      print(buf);
+    }
+    
+    void printAt_P(uint8_t col, uint8_t row, PGM_P s)
+    {
+      setCursor(col, row);
+      print_P(s);
+    }
+
     void printf(const char *format, ...)
     {
         char buf[21];

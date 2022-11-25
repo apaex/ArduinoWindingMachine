@@ -18,8 +18,7 @@ class MenuItem
 
     virtual void Draw(LiquidCrystalCyr &lcd, byte row)
     {
-      lcd.setCursor(2, row);
-      lcd.print(text);
+      lcd.printAt_P(2, row, text);
       Update(lcd, row);
     }
 
