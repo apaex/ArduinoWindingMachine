@@ -7,6 +7,9 @@
 
 #if LANGUAGE == ru
 
+const char STRING_ON[] = "бйк ";
+const char STRING_OFF[] = "бшйк";
+
 const char PROGMEM LINE1_FORMAT[] = "T%03d/%03d L%02d/%02d";
 const char PROGMEM LINE2_FORMAT[] = "Sp%03d St0.%04d";
 const char PROGMEM LINE4_FORMAT[] = "%03d";
@@ -37,6 +40,8 @@ const char PROGMEM MENU_19[] = "ондювю:";
 const char PROGMEM MENU_22[] = "ярноякни";
 
 #else
+const char STRING_ON[] = "ON ";
+const char STRING_OFF[] = "OFF";
 
 const char PROGMEM LINE1_FORMAT[] = "T%03d/%03d L%02d/%02d";
 const char PROGMEM LINE2_FORMAT[] = "Sp%03d St0.%04d";

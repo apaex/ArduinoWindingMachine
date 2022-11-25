@@ -90,7 +90,7 @@ Settings settings;
 
 enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, miSettings, Winding1, Winding2, Winding3, WindingBack, TurnsSet, LaySet, StepSet, SpeedSet, Direction, Start, Cancel, ShaftPos, ShaftStepMul, LayerPos, LayerStepMul, PosCancel, miSettingsStopPerLevel, miSettingsBack}; // Нумерованный список строк экрана
 
-const char *boolSet[] = {"OFF", "ON "};
+const char *boolSet[] = {STRING_OFF, STRING_ON};
 const char *dirSet[] = {"<<<", ">>>"};
 const uint8_t *stepSet[] = {1, 10, 100};
 
