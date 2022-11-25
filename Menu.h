@@ -52,13 +52,29 @@ class ValueMenuItem : public MenuItem
 {    
   public:                   
     const char* format;  // Формат значения при вводе переменной
+    T value = 0;
+
+    ValueMenuItem(byte screen_, byte num_, const char* text_, const char* format_) : MenuItem(screen_, num_, text_), format(format_) {}
+
+    virtual void Update(LiquidCrystalCyr &lcd, byte row)
+    {
+      lcd.printfAt(12, row, format, value);
+    }
+};
+
+
+template <class T>
+class VariableMenuItem : public MenuItem
+{    
+  public:                   
+    const char* format;  // Формат значения при вводе переменной
     T *value;            // Указатель на адрес текущей переменной изменяемой на экране
     T minVal;            // Ограничение значения переменной снизу
     T maxVal;            // Ограничение значения переменной сверху
     T scale;             // Размерный коэффициент значения переменной
     T increment;
 
-    ValueMenuItem(byte screen_, byte num_, const char* text_, const char* format_, T* value_, T min_, T max_, T scale_ = 1, T increment_ = 1) : MenuItem(screen_, num_, text_), format(format_), value(value_), minVal(min_), maxVal(max_), scale(scale_), increment(increment_) {}
+    VariableMenuItem(byte screen_, byte num_, const char* text_, const char* format_, T* value_, T min_, T max_, T scale_ = 1, T increment_ = 1) : MenuItem(screen_, num_, text_), format(format_), value(value_), minVal(min_), maxVal(max_), scale(scale_), increment(increment_) {}
 
     virtual void Update(LiquidCrystalCyr &lcd, byte row)
     {
@@ -97,9 +113,10 @@ class SetMenuItem : public MenuItem
     uint8_t index = 0;
 };
 
-typedef ValueMenuItem<uint8_t> ByteMenuItem;
-typedef ValueMenuItem<int16_t> IntMenuItem;
-typedef ValueMenuItem<uint16_t> UIntMenuItem;
+typedef VariableMenuItem<uint8_t> ByteMenuItem;
+typedef VariableMenuItem<int16_t> IntMenuItem;
+typedef VariableMenuItem<uint16_t> UIntMenuItem;
+typedef ValueMenuItem<uint16_t> ValMenuItem;
 
 class MainMenu
 {

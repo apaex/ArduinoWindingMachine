@@ -35,6 +35,7 @@ https://cxem.net/arduino/arduino245.php
 //**************************************************************  
     
 #define THREAD_PITCH 50 // ShaftStep = Шаг резьбы*50
+#define LANGUAGE ru
 
 //**************************************************************
 
@@ -45,9 +46,10 @@ https://cxem.net/arduino/arduino245.php
 #include <GyverPlanner2.h>
 #include <GyverStepper2.h>
 #include <HardwareSerial.h>
-#include "Menu.h"
 #include "Screen.h"
+#include "Menu.h"
 #include "Winding.h"
+
 #include "LiquidCrystalCyr.h"
 #include "strings.h"
 
@@ -86,7 +88,7 @@ int8_t currentWinding = -1;
 
 Settings settings;
 
-enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, miSettings, Winding1, Winding2, Winding3, WindingBack, TurnsSet, StepSet, SpeedSet, LaySet, Direction, Start, Cancel, ShaftPos, ShaftStepMul, LayerPos, LayerStepMul, PosCancel, miSettingsStopPerLevel, miSettingsBack}; // Нумерованный список строк экрана
+enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, miSettings, Winding1, Winding2, Winding3, WindingBack, TurnsSet, LaySet, StepSet, SpeedSet, Direction, Start, Cancel, ShaftPos, ShaftStepMul, LayerPos, LayerStepMul, PosCancel, miSettingsStopPerLevel, miSettingsBack}; // Нумерованный список строк экрана
 
 const char *boolSet[] = {"OFF", "ON "};
 const char *dirSet[] = {"<<<", ">>>"};
@@ -94,37 +96,40 @@ const uint8_t *stepSet[] = {1, 10, 100};
 
 MenuItem* menuItems[] = 
 {              
-  new MenuItem(0, 0, "Setup 1"),
-  new MenuItem(0, 1, "Setup 2"),
-  new MenuItem(0, 2, "Setup 3"),
-  new MenuItem(0, 3, "Pos control"),
-  new MenuItem(0, 4, "Settings"),
+  new MenuItem(0, 0, MENU_01),
+  new MenuItem(0, 1, MENU_02),
+  new MenuItem(0, 2, MENU_03),
+  new MenuItem(0, 3, MENU_04),
+  new MenuItem(0, 4, MENU_05),
 
-  new MenuItem(1, 0, "Winding 1   0000T"),
-  new MenuItem(1, 1, "Winding 2   0000T"),
-  new MenuItem(1, 2, "Winding 3   0000T"),
-  new MenuItem(1, 3, "Back"),
+  new ValMenuItem(1, 0, MENU_06, "% 4dT"),
+  new ValMenuItem(1, 1, MENU_07, "% 4dT"),
+  new ValMenuItem(1, 2, MENU_08, "% 4dT"),
+  new MenuItem(1, 3, MENU_09),
   
-  new UIntMenuItem(2, 0, "Turns:", "%03d", NULL, 1, 999),
-  new ByteMenuItem(2, 1, "Step:", "0.%04d", NULL, 1, 199, THREAD_PITCH),
-  new UIntMenuItem(2, 2, "Speed:", "%03d", NULL, 0, 600, 1, 30),
-  new ByteMenuItem(2, 3, "Layers:", "%02d", NULL, 1, 99),
-  new BoolMenuItem(2, 4, "Direction", NULL, dirSet),
-  new MenuItem(2, 5, "Start"),
-  new MenuItem(2, 6, "Back"),
+  new UIntMenuItem(2, 0, MENU_10, "%03d", NULL, 1, 999),
+  new ByteMenuItem(2, 3, MENU_13, "%02d", NULL, 1, 99),
+  new ByteMenuItem(2, 1, MENU_11, "0.%04d", NULL, 1, 199, THREAD_PITCH),
+  new UIntMenuItem(2, 2, MENU_12, "%03d", NULL, 0, 600, 1, 30),
+  new BoolMenuItem(2, 4, MENU_14, NULL, dirSet),
+  new MenuItem(2, 5, MENU_15),
+  new MenuItem(2, 6, MENU_09),
 
-  new IntMenuItem(10, 0, "SH pos:", "%+04d" ,&settings.shaftPos, -999, 999),
-  new SetMenuItem(10, 1, "StpMul:", "%03d", &settings.shaftStep, stepSet, 3),
-  new IntMenuItem(10, 2, "LA pos:", "%+04d" ,&settings.layerPos, -999, 999),
-  new SetMenuItem(10, 3, "StpMul:", "%03d", &settings.layerStep, stepSet, 3),
-  new MenuItem(10, 4, "Back"),
+  new IntMenuItem(10, 0, MENU_17, "%+04d", &settings.shaftPos, -999, 999),
+  new SetMenuItem(10, 1, MENU_18, "%03d", &settings.shaftStep, stepSet, 3),
+  new IntMenuItem(10, 2, MENU_19, "%+04d", &settings.layerPos, -999, 999),
+  new SetMenuItem(10, 3, MENU_18, "%03d", &settings.layerStep, stepSet, 3),
+  new MenuItem(10, 4, MENU_09),
 
-  new BoolMenuItem(11, 0, "LayerStop", &settings.stopPerLayer, boolSet),
-  new MenuItem(11, 1, "Back"),
+  new BoolMenuItem(11, 0, MENU_22, &settings.stopPerLayer, boolSet),
+  new MenuItem(11, 1, MENU_09),
 }; 
+
 
 const byte MENU_COUNT = sizeof(menuItems)/sizeof(*menuItems);
 
+byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // Создаем свой символ ⯅ для LCD
+byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100};   // Создаем свой символ ⯆ для LCD
 
 LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7);                  // Назначаем пины для управления LCD 
 //LiquidCrystal_I2C lcd(0x27, NCOL, NROW);                // 0x3F I2C адрес для PCF8574AT
@@ -160,9 +165,7 @@ void setup()
 
  // lcd.init(); 
   
-  byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // Создаем свой символ ⯅ для LCD
-  byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100};   // Создаем свой символ ⯆ для LCD
-
+  
   lcd.createChar(0, up);       // Записываем символ ⯅ в память LCD
   lcd.createChar(1, down);     // Записываем символ ⯆ в память LCD
 
@@ -173,7 +176,10 @@ void setup()
   EIFR = 0x00;                                                                  // Сбрасываем флаги внешних прерываний; ATmega328/P DATASHEET стр.91
   
   lcd.begin(NCOL, NROW);                                                        // Инициализация LCD Дисплей 
-  
+
+        lcd.write(byte(0));
+        lcd.write(byte(1));
+
   menu.Draw();
   sei();
 } 
@@ -251,7 +257,7 @@ void loop()
 
 void UpdateMenuItemText(byte i)
 {
-  sprintf_P(menu[Winding1 + i]->text, LINE3_FORMAT, i+1, params[currentTransformer][i].turns * params[currentTransformer][i].layers); 
+  ((ValMenuItem*)menu[Winding1 + i])->value = params[currentTransformer][i].turns * params[currentTransformer][i].layers;
 }
 
 void ValEdit()
@@ -515,7 +521,7 @@ void AutoWindingPrg()                                             // Подпр�
         current.speed = Set_Speed_INT;      
         EIMSK = 0b00000011;
         screen.UpdateSpeed();
-        
+
         if (Push_Button)
         {
           static bool EN_D;
