@@ -74,6 +74,7 @@ https://cxem.net/arduino/arduino245.php
 #define STEPPERS_MICROSTEPS 16
 #define STEPPERS_STEPS_COUNT (200L * STEPPERS_MICROSTEPS)
 
+#define EEPROM_DATA_VERSION 5
 
 #define TRANSFORMER_COUNT 3
 #define WINDING_COUNT 3
@@ -409,27 +410,27 @@ void LoadSettings()
   int p=0;
   byte v = 0;
   EEPROM.get(p, v);          p+=1;
-  if (v != Winding::version)
+  if (v != EEPROM_DATA_VERSION)
     return;
 
   for (int i=0; i<TRANSFORMER_COUNT; ++i)
     for (int j=0; j<WINDING_COUNT; ++j)
-      params[i][j].Load(p);
+      Load(params[i][j], p);
 
-  //settings.Load(p);
+  Load(settings, p);
 }
 
 void SaveSettings()
 {
   int p=0;
-  byte v = Winding::version;
+  byte v = EEPROM_DATA_VERSION;
   EEPROM_save(p, v);          p+=1;   
 
   for (int i=0; i<TRANSFORMER_COUNT; ++i)
     for (int j=0; j<WINDING_COUNT; ++j)
-      params[i][j].Save(p);
+      Save(params[i][j], p);
 
-  //settings.Save(p);
+  Save(settings, p);
 }
 
 ISR(INT0_vect)   // Вектор прерывания от энкодера
