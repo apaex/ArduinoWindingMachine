@@ -108,9 +108,9 @@ MenuItem* menuItems[] =
   new MenuItem(1, 3, MENU_09),
   
   new UIntMenuItem(2, 0, MENU_10, "%03d", NULL, 1, 999),
-  new ByteMenuItem(2, 3, MENU_13, "%02d", NULL, 1, 99),
-  new ByteMenuItem(2, 1, MENU_11, "0.%04d", NULL, 1, 199, THREAD_PITCH),
-  new UIntMenuItem(2, 2, MENU_12, "%03d", NULL, 0, 600, 1, 30),
+  new ByteMenuItem(2, 1, MENU_13, "%02d", NULL, 1, 99),
+  new ByteMenuItem(2, 2, MENU_11, "0.%04d", NULL, 1, 199, THREAD_PITCH),
+  new UIntMenuItem(2, 3, MENU_12, "%03d", NULL, 0, 600, 1, 30),
   new BoolMenuItem(2, 4, MENU_14, NULL, dirSet),
   new MenuItem(2, 5, MENU_15),
   new MenuItem(2, 6, MENU_09),
