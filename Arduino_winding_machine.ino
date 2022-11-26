@@ -39,19 +39,17 @@ https://cxem.net/arduino/arduino245.php
 
 //**************************************************************
 
-#include <avr/io.h>
-#include <avr/interrupt.h>
 //#include <LiquidCrystal.h>
 //#include <LiquidCrystal_I2C.h>
 #include <EncButton.h>
 #include <GyverPlanner2.h>
 #include <GyverStepper2.h>
 #include <HardwareSerial.h>
-#include "Screen.h"
-#include "Menu.h"
-#include "Winding.h"
-
 #include "LiquidCrystalCyr.h"
+#include "Menu.h"
+
+#include "Screen.h"
+#include "Winding.h"
 #include "strings.h"
 
 #define ENC_CLK   2 // Даем имена номерам пинов
