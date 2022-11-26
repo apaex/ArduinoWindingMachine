@@ -34,7 +34,7 @@ https://cxem.net/arduino/arduino245.php
 
 //**************************************************************  
     
-#define THREAD_PITCH 50 // ShaftStep = Шаг резьбы*50
+#define THREAD_PITCH 50 // Шаг резьбы*50
 #define LANGUAGE ru
 
 //**************************************************************
@@ -43,6 +43,7 @@ https://cxem.net/arduino/arduino245.php
 #include <avr/interrupt.h>
 //#include <LiquidCrystal.h>
 //#include <LiquidCrystal_I2C.h>
+#include <EncButton.h>
 #include <GyverPlanner2.h>
 #include <GyverStepper2.h>
 #include <HardwareSerial.h>
@@ -54,15 +55,18 @@ https://cxem.net/arduino/arduino245.php
 #include "strings.h"
 
 #define ENC_CLK   2 // Даем имена номерам пинов
-#define ENC_SW    3
-#define STEP_Z    4 
 #define ENC_DT    5 
+#define ENC_SW    3
+
+#define STEP_Z    4 
 #define DIR_Z     7
-#define EN_STEP   8
-#define BUZZ_OUT  10
-#define STOP_BT   11
 #define STEP_A    12
 #define DIR_A     13
+#define EN_STEP   8
+
+#define BUZZ_OUT  10
+#define STOP_BT   11
+
 #define RS        14
 #define EN        15
 #define D4        16
@@ -70,11 +74,18 @@ https://cxem.net/arduino/arduino245.php
 #define D6        18
 #define D7        19
 
-#define NCOL 20
-#define NROW 4 
+#define DISPLAY_NCOL        20           // размер дисплея: ширина
+#define DISPLAY_NROW        4            // размер дисплея: высота
 
-#define STEPPERS_MICROSTEPS 16
-#define STEPPERS_STEPS_COUNT (200L * STEPPERS_MICROSTEPS)
+#define STEPPERS_STEPS      200          // число шагов двигателя на 1 оборот
+#define STEPPERS_MICROSTEPS 16           // делитель на плате драйвера двигателя
+
+#define ENCODER_TYPE        EB_HALFSTEP  // тип энкодера: EB_FULLSTEP или EB_HALFSTEP. если энкодер делает один поворот за два щелчка, нужно изменить настройку
+#define ENCODER_INPUT       INPUT        // если есть подтягивающие резисторы - ставь INPUT, если нет - INPUT_PULLUP
+
+
+
+#define STEPPERS_STEPS_COUNT (int32_t(STEPPERS_STEPS) * STEPPERS_MICROSTEPS)
 
 #define EEPROM_DATA_VERSION 1
 
@@ -132,15 +143,15 @@ byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000}
 byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100};   // Создаем свой символ ⯆ для LCD
 
 LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7);                  // Назначаем пины для управления LCD 
-//LiquidCrystal_I2C lcd(0x27, NCOL, NROW);                // 0x3F I2C адрес для PCF8574AT
+//LiquidCrystal_I2C lcd(0x27, DISPLAY_NCOL, DISPLAY_NROW);                // 0x3F I2C адрес для PCF8574AT
 
 MainMenu menu(menuItems, MENU_COUNT, lcd);
 
 GStepper2<STEPPER2WIRE> shaftStepper(STEPPERS_STEPS_COUNT, STEP_Z, DIR_Z, EN_STEP);
 GStepper2<STEPPER2WIRE> layerStepper(STEPPERS_STEPS_COUNT, STEP_A, DIR_A, EN_STEP);
 
-volatile int8_t Encoder_Dir = 0;                          // Направление вращения энкодера
-volatile bool Push_Button = false;                        // Нажатие кнопки
+EncButton<EB_TICK, ENC_CLK, ENC_DT, ENC_SW> encoder(ENCODER_INPUT);  
+
 
 void setup() 
 {
@@ -148,13 +159,9 @@ void setup()
 
   LoadSettings();
 
-  pinMode(ENC_CLK, INPUT);    // Инициализация входов/выходов  
-  pinMode(ENC_SW,  INPUT);
-  pinMode(ENC_DT,  INPUT);
   pinMode(STOP_BT, INPUT);
   pinMode(EN_STEP, OUTPUT);
   pinMode(BUZZ_OUT,OUTPUT);
-
 
   digitalWrite(EN_STEP, HIGH); // Запрет управления двигателями  
 
@@ -165,36 +172,29 @@ void setup()
 
  // lcd.init(); 
   
-  
   lcd.createChar(0, up);       // Записываем символ ⯅ в память LCD
   lcd.createChar(1, down);     // Записываем символ ⯆ в память LCD
-
-
-  cli();                                                                        // Глобальный запрет прерываний
-  EICRA = (1<<ISC11)|(0<<ISC10)|(0<<ISC01)|(1<<ISC00);                          // Настройка срабатывания прерываний: INT0 по изменению сигнала, INT1 по спаду сигнала; ATmega328/P DATASHEET стр.89
-  EIMSK = (1<<INT0)|(1<<INT1);                                                  // Разрешение прерываний INT0 и INT1; ATmega328/P DATASHEET стр.90 
-  EIFR = 0x00;                                                                  // Сбрасываем флаги внешних прерываний; ATmega328/P DATASHEET стр.91
-  
-  lcd.begin(NCOL, NROW);                                                        // Инициализация LCD Дисплей 
-
+  lcd.begin(DISPLAY_NCOL, DISPLAY_NROW);                                                        // Инициализация LCD Дисплей 
   menu.Draw();
-  sei();
+
+  encoder.setEncType(ENCODER_TYPE);  
 } 
 
 
 
 void loop() 
 {
-  if (Encoder_Dir != 0)                               // Проверяем изменение позиции энкодера   
+  encoder.tick(); 
+
+  if (encoder.turn())                               // Проверяем изменение позиции энкодера   
   {                                                                               
-    menu.index = constrain(menu.index + Encoder_Dir, menu.GetFirstIndex(), menu.GetLastIndex()); // Если позиция энкодера изменена, то меняем menu.index и выводим экран
-    Encoder_Dir = 0; 
+    menu.index = constrain(menu.index + encoder.dir(), menu.GetFirstIndex(), menu.GetLastIndex()); // Если позиция энкодера изменена, то меняем menu.index и выводим экран
     menu.Draw();   
   }
 
-  if (Push_Button)                                    // Проверяем нажатие кнопки
+  if (encoder.click())                               // Проверяем нажатие кнопки
   {  
-    switch (menu.index)                               // Если было нажатие, то выполняем действие, соответствующее текущей позиции курсора
+    switch (menu.index)                              // Если было нажатие, то выполняем действие, соответствующее текущей позиции курсора
     {  
       case Autowinding1:  
       case Autowinding2: 
@@ -247,7 +247,6 @@ void loop()
               break;
       case miSettingsBack: menu.index = miSettings; break;
     }
-    Push_Button = false; 
     menu.Draw();
   }
 }
@@ -259,14 +258,18 @@ void UpdateMenuItemText(byte i)
 
 void ValEdit()
 {
-  Push_Button=false; 
-  while(!Push_Button) 
-    ValEditTick(); 
+  do
+  {
+    encoder.tick(); 
+
+    if (encoder.turn())                               // Проверяем изменение позиции энкодера   
+      menu.IncCurrent(encoder.dir());
+    
+  } while (!encoder.click());
 }
 
 void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
 {
-  Push_Button=false; 
   digitalWrite(EN_STEP, LOW); 
 
   stepper.setAcceleration(STEPPERS_STEPS_COUNT/2);
@@ -276,9 +279,10 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
   stepper.setCurrent(oldPos);
   stepper.setTarget(oldPos);
 
-  while(!Push_Button || stepper.getStatus() != 0)
+  do
   {
     stepper.tick();
+    encoder.tick(); 
 
     int newPos = -pos * STEPPERS_MICROSTEPS * 2;
     if (newPos != oldPos)
@@ -287,23 +291,21 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
       oldPos = newPos;
     }    
 
-    ValEditTick(); 
-  } 
+    if (encoder.turn())                               // Проверяем изменение позиции энкодера   
+      menu.IncCurrent(encoder.dir());
+
+  } while(!encoder.click() || stepper.getStatus() != 0);
+
   digitalWrite(EN_STEP, HIGH); 
 }
 
 void ValEditTick()
 {
-  if (Encoder_Dir != 0) 
-  {    
-    menu.IncCurrent(Encoder_Dir);         
-    Encoder_Dir = 0;                                                                
-  } 
 }
 
 
 void _AutoWindingPrg()                                       // Подпрограмма автоматической намотки
-{    
+{  
   Winding current;                                          // Текущий виток и слой при автонамотке
   GPlanner2< STEPPER2WIRE, 2, 4 > planner;
   planner.addStepper(0, shaftStepper);
@@ -321,8 +323,6 @@ void _AutoWindingPrg()                                       // Подпрогр
   current.step = w.step;
    
   digitalWrite(EN_STEP, LOW);   // Разрешение управления двигателями
- 
-  Push_Button = false; 
  
   planner.setAcceleration(STEPPERS_STEPS_COUNT / 2);
   planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed *30 / 60);
@@ -342,10 +342,10 @@ void _AutoWindingPrg()                                       // Подпрогр
   
   while (!planner.ready())
   {
-    if (Encoder_Dir) {                                                                    // Если повернуть энкодер во время автонамотки, 
-      current.speed = constrain(current.speed + Encoder_Dir, 1, 255);                     // то меняем значение скорости
+    encoder.tick();
+    if (encoder.turn()) {                                                                    // Если повернуть энкодер во время автонамотки, 
+      current.speed = constrain(current.speed + encoder.dir(), 1, 255);                     // то меняем значение скорости
       planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed *30 / 60);
-      Encoder_Dir = 0; 
       //planner.calculate();
       screen.UpdateSpeed();
 
@@ -403,9 +403,9 @@ void _AutoWindingPrg()                                       // Подпрогр
 
 void WaitButton()
 {
-  Push_Button = false;
-  while (!Push_Button);
-  Push_Button = false;
+  do {
+    encoder.tick();
+  } while (!encoder.click());
 }
 
 void LoadSettings()
@@ -436,30 +436,6 @@ void SaveSettings()
   Save(settings, p);
 }
 
-ISR(INT0_vect)   // Вектор прерывания от энкодера
-{
-  static byte Enc_Temp_prev;                                             // Временная переменная для хранения состояния порта
-
-  byte Enc_Temp = PIND & 0b00100100;                                     // Маскируем все пины порта D кроме PD2 и PD5      
-
-  if (Enc_Temp==0b00100000 && Enc_Temp_prev==0b00000100) {Encoder_Dir += -1;} // -1 - шаг против часовой
-  else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00100100) {Encoder_Dir +=  1;} // +1 - шаг по часовой
-  else if (Enc_Temp==0b00100000 && Enc_Temp_prev==0b00100100) {Encoder_Dir += -1;}
-  else if (Enc_Temp==0b00000000 && Enc_Temp_prev==0b00000100) {Encoder_Dir +=  1;}
-
-  Enc_Temp_prev = Enc_Temp;         
-}
-
-
-
-ISR(INT1_vect)                               // Вектор прерывания от кнопки энкодера
-{   
-  static unsigned long timer = 0;
-  if (millis() - timer < 300) return;
-  timer = millis();
-
-  Push_Button = true;
-}
 
 
 
@@ -493,7 +469,6 @@ void AutoWindingPrg()                                             // Подпр�
   digitalWrite(EN_STEP, LOW);   // Разрешение управления двигателями
   digitalWrite(DIR_Z, HIGH);  
  
-  Push_Button = false; 
   _mode = mdRun;
  
   Set_Speed_INT = current.speed;
@@ -510,19 +485,17 @@ void AutoWindingPrg()                                             // Подпр�
       {
         TIMSK1=0; 
 
-        if (Encoder_Dir != 0) {                                                               // Если повернуть энкодер во время автонамотки 
-          Set_Speed_INT = constrain(Set_Speed_INT + Encoder_Dir, 1, 600);                     // то меняем значение скорости
-          Encoder_Dir = 0; 
-        }              
+        encoder.tick();
+        if (encoder.turn())                                                               // Если повернуть энкодер во время автонамотки 
+          Set_Speed_INT = constrain(Set_Speed_INT + encoder.dir(), 1, 600);                     // то меняем значение скорости     
         EIMSK = 0b00000010;
         current.speed = Set_Speed_INT;      
         EIMSK = 0b00000011;
         screen.UpdateSpeed();
 
-        if (Push_Button)
+        if (encoder.click())
         {
           static bool EN_D;
-          Push_Button = false;
           digitalWrite(EN_STEP, EN_D ? HIGH: LOW);
           EN_D = !EN_D;
         }
@@ -532,10 +505,9 @@ void AutoWindingPrg()                                             // Подпр�
        
       screen.UpdateTurns();
       
-      if (Encoder_Dir != 0) {                                                               // Если повернуть энкодер во время автонамотки 
-        Set_Speed_INT = constrain(Set_Speed_INT + Encoder_Dir, 1, 600);                     // то меняем значение скорости
-        Encoder_Dir = 0; 
-      }
+      encoder.tick();
+      if (encoder.turn())                                                               // Если повернуть энкодер во время автонамотки 
+        Set_Speed_INT = constrain(Set_Speed_INT + encoder.dir(), 1, 600);                     // то меняем значение скорости
       EIMSK = 0b00000010;
       current.speed = Set_Speed_INT;
       EIMSK = 0b00000011;
