@@ -177,9 +177,6 @@ void setup()
   
   lcd.begin(NCOL, NROW);                                                        // Инициализация LCD Дисплей 
 
-        lcd.write(byte(0));
-        lcd.write(byte(1));
-
   menu.Draw();
   sei();
 } 
