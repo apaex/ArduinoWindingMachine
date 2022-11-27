@@ -353,8 +353,6 @@ void AutoWindingPrg()                                       // Подпрогр�
       p[0] = dShaft;
       p[1] = (i%2) ? -dLayer : dLayer;
       ++i;
-      Serial.print(i);
-      Serial.println(F(" - AddTarget"));
       planner.addTarget(p, (i == w.layers), RELATIVE);    // в последней точке остановка
       planner.calculate();
     }        
@@ -362,26 +360,30 @@ void AutoWindingPrg()                                       // Подпрогр�
     planner.tick();
 
     static uint32_t tmr;
-    if (millis() - tmr >= 500) {
+    if (millis() - tmr >= 100) {
       tmr = millis();
 
-      int total_turns = -shaftStepper.pos / STEPPERS_STEPS_COUNT;
+      int total_turns = (abs(shaftStepper.pos)-1) / STEPPERS_STEPS_COUNT;
+      current.turns = total_turns % w.turns;
+      current.layers = total_turns / w.turns;
+      screen.UpdateTurns();
+      screen.UpdateLayers();
+#ifdef DEBUG
+      Serial.print(shaftStepper.pos);
+      Serial.print(',');
+      Serial.println(layerStepper.pos);        
+#endif      
+    }
+  }
+
+      int total_turns = (abs(shaftStepper.pos)-1) / STEPPERS_STEPS_COUNT;
       current.turns = total_turns % w.turns;
       current.layers = total_turns / w.turns;
       screen.UpdateTurns();
       screen.UpdateLayers();
 
-      Serial.print(planner.getStatus());
-      Serial.print(',');
-      Serial.print(shaftStepper.pos);
-      Serial.print(',');
-      Serial.println(layerStepper.pos);        
-      
-    }
-  }
+  //screen.Draw();
 
-  planner.stop();
-  screen.Draw();
   /*
   if (settings.stopPerLayer) {
     lcd.printfAt_P(0, 1, STRING_2);           // "PRESS CONTINUE  "    
