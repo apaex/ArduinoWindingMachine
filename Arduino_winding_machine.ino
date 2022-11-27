@@ -149,6 +149,7 @@ GStepper2<STEPPER2WIRE> shaftStepper(STEPPERS_STEPS_COUNT, STEP_Z, DIR_Z, EN_STE
 GStepper2<STEPPER2WIRE> layerStepper(STEPPERS_STEPS_COUNT, STEP_A, DIR_A, EN_STEP);
 
 EncButton<EB_TICK, ENC_CLK, ENC_DT, ENC_SW> encoder(ENCODER_INPUT);  
+EncButton<EB_TICK, STOP_BT> button;
 
 
 void setup() 
@@ -157,19 +158,11 @@ void setup()
 
   LoadSettings();
 
-  pinMode(STOP_BT, INPUT);
   pinMode(EN_STEP, OUTPUT);
   pinMode(BUZZ_OUT,OUTPUT);
 
-  digitalWrite(EN_STEP, HIGH); // Запрет управления двигателями  
+  EnableSteppers(false); // Запрет управления двигателями  
 
-  //digitalWrite(ENC_CLK,HIGH);  // Вкл. подтягивающие резисторы к VDD 
-  //digitalWrite(ENC_SW, HIGH);   
-  //digitalWrite(ENC_DT, HIGH);    
-  digitalWrite(STOP_BT, HIGH);   
-
- // lcd.init(); 
-  
   lcd.createChar(0, up);       // Записываем символ ⯅ в память LCD
   lcd.createChar(1, down);     // Записываем символ ⯆ в память LCD
   lcd.begin(DISPLAY_NCOL, DISPLAY_NROW);                                                        // Инициализация LCD Дисплей 
@@ -177,8 +170,6 @@ void setup()
 
   encoder.setEncType(ENCODER_TYPE);  
 } 
-
-
 
 void loop() 
 {
@@ -217,10 +208,10 @@ void loop()
               break;
       case WindingBack:  menu.index = Autowinding1 + currentTransformer; break;
       case PosControl:   menu.index = ShaftPos; break;
-      case TurnsSet:     menu.SetQuote(9,13); ValEdit(); menu.ClearQuote(9,13); break;
-      case StepSet:      menu.SetQuote(9,16); ValEdit(); menu.ClearQuote(9,16); break;  
-      case SpeedSet:     menu.SetQuote(9,13); ValEdit(); menu.ClearQuote(9,13); break;
-      case LaySet:       menu.SetQuote(9,12); ValEdit(); menu.ClearQuote(9,12); break;   
+      case TurnsSet:     menu.SetQuote(9,13); ValueEdit(); menu.ClearQuote(9,13); break;
+      case StepSet:      menu.SetQuote(9,16); ValueEdit(); menu.ClearQuote(9,16); break;  
+      case SpeedSet:     menu.SetQuote(9,13); ValueEdit(); menu.ClearQuote(9,13); break;
+      case LaySet:       menu.SetQuote(9,12); ValueEdit(); menu.ClearQuote(9,12); break;   
       case Direction:    menu.IncCurrent(1); break;                          
       case Start:        SaveSettings(); AutoWindingPrg(); menu.index = Winding1 + currentWinding; UpdateMenuItemText(currentWinding); break; 
       case Cancel:       SaveSettings(); menu.index = Winding1 + currentWinding; UpdateMenuItemText(currentWinding); break;
@@ -254,7 +245,7 @@ void UpdateMenuItemText(byte i)
   ((ValMenuItem*)menu[Winding1 + i])->value = params[currentTransformer][i].turns * params[currentTransformer][i].layers;
 }
 
-void ValEdit()
+void ValueEdit()
 {
   do
   {
@@ -266,9 +257,14 @@ void ValEdit()
   } while (!encoder.click());
 }
 
+void EnableSteppers(bool b)
+{
+  digitalWrite(EN_STEP, b ? LOW : HIGH); 
+}
+
 void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
 {
-  digitalWrite(EN_STEP, LOW); 
+  EnableSteppers(true);
 
   stepper.setAcceleration(STEPPERS_STEPS_COUNT/2);
   stepper.setMaxSpeed(STEPPERS_STEPS_COUNT/2);
@@ -294,15 +290,10 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
 
   } while(!encoder.click() || stepper.getStatus() != 0);
 
-  digitalWrite(EN_STEP, HIGH); 
+  EnableSteppers(false);
 }
 
-void ValEditTick()
-{
-}
-
-
-void _AutoWindingPrg()                                       // Подпрограмма автоматической намотки
+void AutoWindingPrg()                                       // Подпрограмма автоматической намотки
 {  
   Winding current;                                          // Текущий виток и слой при автонамотке
   GPlanner2< STEPPER2WIRE, 2, 4 > planner;
@@ -320,7 +311,7 @@ void _AutoWindingPrg()                                       // Подпрогр
   current.dir = w.dir;
   current.step = w.step;
    
-  digitalWrite(EN_STEP, LOW);   // Разрешение управления двигателями
+  EnableSteppers(true);   // Разрешение управления двигателями
  
   planner.setAcceleration(STEPPERS_STEPS_COUNT / 2);
   planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed *30 / 60);
@@ -392,7 +383,7 @@ void _AutoWindingPrg()                                       // Подпрогр
   }
   */
      
-  digitalWrite(EN_STEP, HIGH);
+  EnableSteppers(false);
 
   lcd.printfAt_P(0, 1, STRING_1);             // "AUTOWINDING DONE"  
   WaitButton();
@@ -443,7 +434,7 @@ volatile int i_;                                          // Счетчик ко
 enum Mode {mdMenu, mdVarEdit, mdRun} _mode;                // режим установки значения; работает подпрограмма автонамотки 
 Winding current;
 
-void AutoWindingPrg()                                             // Подпрограмма автоматической намотки
+void _AutoWindingPrg()                                             // Подпрограмма автоматической намотки
 {    
   cli();
   TCCR1A=(0<<COM1A1)|(0<<COM1B1)|(0<<COM1A0)|(0<<COM1B0)|(0<<WGM11)|(0<<WGM10); // Настройка таймера/счетчика 1: нормальный режим работы порта, OC1A/OC1B отключены; ATmega328/P DATASHEET стр.170-172
@@ -464,7 +455,7 @@ void AutoWindingPrg()                                             // Подпр�
   current.dir = w.dir;
   current.step = w.step;
    
-  digitalWrite(EN_STEP, LOW);   // Разрешение управления двигателями
+  EnableSteppers(true);   // Разрешение управления двигателями
   digitalWrite(DIR_Z, HIGH);  
  
   _mode = mdRun;
@@ -525,7 +516,7 @@ void AutoWindingPrg()                                             // Подпр�
     TIMSK1=2;        
   }
      
-  digitalWrite(EN_STEP, HIGH);
+  EnableSteppers(false);
   lcd.printfAt_P(0, 1, STRING_1);             // "AUTOWINDING DONE"  
   WaitButton();
   _mode = mdMenu;
