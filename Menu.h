@@ -178,12 +178,12 @@ public:
         }
 
         for (int i = 0; i < lcd.nRows; ++i)
-            lcd.PrintSymbol(0, i, (i == cur) ? CH_CR : ' ');
+            lcd.printAt(0, i, (i == cur) ? CH_CR : ' ');
 
         if (page > 0) // Выводим стрелки ⯅⯆ на соответствующих строках меню
-            lcd.PrintSymbol(lcd.nCols - 1, 0, CH_UP);
+            lcd.printAt(lcd.nCols - 1, 0, CH_UP);
         if (items[first + lcd.nRows]->screen == scr)
-            lcd.PrintSymbol(lcd.nCols - 1, lcd.nRows - 1, CH_DW);
+            lcd.printAt(lcd.nCols - 1, lcd.nRows - 1, CH_DW);
     }
     
     byte GetCursor() const
@@ -203,9 +203,9 @@ public:
     {
         byte cur = GetCursor();
         
-        lcd.PrintSymbol(leftPos, cur, enable ? CH_QR : ' ');  // Выводим символ >
-        lcd.PrintSymbol(rightPos, cur, enable ? CH_QL : ' '); // Выводим символ <
-        lcd.PrintSymbol(0, cur, !enable ? CH_CR : ' ');       // Стираем основной курсор
+        lcd.printAt(leftPos, cur, enable ? CH_QR : ' ');  // Выводим символ >
+        lcd.printAt(rightPos, cur, enable ? CH_QL : ' '); // Выводим символ <
+        lcd.printAt(0, cur, !enable ? CH_CR : ' ');       // Стираем основной курсор
     }
 
     void SetQuote(byte leftPos, byte rightPos) { DrawQuotes(1, leftPos, rightPos); }

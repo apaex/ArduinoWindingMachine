@@ -109,18 +109,36 @@ public:
       print(buf);
     }
     
+    void printAt(uint8_t col, uint8_t row, char ch) 
+    {
+        setCursor(col, row);
+        write(byte(ch));
+    }   
+
     void printAt_P(uint8_t col, uint8_t row, PGM_P s)
     {
       setCursor(col, row);
       print_P(s);
     }
 
+// printf 
+    
     void printf(const char *format, ...)
     {
         char buf[21];
         va_list args;
         va_start(args, format);
         vsnprintf(buf, 21, format, args);
+        va_end(args);
+        print(buf);
+    }
+
+    void printf_P(PGM_P format, ...)
+    {
+        char buf[21];
+        va_list args;
+        va_start(args, format);
+        vsnprintf_P(buf, 21, format, args);
         va_end(args);
         print(buf);
     }
@@ -147,11 +165,6 @@ public:
         print(buf);
     }
 
-    void PrintSymbol(byte col, byte row, byte Symbol_Code) // Подпрограмма: Выводим символ на экран
-    {
-        setCursor(col, row);
-        write(byte(Symbol_Code));
-    }
 
 private:
     byte _row = 0;
