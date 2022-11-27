@@ -320,7 +320,7 @@ void AutoWindingPrg()                                       // Подпрогр�
   EnableSteppers(true);   // Разрешение управления двигателями
  
   planner.setAcceleration(STEPPERS_STEPS_COUNT * settings.acceleration / 60);
-  planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed *30 / 60);
+  planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed / 60);
   //planner.setDtA(0.1);
  
   int32_t dShaft = -STEPPERS_STEPS_COUNT * w.turns;
@@ -340,7 +340,7 @@ void AutoWindingPrg()                                       // Подпрогр�
     encoder.tick();
     if (encoder.turn()) {                                                                    // Если повернуть энкодер во время автонамотки, 
       current.speed = constrain(current.speed + encoder.dir(), 1, 255);                     // то меняем значение скорости
-      planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed *30 / 60);
+      planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed / 60);
       //planner.calculate();
       screen.UpdateSpeed();
 
