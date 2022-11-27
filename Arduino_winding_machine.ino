@@ -97,7 +97,7 @@ int8_t currentWinding = -1;
 
 Settings settings;
 
-enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, miSettings, Winding1, Winding2, Winding3, WindingBack, TurnsSet, LaySet, StepSet, SpeedSet, Direction, Start, Cancel, ShaftPos, ShaftStepMul, LayerPos, LayerStepMul, PosCancel, miSettingsStopPerLevel, miSettingsBack}; // Нумерованный список строк экрана
+enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, miSettings, Winding1, Winding2, Winding3, WindingBack, TurnsSet, LaySet, StepSet, SpeedSet, Direction, Start, Cancel, ShaftPos, ShaftStepMul, LayerPos, LayerStepMul, PosCancel, miSettingsStopPerLevel, AccelSet, miSettingsBack}; // Нумерованный список строк экрана
 
 const char *boolSet[] = {STRING_OFF, STRING_ON};
 const char *dirSet[] = {"<<<", ">>>"};
@@ -131,7 +131,8 @@ MenuItem* menuItems[] =
   new MenuItem(10, 4, MENU_09),
 
   new BoolMenuItem(11, 0, MENU_22, &settings.stopPerLayer, boolSet),
-  new MenuItem(11, 1, MENU_09),
+  new UIntMenuItem(11, 1, MENU_23, "%03d", &settings.acceleration, 0, 600, 1, 10),
+  new MenuItem(11, 2, MENU_09),
 }; 
 
 
@@ -212,6 +213,7 @@ void loop()
       case StepSet:      menu.SetQuote(9,16); ValueEdit(); menu.ClearQuote(9,16); break;  
       case SpeedSet:     menu.SetQuote(9,13); ValueEdit(); menu.ClearQuote(9,13); break;
       case LaySet:       menu.SetQuote(9,12); ValueEdit(); menu.ClearQuote(9,12); break;   
+      case AccelSet:     menu.SetQuote(9,13); ValueEdit(); menu.ClearQuote(9,13); break;
       case Direction:    menu.IncCurrent(1); break;                          
       case Start:        SaveSettings(); AutoWindingPrg(); menu.index = Winding1 + currentWinding; UpdateMenuItemText(currentWinding); break; 
       case Cancel:       SaveSettings(); menu.index = Winding1 + currentWinding; UpdateMenuItemText(currentWinding); break;
@@ -266,7 +268,7 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
 {
   EnableSteppers(true);
 
-  stepper.setAcceleration(STEPPERS_STEPS_COUNT/2);
+  stepper.setAcceleration(STEPPERS_STEPS_COUNT * settings.acceleration / 60);
   stepper.setMaxSpeed(STEPPERS_STEPS_COUNT/2);
 
   int oldPos = -pos * STEPPERS_MICROSTEPS * 2;
@@ -313,7 +315,7 @@ void AutoWindingPrg()                                       // Подпрогр�
    
   EnableSteppers(true);   // Разрешение управления двигателями
  
-  planner.setAcceleration(STEPPERS_STEPS_COUNT / 2);
+  planner.setAcceleration(STEPPERS_STEPS_COUNT * settings.acceleration / 60);
   planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed *30 / 60);
   //planner.setDtA(0.1);
  
@@ -350,7 +352,7 @@ void AutoWindingPrg()                                       // Подпрогр�
       Serial.print(i);
       Serial.println(F(" - AddTarget"));
       planner.addTarget(p, (i == w.layers), RELATIVE);    // в последней точке остановка
-      //planner.calculate();
+      planner.calculate();
     }        
     
     planner.tick();
@@ -401,7 +403,7 @@ void LoadSettings()
 {
   int p=0;
   byte v = 0;
-  EEPROM.get(p, v);          p+=1;
+  EEPROM_load(p, v);        
   if (v != EEPROM_DATA_VERSION)
     return;
 
@@ -416,7 +418,7 @@ void SaveSettings()
 {
   int p=0;
   byte v = EEPROM_DATA_VERSION;
-  EEPROM_save(p, v);          p+=1;   
+  EEPROM_save(p, v);          
 
   for (int i=0; i<TRANSFORMER_COUNT; ++i)
     for (int j=0; j<WINDING_COUNT; ++j)

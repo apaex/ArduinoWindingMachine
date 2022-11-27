@@ -38,8 +38,10 @@ const char PROGMEM MENU_17[] = "йюрсьйю:";
 const char PROGMEM MENU_18[] = "ьюц:";
 const char PROGMEM MENU_19[] = "ондювю:";
 const char PROGMEM MENU_22[] = "ярноякни";
+const char PROGMEM MENU_23[] = "сяйнп.";
 
 #else
+
 const char STRING_ON[] = "ON ";
 const char STRING_OFF[] = "OFF";
 
@@ -71,5 +73,6 @@ const char PROGMEM MENU_17[] = "SH pos:";
 const char PROGMEM MENU_18[] = "StpMul:";
 const char PROGMEM MENU_19[] = "LA pos:";
 const char PROGMEM MENU_22[] = "LayerStop";
+const char PROGMEM MENU_23[] = "Accel";
 
 #endif

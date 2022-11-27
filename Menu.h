@@ -82,7 +82,7 @@ class VariableMenuItem : public MenuItem
 
     virtual void IncValue(int8_t inc)
     {       
-      *value = constrain(*value + inc * increment, minVal, maxVal);    
+      *value = constrain(int(*value + inc * increment), (int)minVal, (int)maxVal);    
     }
 };
 
@@ -146,7 +146,7 @@ public:
         return r;
     }
 
-    void Draw() // Подпрограмма: Выводим экран на LCD
+    void Draw()
     {
         byte scr = items[index]->screen;
         byte page = items[index]->line / lcd.nRows;
