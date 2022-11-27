@@ -1,9 +1,17 @@
 #pragma once
 
-#include <LiquidCrystal.h>
 //#define INCLUDE_LOWERCASE 
 #include "font.h"
 
+#ifdef LiquidCrystal_h
+#define LCD_CLASS LiquidCrystal
+#endif
+#ifdef LiquidCrystal_I2C_h
+#define LCD_CLASS LiquidCrystal_I2C
+#endif
+#ifndef LCD_CLASS
+#error "Нужно добавить включение файла LiquidCrystal.h или LiquidCrystal_I2C.h в зависимости от подключения дисплея"
+#endif
 
 #define GEN_COUNT (FONT_CHAR_COUNT+8)   // ещё на 8 пользовательских символов храним номер генератора
 
@@ -17,10 +25,11 @@ void pgm_read_8byte(const byte* data, void *buf)
 }
 
 
-class LiquidCrystalCyr : public LiquidCrystal
+class LiquidCrystalCyr : public LCD_CLASS
 {
 
 public:
+#ifdef LiquidCrystal_h
     LiquidCrystalCyr(uint8_t rs, uint8_t enable,
                      uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3,
                      uint8_t d4, uint8_t d5, uint8_t d6, uint8_t d7) : LiquidCrystal(rs, enable, d0, d1, d2, d3, d4, d5, d6, d7){};
@@ -31,7 +40,10 @@ public:
                      uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3) : LiquidCrystal(rs, rw, enable, d0, d1, d2, d3){};
     LiquidCrystalCyr(uint8_t rs, uint8_t enable,
                      uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3) : LiquidCrystal(rs, enable, d0, d1, d2, d3){};
-
+#endif
+#ifdef LiquidCrystal_I2C_h
+    LiquidCrystalCyr(uint8_t lcd_Addr, uint8_t lcd_cols, uint8_t lcd_rows) : LiquidCrystal_I2C(lcd_Addr, lcd_cols, lcd_rows), nCols(lcd_cols), nRows(lcd_rows) {}
+#endif
     uint8_t nCols = 0;
     uint8_t nRows = 0;
 
@@ -41,21 +53,27 @@ public:
 
       nCols = cols;
       nRows = rows;
-      LiquidCrystal::begin(cols, rows, LCD_5x8DOTS);
+#ifdef LiquidCrystal_h
+      LCD_CLASS::begin(cols, rows, LCD_5x8DOTS);
+#endif
+#ifdef LiquidCrystal_I2C_h
+      init();
+      backlight();
+#endif
     }
 
     void clear()
     {
         _col = 0;
         _row = 0;
-        return LiquidCrystal::clear();
+        return LCD_CLASS::clear();
     }
 
     void setCursor(uint8_t col, uint8_t row)
     {
         _col = col;
         _row = row;
-        return LiquidCrystal::setCursor(col, row);
+        return LCD_CLASS::setCursor(col, row);
     }
     
     byte *customChars_[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
@@ -81,7 +99,7 @@ public:
             }
             ++_col;
         }
-        LiquidCrystal::write((byte)c);        
+        LCD_CLASS::write((byte)c);        
     }
 
     void print_P(PGM_P s)
@@ -180,9 +198,9 @@ private:
             byte buf[8];
             pgm_read_8byte(font[c], buf);
             _CGRAM_write = true;
-            LiquidCrystal::createChar(lcd_c - 1, buf);
+            LCD_CLASS::createChar(lcd_c - 1, buf);
             _CGRAM_write = false;
-            LiquidCrystal::setCursor(_col, _row);
+            LCD_CLASS::setCursor(_col, _row);
             DebugWrite(); 
         }
 
@@ -205,9 +223,9 @@ private:
             _gen[c] = lcd_c;
 
             _CGRAM_write = true;
-            LiquidCrystal::createChar(lcd_c - 1, customChars_[c]);
+            LCD_CLASS::createChar(lcd_c - 1, customChars_[c]);
             _CGRAM_write = false;
-            LiquidCrystal::setCursor(_col, _row);       
+            LCD_CLASS::setCursor(_col, _row);       
             DebugWrite();     
         }
 

@@ -35,11 +35,11 @@ https://cxem.net/arduino/arduino245.php
 //**************************************************************  
     
 #define THREAD_PITCH 50 // Шаг резьбы*50
-#define LANGUAGE ru
+#define LANGUAGE RU     // EN, RU
 
 //**************************************************************
 
-//#include <LiquidCrystal.h>
+#include <LiquidCrystal.h>
 //#include <LiquidCrystal_I2C.h>
 #include <EncButton.h>
 #include <GyverPlanner2.h>
@@ -141,8 +141,12 @@ const byte MENU_COUNT = sizeof(menuItems)/sizeof(*menuItems);
 byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // Создаем свой символ ⯅ для LCD
 byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100};   // Создаем свой символ ⯆ для LCD
 
+#ifdef LiquidCrystal_h
 LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7);                  // Назначаем пины для управления LCD 
-//LiquidCrystal_I2C lcd(0x27, DISPLAY_NCOL, DISPLAY_NROW);                // 0x3F I2C адрес для PCF8574AT
+#endif
+#ifdef LiquidCrystal_I2C_h
+LiquidCrystalCyr lcd(0x27, DISPLAY_NCOL, DISPLAY_NROW);                // 0x3F I2C адрес для PCF8574AT
+#endif
 
 MainMenu menu(menuItems, MENU_COUNT, lcd);
 

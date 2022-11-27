@@ -3,9 +3,10 @@
 // Этот файл сохранен в кодировке Windows 1251
 // This file is saved in Windows 1251 encoding
 
+#define EN 1
+#define RU 2
 
-
-#if LANGUAGE == ru
+#if LANGUAGE == RU
 
 const char STRING_ON[] = "ВКЛ ";
 const char STRING_OFF[] = "ВЫКЛ";
