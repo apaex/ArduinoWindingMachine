@@ -47,6 +47,7 @@ https://cxem.net/arduino/arduino245.php
 #include <HardwareSerial.h>
 #include "LiquidCrystalCyr.h"
 #include "Menu.h"
+#include "timer.h"
 
 #include "Screen.h"
 #include "Winding.h"
@@ -299,10 +300,22 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
   EnableSteppers(false);
 }
 
+
+ GPlanner2< STEPPER2WIRE, 2, 4 > planner;
+ 
+// прерывание таймера
+ISR(TIMER1_COMPA_vect) {
+  // здесь происходит движение моторов
+  // если мотор должен двигаться (true) - ставим новый период таймеру
+  if (planner.tickManual()) setPeriod(planner.getPeriod());
+  else stopTimer();
+  // если нет - останавливаем таймер
+}
+
+
 void AutoWindingPrg()                                       // Подпрограмма автоматической намотки
 {  
   Winding current;                                          // Текущий виток и слой при автонамотке
-  GPlanner2< STEPPER2WIRE, 2, 4 > planner;
   planner.addStepper(0, shaftStepper);
   planner.addStepper(1, layerStepper);
 
@@ -331,6 +344,7 @@ void AutoWindingPrg()                                       // Подпрогр�
   planner.addTarget(p, 0);  // начальная точка системы должна совпадать с первой точкой маршрута
 
   planner.start();
+  initTimer();  
   int i = 0;    // упреждающий счетчик слоёв
 
   screen.Draw();
@@ -338,7 +352,8 @@ void AutoWindingPrg()                                       // Подпрогр�
   while (!planner.ready())
   {
     encoder.tick();
-    if (encoder.turn()) {                                                                    // Если повернуть энкодер во время автонамотки, 
+    if (encoder.turn()) 
+    {                                                                    // Если повернуть энкодер во время автонамотки, 
       current.speed = constrain(current.speed + encoder.dir(), 1, 255);                     // то меняем значение скорости
       planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed / 60);
       //planner.calculate();
@@ -351,16 +366,21 @@ void AutoWindingPrg()                                       // Подпрогр�
     while(planner.available() && (i < w.layers)) 
     {
       p[0] = dShaft;
-      p[1] = (i%2) ? -dLayer : dLayer;
+      p[1] = (i&1) ? -dLayer : dLayer;
       ++i;
       planner.addTarget(p, (i == w.layers), RELATIVE);    // в последней точке остановка
-      planner.calculate();
+      //planner.calculate();
     }        
     
-    planner.tick();
+    // вручную проверяем буфер. Если начался новый отрезок движения
+    if (planner.checkBuffer()) {
+      startTimer();                     // запускаем таймер
+      setPeriod(planner.getPeriod());   // устанавливаем новый период
+    }
 
     static uint32_t tmr;
-    if (millis() - tmr >= 100) {
+    if (millis() - tmr >= 500) 
+    {
       tmr = millis();
 
       int total_turns = (abs(shaftStepper.pos)-1) / STEPPERS_STEPS_COUNT;
@@ -434,7 +454,7 @@ void SaveSettings()
 }
 
 
-
+/*
 
 volatile uint32_t NSteps;
 volatile int NTurn;
@@ -555,7 +575,5 @@ ISR(TIMER1_COMPA_vect)                       // Вектор прерывани�
   }
   i_++;                                        // Счетчик кол-ва заходов в прерывание
 }
+*/
 
-
-
-      
