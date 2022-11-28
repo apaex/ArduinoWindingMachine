@@ -1,6 +1,6 @@
 # Arduino Winding Machine
 
-Это продолжение развития прошивки намоточного станка, созданного [Дмитрием Торцевым](https://vk.com/club192215032). Форк основан на версии прошивки [2.1b](https://github.com/apaex/ArduinoWindingMachine/tree/2.1b), ничего более нового я не нашел. Ссылки на статьи и оригинальные версии прошивок:
+Это продолжение развития прошивки намоточного станка, созданного [Дмитрием Торцевым](https://vk.com/club192215032). Форк основан на версии прошивки [2.1b](https://github.com/apaex/ArduinoWindingMachine/tree/origin), ничего более нового я не нашел. Ссылки на статьи и оригинальные версии прошивок:
 
 * [Намоточный станок на Arduino версия 2.0](https://cxem.net/arduino/arduino245.php)
 * [Намоточный станок на Arduino](https://cxem.net/arduino/arduino235.php)
