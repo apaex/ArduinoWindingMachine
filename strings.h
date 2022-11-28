@@ -17,8 +17,8 @@ const char PROGMEM LINE4_FORMAT[] = "%03d";
 const char PROGMEM LINE5_FORMAT[] = "%02d";
 const char PROGMEM LINE6_FORMAT[] = "%03d";
 
-const char PROGMEM STRING_1[] = "AUTOWINDING DONE";
-const char PROGMEM STRING_2[] = "PRESS CONTINUE  ";
+const char PROGMEM STRING_1[] = "мюлнрйю нйнмвемю";
+const char PROGMEM STRING_2[] = "мюфлхре щмйндеп ";
 
 const char PROGMEM MENU_01[] = "цпсоою 1";
 const char PROGMEM MENU_02[] = "цпсоою 2";
