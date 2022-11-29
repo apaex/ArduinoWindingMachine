@@ -37,7 +37,7 @@
 В файле [config.h](https://github.com/apaex/ArduinoWindingMachine/blob/main/config.h) нужно проверить следующие настройки на соответствие железу:
 
 ```cpp
-#define THREAD_PITCH        1000         // Шаг резьбы вала намотчика в мкм
+#define THREAD_PITCH        1000         // Шаг резьбы вала укладчика в мкм
 
 #define DISPLAY_NCOL        20           // размер дисплея: ширина
 #define DISPLAY_NROW        4            // размер дисплея: высота
