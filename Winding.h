@@ -5,9 +5,9 @@
 struct Winding
 {
   uint16_t turns=0;
-  uint8_t step=0;
+  uint16_t step=0;
   uint16_t speed=30;    
-  uint8_t layers=0;
+  uint16_t layers=0;
   bool dir=1;
 };
 

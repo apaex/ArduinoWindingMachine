@@ -37,7 +37,7 @@
 В файле Arduino_winding_machine.ino нужно проверить следующие настройки:
 
 ```cpp
-#define THREAD_PITCH        50           // Шаг резьбы вала каретки, умноженный на 50
+#define THREAD_PITCH        1000         // Шаг резьбы вала намотчика в мкм
 
 #define DISPLAY_NCOL        20           // размер дисплея: ширина
 #define DISPLAY_NROW        4            // размер дисплея: высота

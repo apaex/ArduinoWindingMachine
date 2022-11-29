@@ -34,7 +34,6 @@ https://cxem.net/arduino/arduino245.php
     
 #define LANGUAGE RU     // EN, RU
 #define DEBUG
-#define STEP_SCALE 5
 
 #include <LiquidCrystal.h>
 //#include <LiquidCrystal_I2C.h>
@@ -87,9 +86,9 @@ MenuItem* menuItems[] =
   new MenuItem(1, 3, MENU_09),
   
   new UIntMenuItem(2, 0, MENU_10, MENU_FORMAT_10, NULL, 1, 999),
-  new ByteMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 99),
-  new ByteMenuItem(2, 2, MENU_11, MENU_FORMAT_11, NULL, 1, 199, STEP_SCALE),
-  new UIntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, 30, 600, 1, 30),
+  new UIntMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 99),
+  new UIntMenuItem(2, 2, MENU_11, MENU_FORMAT_11, NULL, 5, 995, 5),
+  new UIntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, 30, 600, 30),
   new BoolMenuItem(2, 4, MENU_14, NULL, dirSet),
   new MenuItem(2, 5, MENU_15),
   new MenuItem(2, 6, MENU_09),
@@ -101,7 +100,7 @@ MenuItem* menuItems[] =
   new MenuItem(10, 4, MENU_09),
 
   new BoolMenuItem(11, 0, MENU_22, &settings.stopPerLayer, boolSet),
-  new UIntMenuItem(11, 1, MENU_23, MENU_FORMAT_10, &settings.acceleration, 0, 600, 1, 10),
+  new UIntMenuItem(11, 1, MENU_23, MENU_FORMAT_10, &settings.acceleration, 0, 600, 10),
   new MenuItem(11, 2, MENU_09),
 }; 
 
@@ -179,9 +178,9 @@ void loop()
               currentWinding = menu.index - Winding1; 
               menu.index = TurnsSet;                                                          
               ((UIntMenuItem*)menu[TurnsSet])->value = &params[currentTransformer][currentWinding].turns;
-              ((ByteMenuItem*)menu[StepSet])->value = &params[currentTransformer][currentWinding].step;
+              ((UIntMenuItem*)menu[StepSet])->value = &params[currentTransformer][currentWinding].step;
               ((UIntMenuItem*)menu[SpeedSet])->value = &params[currentTransformer][currentWinding].speed;
-              ((ByteMenuItem*)menu[LaySet])->value = &params[currentTransformer][currentWinding].layers;              
+              ((UIntMenuItem*)menu[LaySet])->value = &params[currentTransformer][currentWinding].layers;              
               ((BoolMenuItem*)menu[Direction])->value = &params[currentTransformer][currentWinding].dir;
               break;
       case WindingBack:  menu.index = Autowinding1 + currentTransformer; break;
@@ -307,7 +306,7 @@ void AutoWindingPrg()                                       // Подпрогр�
   planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed / 60);
  
   int32_t dShaft = -STEPPERS_STEPS_COUNT * w.turns;
-  int32_t dLayer = -STEPPERS_STEPS_COUNT /200L * w.turns * w.step * 50 / THREAD_PITCH * (w.dir ? 1 : -1); 
+  int32_t dLayer = -STEPPERS_STEPS_COUNT * w.turns *  w.step / int32_t(THREAD_PITCH) * (w.dir ? 1 : -1); 
 
   planner.reset();
   initTimer();  

@@ -17,7 +17,7 @@ public:
   {  
     lcd.clear();
     lcd.printfAt_P(0,0, LINE1_FORMAT, current.turns, w.turns, current.layers, w.layers);
-    lcd.printfAt_P(0,1, LINE2_FORMAT, current.speed, w.step * STEP_SCALE);  
+    lcd.printfAt_P(0,1, LINE2_FORMAT, current.speed, w.step);  
     UpdateTurns();
     UpdateLayers();
     UpdateSpeed();
