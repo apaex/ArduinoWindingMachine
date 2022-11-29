@@ -30,7 +30,7 @@ public:
 
   void UpdateLayers()  
   {  
-    lcd.printfAt_P(10, 0, LINE5_FORMAT, current.layers+1);
+    lcd.printfAt_P(10, 0, LINE5_FORMAT, current.layers);
   }
 
   void UpdateSpeed()  

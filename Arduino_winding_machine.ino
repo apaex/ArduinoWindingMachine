@@ -120,7 +120,7 @@ MenuItem* menuItems[] =
   new UIntMenuItem(2, 0, MENU_10, MENU_FORMAT_10, NULL, 1, 999),
   new ByteMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 99),
   new ByteMenuItem(2, 2, MENU_11, MENU_FORMAT_11, NULL, 1, 199, THREAD_PITCH),
-  new UIntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, 0, 600, 1, 30),
+  new UIntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, 30, 600, 1, 30),
   new BoolMenuItem(2, 4, MENU_14, NULL, dirSet),
   new MenuItem(2, 5, MENU_15),
   new MenuItem(2, 6, MENU_09),
@@ -153,7 +153,7 @@ MainMenu menu(menuItems, MENU_COUNT, lcd);
 
 GStepper2<STEPPER2WIRE> shaftStepper(STEPPERS_STEPS_COUNT, STEP_Z, DIR_Z, EN_STEP);
 GStepper2<STEPPER2WIRE> layerStepper(STEPPERS_STEPS_COUNT, STEP_A, DIR_A, EN_STEP);
-GPlanner2< STEPPER2WIRE, 2, 15 > planner;
+GPlanner< STEPPER2WIRE, 2> planner;
 
 EncButton<EB_TICK, ENC_CLK, ENC_DT, ENC_SW> encoder(ENCODER_INPUT);  
 EncButton<EB_TICK, STOP_BT> button;
@@ -169,6 +169,8 @@ void setup()
   pinMode(BUZZ_OUT,OUTPUT);
 
   EnableSteppers(false); // Запрет управления двигателями  
+  planner.addStepper(0, shaftStepper);
+  planner.addStepper(1, layerStepper);
 
   lcd.createChar(0, up);       // Записываем символ ⯅ в память LCD
   lcd.createChar(1, down);     // Записываем символ ⯆ в память LCD
@@ -303,27 +305,41 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
 
 
 
- 
-// прерывание таймера
-ISR(TIMER1_COMPA_vect) {
-  // здесь происходит движение моторов
-  // если мотор должен двигаться (true) - ставим новый период таймеру
-  if (planner.tickManual()) setPeriod(planner.getPeriod());
-  else stopTimer();
-  // если нет - останавливаем таймер
+ISR(TIMER1_COMPA_vect) 
+{
+  if (planner.tickManual()) 
+    setPeriod(planner.getPeriod());
+  else 
+    stopTimer();
 }
 
+template<class T>
+void DebugWrite(T v)
+{
+#ifdef DEBUG
+  Serial.println(v);
+#endif
+}
+
+void DebugWrite(const char* st, int32_t x, int32_t y)
+{
+#ifdef DEBUG
+  Serial.print(st);
+  Serial.print("(");
+  Serial.print(x);
+  Serial.print(',');
+  Serial.print(y);     
+  Serial.println(")");
+#endif
+}
 
 void AutoWindingPrg()                                       // Подпрограмма автоматической намотки
 {  
   Winding current;                                          // Текущий виток и слой при автонамотке
-  planner.addStepper(0, shaftStepper);
-  planner.addStepper(1, layerStepper);
-
   const Winding &w = params[currentTransformer][currentWinding];
   MainScreen screen(lcd, w, current);
  
-  Serial.println(F("Start"));
+  DebugWrite("Start");
 
   current.turns = 0;
   current.layers = 0;
@@ -331,52 +347,53 @@ void AutoWindingPrg()                                       // Подпрогр�
   current.dir = w.dir;
   current.step = w.step;
    
+  screen.Draw();  
+  
   EnableSteppers(true);   // Разрешение управления двигателями
  
   planner.setAcceleration(STEPPERS_STEPS_COUNT * settings.acceleration / 60);
   planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed / 60);
-  //planner.setDtA(0.1);
  
   int32_t dShaft = -STEPPERS_STEPS_COUNT * w.turns;
   int32_t dLayer = -STEPPERS_STEPS_COUNT /200L * w.turns * w.step * (w.dir ? 1 : -1); 
-  int32_t p[] = {0, 0};
-  
+ 
   planner.reset();
-  planner.addTarget(p, 0);  // начальная точка системы должна совпадать с первой точкой маршрута
-
-  planner.start();
   initTimer();  
-  int i = 0;    // упреждающий счетчик слоёв
-
-  screen.Draw();
+  startTimer(); 
   
-  while (!planner.ready())
+  while (1)
   {
-    encoder.tick();
-    if (encoder.turn()) 
-    {                                                                    // Если повернуть энкодер во время автонамотки, 
-      current.speed = constrain(current.speed + encoder.dir(), 1, 255);                     // то меняем значение скорости
-      planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed / 60);
-      //planner.calculate();
-      screen.UpdateSpeed();
+    if (!planner.getStatus()) 
+    {   
+      DebugWrite("READY");
+      if (current.layers >= w.layers)
+        break;      
 
-      Serial.print("Speed: ");
-      Serial.println(STEPPERS_STEPS_COUNT * current.speed / 60);
+      if (settings.stopPerLayer && (current.layers > 0)) 
+      {
+        lcd.printfAt_P(0, 1, STRING_2);           // "PRESS CONTINUE  "    
+        WaitButton();
+        screen.Draw();
+      }      
+      
+      int32_t p[] = {dShaft, (current.layers&1) ? -dLayer : dLayer};       
+      
+      planner.setTarget(p, RELATIVE);
+      DebugWrite("setTarget", p[0], p[1]);
+      ++current.layers;   
+
+      startTimer();                   
+      setPeriod(planner.getPeriod());
+
+      screen.UpdateLayers();            
     }
 
-    while(planner.available() && (i < w.layers)) 
-    {
-      p[0] = dShaft;
-      p[1] = (i&1) ? -dLayer : dLayer;
-      ++i;
-      planner.addTarget(p, (i == w.layers), RELATIVE);    // в последней точке остановка
-      //planner.calculate();
-    }        
-    
-    // вручную проверяем буфер. Если начался новый отрезок движения
-    if (planner.checkBuffer()) {
-      startTimer();                     // запускаем таймер
-      setPeriod(planner.getPeriod());   // устанавливаем новый период
+    encoder.tick();
+    if (encoder.turn()) 
+    {                                                                                             // Если повернуть энкодер во время автонамотки, 
+      current.speed = constrain(current.speed + encoder.dir() * 30, 30, 600);                     // то меняем значение скорости
+      planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed / 60);
+      screen.UpdateSpeed();
     }
 
     static uint32_t tmr;
@@ -384,34 +401,14 @@ void AutoWindingPrg()                                       // Подпрогр�
     {
       tmr = millis();
 
-      int total_turns = (abs(shaftStepper.pos)-1) / STEPPERS_STEPS_COUNT;
-      current.turns = total_turns % w.turns;
-      current.layers = total_turns / w.turns;
+      int total_turns = (abs(shaftStepper.pos)) / STEPPERS_STEPS_COUNT;
+      current.turns = total_turns - (current.layers-1) * w.turns;
+      
       screen.UpdateTurns();
-      screen.UpdateLayers();
-#ifdef DEBUG
-      Serial.print(shaftStepper.pos);
-      Serial.print(',');
-      Serial.println(layerStepper.pos);        
-#endif      
+      //DebugWrite("", shaftStepper.pos, layerStepper.pos);   
     }
   }
 
-      int total_turns = (abs(shaftStepper.pos)-1) / STEPPERS_STEPS_COUNT;
-      current.turns = total_turns % w.turns;
-      current.layers = total_turns / w.turns;
-      screen.UpdateTurns();
-      screen.UpdateLayers();
-
-  //screen.Draw();
-
-  /*
-  if (settings.stopPerLayer) {
-    lcd.printfAt_P(0, 1, STRING_2);           // "PRESS CONTINUE  "    
-    WaitButton();
-  }
-  */
-     
   EnableSteppers(false);
 
   lcd.printfAt_P(0, 1, STRING_1);             // "AUTOWINDING DONE"  
@@ -454,127 +451,4 @@ void SaveSettings()
   Save(settings, p);
 }
 
-
-/*
-
-volatile uint32_t NSteps;
-volatile int NTurn;
-volatile int i_;                                          // Счетчик кол-ва заходов в прерывание таймера
-enum Mode {mdMenu, mdVarEdit, mdRun} _mode;                // режим установки значения; работает подпрограмма автонамотки 
-Winding current;
-
-void _AutoWindingPrg()                                             // Подпрограмма автоматической намотки
-{    
-  cli();
-  TCCR1A=(0<<COM1A1)|(0<<COM1B1)|(0<<COM1A0)|(0<<COM1B0)|(0<<WGM11)|(0<<WGM10); // Настройка таймера/счетчика 1: нормальный режим работы порта, OC1A/OC1B отключены; ATmega328/P DATASHEET стр.170-172
-  TCCR1B=(0<<WGM13)|(1<<WGM12)|(0<<CS12)|(0<<CS11)|(1<<CS10);                   // Режим работы таймера/счетчика - CTC (очистить таймер при достижении значения в регистре сравнения OCR1A)
-  OCR1A = 20000;                                                                // Значение в регистре OCR1A определяет частоту входа в прерывание таймера и устанавливает скрость вращения двигателей
-  sei();
-  NSteps = 0;
-  NTurn = 0;
-  i_ = 0;                                           
-  int Set_Speed_INT;
-  const Winding &w = params[currentTransformer][currentWinding];
-  MainScreen screen(lcd, w, current);
-
-  Serial.println(F("Start"));
-  current.turns = 0;
-  current.layers = 0;
-  current.speed = w.speed;
-  current.dir = w.dir;
-  current.step = w.step;
-   
-  EnableSteppers(true);   // Разрешение управления двигателями
-  digitalWrite(DIR_Z, HIGH);  
- 
-  _mode = mdRun;
- 
-  Set_Speed_INT = current.speed;
-  while (current.layers < w.layers)                                 // Пока текущее кол-во слоев меньше заданного проверяем сколько сейчас витков
-  { 
-    current.turns = 0;   
-    screen.Draw();
-    if (current.dir) PORTB &= 0b11011111; 
-    else PORTB |= 0b00100000;
-    OCR1A = 65535;
-    while (current.turns < w.turns)                               // Пока текущее кол-во витков меньше заданного продолжаем мотать
-    {     
-      while (PINB & 0b00001000)
-      {
-        TIMSK1=0; 
-
-        encoder.tick();
-        if (encoder.turn())                                                               // Если повернуть энкодер во время автонамотки 
-          Set_Speed_INT = constrain(Set_Speed_INT + encoder.dir(), 1, 600);                     // то меняем значение скорости     
-        EIMSK = 0b00000010;
-        current.speed = Set_Speed_INT;      
-        EIMSK = 0b00000011;
-        screen.UpdateSpeed();
-
-        if (encoder.click())
-        {
-          static bool EN_D;
-          digitalWrite(EN_STEP, EN_D ? HIGH: LOW);
-          EN_D = !EN_D;
-        }
-      }
-      digitalWrite(EN_STEP, LOW);
-      TIMSK1=2;                
-       
-      screen.UpdateTurns();
-      
-      encoder.tick();
-      if (encoder.turn())                                                               // Если повернуть энкодер во время автонамотки 
-        Set_Speed_INT = constrain(Set_Speed_INT + encoder.dir(), 1, 600);                     // то меняем значение скорости
-      EIMSK = 0b00000010;
-      current.speed = Set_Speed_INT;
-      EIMSK = 0b00000011;
-      screen.UpdateSpeed();      
-    }  
-    TIMSK1=0;
-        
-    current.layers++;    
-    if (current.layers == w.layers) break; 
-    
-    if (settings.stopPerLayer) {
-      lcd.printfAt_P(0, 1, STRING_2);           // "PRESS CONTINUE  "    
-      WaitButton();
-    }
-    current.dir = !current.dir;
-         
-    TIMSK1=2;        
-  }
-     
-  EnableSteppers(false);
-  lcd.printfAt_P(0, 1, STRING_1);             // "AUTOWINDING DONE"  
-  WaitButton();
-  _mode = mdMenu;
-}
-
-ISR(TIMER1_COMPA_vect)                       // Вектор прерывания от таймера/счетчика 1 
-{
-  if (_mode == mdRun) 
-  {
-    if (NSteps < 200 * STEPPERS_MICROSTEPS) 
-    {
-      uint32_t INCR = current.speed * 5 / (STEPPERS_MICROSTEPS);
-      OCR1A = min (65535, 300000 * 1000 / (NSteps * INCR));
-    } 
-    else
-    {
-      OCR1A = 4800000 / (current.speed*STEPPERS_MICROSTEPS);  // OCR1A_NOM;
-    }
-    PORTD |= 0b00010000;
-    if (NTurn>>4 > 200 - current.step) PORTB |= 0b00010000;    
-    while (i_<6) {i_++;} 
-    i_=0;    
-    PORTD &= 0b11101111; 
-    if (NTurn>>4 > 200 - current.step) PORTB &= 0b11101111;
-    NTurn++;
-    if (NTurn>>4 > 200) {NTurn=0; current.turns++;}
-    NSteps++;
-  }
-  i_++;                                        // Счетчик кол-ва заходов в прерывание
-}
-*/
 
