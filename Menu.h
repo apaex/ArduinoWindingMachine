@@ -57,7 +57,7 @@ class ValueMenuItem : public MenuItem
 
     virtual void Update(LiquidCrystalCyr &lcd, byte row)
     {
-      lcd.printfAt(12, row, format, value);
+      lcd.printfAt_P(12, row, format, value);
     }
 };
 
@@ -77,7 +77,7 @@ class VariableMenuItem : public MenuItem
 
     virtual void Update(LiquidCrystalCyr &lcd, byte row)
     {
-      lcd.printfAt(10, row, format, int(*value) * scale);
+      lcd.printfAt_P(10, row, format, int(*value) * scale);
     }
 
     virtual void IncValue(int8_t inc)
@@ -98,7 +98,7 @@ class SetMenuItem : public MenuItem
 
     virtual void Update(LiquidCrystalCyr &lcd, byte row) 
     {
-      lcd.printfAt(10, row, format, *value);
+      lcd.printfAt_P(10, row, format, *value);
     }
 
     virtual void IncValue(int8_t )

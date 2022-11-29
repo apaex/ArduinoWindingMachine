@@ -6,16 +6,22 @@
 #define EN 1
 #define RU 2
 
-#if LANGUAGE == RU
-
-const char STRING_ON[] = "¬ À ";
-const char STRING_OFF[] = "¬€ À";
-
 const char PROGMEM LINE1_FORMAT[] = "T%03d/%03d L%02d/%02d";
 const char PROGMEM LINE2_FORMAT[] = "Sp%03d St0.%04d";
 const char PROGMEM LINE4_FORMAT[] = "%03d";
 const char PROGMEM LINE5_FORMAT[] = "%02d";
 const char PROGMEM LINE6_FORMAT[] = "%03d";
+
+const char PROGMEM MENU_FORMAT_06[] = "% 4dT";
+const char PROGMEM MENU_FORMAT_10[] = "%03d";
+const char PROGMEM MENU_FORMAT_13[] = "%02d";
+const char PROGMEM MENU_FORMAT_11[] = "0.%04d";
+const char PROGMEM MENU_FORMAT_17[] = "%+04d";
+
+#if LANGUAGE == RU
+
+const char STRING_ON[] = "¬ À ";
+const char STRING_OFF[] = "¬€ À";
 
 const char PROGMEM STRING_1[] = "Õ¿ÃŒ“ ¿ Œ ŒÕ◊≈Õ¿";
 const char PROGMEM STRING_2[] = "Õ¿∆Ã»“≈ ›Õ Œƒ≈– ";
@@ -41,16 +47,13 @@ const char PROGMEM MENU_19[] = "œŒƒ¿◊¿:";
 const char PROGMEM MENU_22[] = "—“Œœ—ÀŒ…";
 const char PROGMEM MENU_23[] = "”— Œ–.";
 
+
+
+
 #else
 
 const char STRING_ON[] = "ON ";
 const char STRING_OFF[] = "OFF";
-
-const char PROGMEM LINE1_FORMAT[] = "T%03d/%03d L%02d/%02d";
-const char PROGMEM LINE2_FORMAT[] = "Sp%03d St0.%04d";
-const char PROGMEM LINE4_FORMAT[] = "%03d";
-const char PROGMEM LINE5_FORMAT[] = "%02d";
-const char PROGMEM LINE6_FORMAT[] = "%03d";
 
 const char PROGMEM STRING_1[] = "AUTOWINDING DONE";
 const char PROGMEM STRING_2[] = "PRESS CONTINUE  ";

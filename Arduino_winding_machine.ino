@@ -112,27 +112,27 @@ MenuItem* menuItems[] =
   new MenuItem(0, 3, MENU_04),
   new MenuItem(0, 4, MENU_05),
 
-  new ValMenuItem(1, 0, MENU_06, "% 4dT"),
-  new ValMenuItem(1, 1, MENU_07, "% 4dT"),
-  new ValMenuItem(1, 2, MENU_08, "% 4dT"),
+  new ValMenuItem(1, 0, MENU_06, MENU_FORMAT_06),
+  new ValMenuItem(1, 1, MENU_07, MENU_FORMAT_06),
+  new ValMenuItem(1, 2, MENU_08, MENU_FORMAT_06),
   new MenuItem(1, 3, MENU_09),
   
-  new UIntMenuItem(2, 0, MENU_10, "%03d", NULL, 1, 999),
-  new ByteMenuItem(2, 1, MENU_13, "%02d", NULL, 1, 99),
-  new ByteMenuItem(2, 2, MENU_11, "0.%04d", NULL, 1, 199, THREAD_PITCH),
-  new UIntMenuItem(2, 3, MENU_12, "%03d", NULL, 0, 600, 1, 30),
+  new UIntMenuItem(2, 0, MENU_10, MENU_FORMAT_10, NULL, 1, 999),
+  new ByteMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 99),
+  new ByteMenuItem(2, 2, MENU_11, MENU_FORMAT_11, NULL, 1, 199, THREAD_PITCH),
+  new UIntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, 0, 600, 1, 30),
   new BoolMenuItem(2, 4, MENU_14, NULL, dirSet),
   new MenuItem(2, 5, MENU_15),
   new MenuItem(2, 6, MENU_09),
 
-  new IntMenuItem(10, 0, MENU_17, "%+04d", &settings.shaftPos, -999, 999),
-  new SetMenuItem(10, 1, MENU_18, "%03d", &settings.shaftStep, stepSet, 3),
-  new IntMenuItem(10, 2, MENU_19, "%+04d", &settings.layerPos, -999, 999),
-  new SetMenuItem(10, 3, MENU_18, "%03d", &settings.layerStep, stepSet, 3),
+  new IntMenuItem(10, 0, MENU_17, MENU_FORMAT_17, &settings.shaftPos, -999, 999),
+  new SetMenuItem(10, 1, MENU_18, MENU_FORMAT_10, &settings.shaftStep, stepSet, 3),
+  new IntMenuItem(10, 2, MENU_19, MENU_FORMAT_17, &settings.layerPos, -999, 999),
+  new SetMenuItem(10, 3, MENU_18, MENU_FORMAT_10, &settings.layerStep, stepSet, 3),
   new MenuItem(10, 4, MENU_09),
 
   new BoolMenuItem(11, 0, MENU_22, &settings.stopPerLayer, boolSet),
-  new UIntMenuItem(11, 1, MENU_23, "%03d", &settings.acceleration, 0, 600, 1, 10),
+  new UIntMenuItem(11, 1, MENU_23, MENU_FORMAT_10, &settings.acceleration, 0, 600, 1, 10),
   new MenuItem(11, 2, MENU_09),
 }; 
 
@@ -301,7 +301,7 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
 }
 
 
- GPlanner2< STEPPER2WIRE, 2, 4 > planner;
+ GPlanner2< STEPPER2WIRE, 2, 15 > planner;
  
 // прерывание таймера
 ISR(TIMER1_COMPA_vect) {
