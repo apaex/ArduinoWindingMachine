@@ -214,7 +214,7 @@ private:
             LCD_CLASS::createChar(lcd_c - 1, buf);
             _CGRAM_write = false;
             LCD_CLASS::setCursor(_col, _row);
-            DebugWrite(); 
+            //DebugWrite(); 
         }
 
         return _gen[c+8] - 1;

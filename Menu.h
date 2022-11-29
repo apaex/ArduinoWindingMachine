@@ -18,7 +18,7 @@ class MenuItem
 
     virtual void Draw(LiquidCrystalCyr &lcd, byte row)
     {
-      lcd.printAt_P(2, row, text);
+      lcd.printAt_P((lcd.nCols > 16) ? 2 : 1, row, text);
       Update(lcd, row);
     }
 
@@ -36,7 +36,7 @@ class BoolMenuItem : public MenuItem
 
     virtual void Update(LiquidCrystalCyr &lcd, byte row) 
     {
-      lcd.setCursor(12, row);
+      lcd.setCursor((lcd.nCols > 16) ? 12 : 10, row);
       lcd.print(items[*value]);     
     }
 
@@ -57,7 +57,7 @@ class ValueMenuItem : public MenuItem
 
     virtual void Update(LiquidCrystalCyr &lcd, byte row)
     {
-      lcd.printfAt_P(12, row, format, value);
+      lcd.printfAt_P((lcd.nCols > 16) ? 12 : 10, row, format, value);
     }
 };
 
@@ -98,7 +98,7 @@ class SetMenuItem : public MenuItem
 
     virtual void Update(LiquidCrystalCyr &lcd, byte row) 
     {
-      lcd.printfAt_P(10, row, format, *value);
+      lcd.printfAt_P((lcd.nCols > 16) ? 10 : 10, row, format, *value);
     }
 
     virtual void IncValue(int8_t )

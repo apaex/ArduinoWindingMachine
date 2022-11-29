@@ -31,13 +31,10 @@ https://cxem.net/arduino/arduino235.php
 https://cxem.net/arduino/arduino245.php
 
 */
-
-//**************************************************************  
     
-#define THREAD_PITCH 50 // Шаг резьбы*50
 #define LANGUAGE RU     // EN, RU
-
-//**************************************************************
+#define DEBUG
+#define STEP_SCALE 5
 
 #include <LiquidCrystal.h>
 //#include <LiquidCrystal_I2C.h>
@@ -48,40 +45,12 @@ https://cxem.net/arduino/arduino245.php
 #include "LiquidCrystalCyr.h"
 #include "Menu.h"
 #include "timer.h"
+#include "tools.h"
 
 #include "Screen.h"
 #include "Winding.h"
 #include "strings.h"
-
-#define ENC_CLK   2 // Даем имена номерам пинов
-#define ENC_DT    5 
-#define ENC_SW    3
-
-#define STEP_Z    4 
-#define DIR_Z     7
-#define STEP_A    12
-#define DIR_A     13
-#define EN_STEP   8
-
-#define BUZZ_OUT  10
-#define STOP_BT   11
-
-#define RS        14
-#define EN        15
-#define D4        16
-#define D5        17
-#define D6        18
-#define D7        19
-
-#define DISPLAY_NCOL        20           // размер дисплея: ширина
-#define DISPLAY_NROW        4            // размер дисплея: высота
-
-#define STEPPERS_STEPS      200          // число шагов двигателя на 1 оборот
-#define STEPPERS_MICROSTEPS 16           // делитель на плате драйвера двигателя
-
-#define ENCODER_TYPE        EB_HALFSTEP  // тип энкодера: EB_FULLSTEP или EB_HALFSTEP. если энкодер делает один поворот за два щелчка, нужно изменить настройку
-#define ENCODER_INPUT       INPUT        // если есть подтягивающие резисторы - ставь INPUT, если нет - INPUT_PULLUP
-
+#include "config.h"   // все настройки железа здесь
 
 
 #define STEPPERS_STEPS_COUNT (int32_t(STEPPERS_STEPS) * STEPPERS_MICROSTEPS)
@@ -119,7 +88,7 @@ MenuItem* menuItems[] =
   
   new UIntMenuItem(2, 0, MENU_10, MENU_FORMAT_10, NULL, 1, 999),
   new ByteMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 99),
-  new ByteMenuItem(2, 2, MENU_11, MENU_FORMAT_11, NULL, 1, 199, THREAD_PITCH),
+  new ByteMenuItem(2, 2, MENU_11, MENU_FORMAT_11, NULL, 1, 199, STEP_SCALE),
   new UIntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, 30, 600, 1, 30),
   new BoolMenuItem(2, 4, MENU_14, NULL, dirSet),
   new MenuItem(2, 5, MENU_15),
@@ -218,7 +187,7 @@ void loop()
       case WindingBack:  menu.index = Autowinding1 + currentTransformer; break;
       case PosControl:   menu.index = ShaftPos; break;
       case TurnsSet:     menu.SetQuote(9,13); ValueEdit(); menu.ClearQuote(9,13); break;
-      case StepSet:      menu.SetQuote(9,16); ValueEdit(); menu.ClearQuote(9,16); break;  
+      case StepSet:      menu.SetQuote(9,15); ValueEdit(); menu.ClearQuote(9,15); break;  
       case SpeedSet:     menu.SetQuote(9,13); ValueEdit(); menu.ClearQuote(9,13); break;
       case LaySet:       menu.SetQuote(9,12); ValueEdit(); menu.ClearQuote(9,12); break;   
       case AccelSet:     menu.SetQuote(9,13); ValueEdit(); menu.ClearQuote(9,13); break;
@@ -313,25 +282,6 @@ ISR(TIMER1_COMPA_vect)
     stopTimer();
 }
 
-template<class T>
-void DebugWrite(T v)
-{
-#ifdef DEBUG
-  Serial.println(v);
-#endif
-}
-
-void DebugWrite(const char* st, int32_t x, int32_t y)
-{
-#ifdef DEBUG
-  Serial.print(st);
-  Serial.print("(");
-  Serial.print(x);
-  Serial.print(',');
-  Serial.print(y);     
-  Serial.println(")");
-#endif
-}
 
 void AutoWindingPrg()                                       // Подпрограмма автоматической намотки
 {  
@@ -348,6 +298,8 @@ void AutoWindingPrg()                                       // Подпрогр�
   current.step = w.step;
    
   screen.Draw();  
+
+  bool pause = false;
   
   EnableSteppers(true);   // Разрешение управления двигателями
  
@@ -355,15 +307,15 @@ void AutoWindingPrg()                                       // Подпрогр�
   planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed / 60);
  
   int32_t dShaft = -STEPPERS_STEPS_COUNT * w.turns;
-  int32_t dLayer = -STEPPERS_STEPS_COUNT /200L * w.turns * w.step * (w.dir ? 1 : -1); 
- 
+  int32_t dLayer = -STEPPERS_STEPS_COUNT /200L * w.turns * w.step * 50 / THREAD_PITCH * (w.dir ? 1 : -1); 
+
   planner.reset();
   initTimer();  
   startTimer(); 
   
   while (1)
   {
-    if (!planner.getStatus()) 
+    if (!planner.getStatus() && !pause) 
     {   
       DebugWrite("READY");
       if (current.layers >= w.layers)
@@ -389,6 +341,16 @@ void AutoWindingPrg()                                       // Подпрогр�
     }
 
     encoder.tick();
+    button.tick();
+    if (encoder.click())
+    {
+      if (pause)
+        planner.resume();
+      else 
+        planner.stop();
+      pause != pause;
+    }
+            
     if (encoder.turn()) 
     {                                                                                             // Если повернуть энкодер во время автонамотки, 
       current.speed = constrain(current.speed + encoder.dir() * 30, 30, 600);                     // то меняем значение скорости

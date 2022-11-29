@@ -15,7 +15,7 @@ const char PROGMEM LINE6_FORMAT[] = "%03d";
 const char PROGMEM MENU_FORMAT_06[] = "% 4dT";
 const char PROGMEM MENU_FORMAT_10[] = "%03d";
 const char PROGMEM MENU_FORMAT_13[] = "%02d";
-const char PROGMEM MENU_FORMAT_11[] = "0.%04d";
+const char PROGMEM MENU_FORMAT_11[] = "0.%03d";
 const char PROGMEM MENU_FORMAT_17[] = "%+04d";
 
 #if LANGUAGE == RU
