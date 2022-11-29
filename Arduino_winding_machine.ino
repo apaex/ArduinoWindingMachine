@@ -42,7 +42,7 @@ https://cxem.net/arduino/arduino245.php
 #include <LiquidCrystal.h>
 //#include <LiquidCrystal_I2C.h>
 #include <EncButton.h>
-#include <GyverPlanner2.h>
+#include <GyverPlanner.h>
 #include <GyverStepper2.h>
 #include <HardwareSerial.h>
 #include "LiquidCrystalCyr.h"
@@ -153,6 +153,7 @@ MainMenu menu(menuItems, MENU_COUNT, lcd);
 
 GStepper2<STEPPER2WIRE> shaftStepper(STEPPERS_STEPS_COUNT, STEP_Z, DIR_Z, EN_STEP);
 GStepper2<STEPPER2WIRE> layerStepper(STEPPERS_STEPS_COUNT, STEP_A, DIR_A, EN_STEP);
+GPlanner2< STEPPER2WIRE, 2, 15 > planner;
 
 EncButton<EB_TICK, ENC_CLK, ENC_DT, ENC_SW> encoder(ENCODER_INPUT);  
 EncButton<EB_TICK, STOP_BT> button;
@@ -301,7 +302,7 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
 }
 
 
- GPlanner2< STEPPER2WIRE, 2, 15 > planner;
+
  
 // прерывание таймера
 ISR(TIMER1_COMPA_vect) {
