@@ -7,7 +7,7 @@
 #define RU 2
 
 const char PROGMEM LINE1_FORMAT[] = "T%03d/%03d L%02d/%02d";
-const char PROGMEM LINE2_FORMAT[] = "Sp%03d St0.%04d";
+const char PROGMEM LINE2_FORMAT[] = "Sp%03d St0.%03d";
 const char PROGMEM LINE4_FORMAT[] = "%03d";
 const char PROGMEM LINE5_FORMAT[] = "%02d";
 const char PROGMEM LINE6_FORMAT[] = "%03d";

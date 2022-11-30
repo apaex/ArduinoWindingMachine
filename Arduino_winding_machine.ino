@@ -106,9 +106,6 @@ MenuItem* menuItems[] =
   new MenuItem(11, 2, MENU_09),
 }; 
 
-
-const byte MENU_COUNT = sizeof(menuItems)/sizeof(*menuItems);
-
 byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // Создаем свой символ ⯅ для LCD
 byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100};   // Создаем свой символ ⯆ для LCD
 
@@ -119,7 +116,7 @@ LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7);                  // Назначаем 
 LiquidCrystalCyr lcd(0x27, DISPLAY_NCOL, DISPLAY_NROW);                // 0x3F I2C адрес для PCF8574AT
 #endif
 
-MainMenu menu(menuItems, MENU_COUNT, lcd);
+MainMenu menu(menuItems, LENGTH(menuItems), lcd);
 
 GStepper2<STEPPER2WIRE> shaftStepper(STEPPERS_STEPS_COUNT, STEP_Z, DIR_Z, EN_STEP);
 GStepper2<STEPPER2WIRE> layerStepper(STEPPERS_STEPS_COUNT, STEP_A, DIR_A, EN_STEP);
