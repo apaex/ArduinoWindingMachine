@@ -34,7 +34,7 @@
 Все библиотеки доступны в менеджере библиотек Arduino IDE
 
 ### Настройки в коде
-В файле [config.h](https://github.com/apaex/ArduinoWindingMachine/blob/main/config.h) нужно проверить следующие настройки на соответствие железу:
+В файле [config.h](https://github.com/apaex/ArduinoWindingMachine/blob/main/Arduino_winding_machine/config.h) нужно проверить следующие настройки на соответствие железу:
 
 ```cpp
 #define THREAD_PITCH        1000         // Шаг резьбы вала укладчика в мкм
