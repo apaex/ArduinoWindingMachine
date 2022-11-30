@@ -33,7 +33,7 @@ https://cxem.net/arduino/arduino245.php
 */
     
 #define LANGUAGE RU     // EN, RU
-#define DEBUG
+//#define DEBUG
 
 #include <LiquidCrystal.h>
 //#include <LiquidCrystal_I2C.h>
