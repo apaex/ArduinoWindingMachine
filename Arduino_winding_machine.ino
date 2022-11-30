@@ -33,7 +33,7 @@ https://cxem.net/arduino/arduino245.php
 */
     
 #define LANGUAGE RU     // EN, RU
-#define DEBUG
+//#define DEBUG
 #include "debug.h"
 #define FPSTR(pstr) (const __FlashStringHelper*)(pstr)
 #define LENGTH(a) (sizeof(a) / sizeof(*a))
@@ -306,10 +306,10 @@ void AutoWindingPrg()                                       // Подпрогр�
  
   int32_t dShaft = -STEPPERS_STEPS_COUNT * w.turns;
   int32_t dLayer = -STEPPERS_STEPS_COUNT * w.turns * w.step / int32_t(THREAD_PITCH) * (w.dir ? 1 : -1); 
+  int32_t p[] = {dShaft, dLayer}; 
 
   planner.reset();
-  initTimer();  
- //! startTimer(); 
+  initTimer();   
   
   while (1)
   {
@@ -326,11 +326,10 @@ void AutoWindingPrg()                                       // Подпрогр�
         screen.Draw();
       }      
       
-      int32_t p[] = {dShaft, (current.layers&1) ? -dLayer : dLayer};       
-      
       planner.setTarget(p, RELATIVE);
       DebugWrite("setTarget", p[0], p[1]);
       ++current.layers;   
+      p[1] = -p[1];
 
       startTimer();                   
       setPeriod(planner.getPeriod());
@@ -341,8 +340,7 @@ void AutoWindingPrg()                                       // Подпрогр�
     encoder.tick();
     button.tick();
     if (encoder.click())
-    {
-      
+    {      
       if (pause)
       {
         planner.resume();
