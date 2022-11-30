@@ -239,7 +239,7 @@ private:
             LCD_CLASS::createChar(lcd_c - 1, customChars_[c]);
             _CGRAM_write = false;
             LCD_CLASS::setCursor(_col, _row);       
-            DebugWrite();     
+            //DebugWrite();     
         }
 
         return _gen[c] - 1;

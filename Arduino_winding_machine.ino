@@ -59,7 +59,7 @@ https://cxem.net/arduino/arduino245.php
 #define TRANSFORMER_COUNT 3
 #define WINDING_COUNT 3
 
-Winding params[TRANSFORMER_COUNT][WINDING_COUNT];
+Winding params[WINDING_COUNT];
 
 int8_t currentTransformer = -1;
 int8_t currentWinding = -1;
@@ -130,7 +130,6 @@ EncButton<EB_TICK, STOP_BT> button;
 void setup() 
 {
   Serial.begin(9600);
-
   LoadSettings();
 
   pinMode(EN_STEP, OUTPUT);
@@ -166,6 +165,7 @@ void loop()
       case Autowinding2: 
       case Autowinding3: 
               currentTransformer = menu.index - Autowinding1; 
+              LoadSettings();
               menu.index = Winding1;  
 
               UpdateMenuItemText(0);
@@ -177,11 +177,11 @@ void loop()
       case Winding3:     
               currentWinding = menu.index - Winding1; 
               menu.index = TurnsSet;                                                          
-              ((UIntMenuItem*)menu[TurnsSet])->value = &params[currentTransformer][currentWinding].turns;
-              ((UIntMenuItem*)menu[StepSet])->value = &params[currentTransformer][currentWinding].step;
-              ((UIntMenuItem*)menu[SpeedSet])->value = &params[currentTransformer][currentWinding].speed;
-              ((UIntMenuItem*)menu[LaySet])->value = &params[currentTransformer][currentWinding].layers;              
-              ((BoolMenuItem*)menu[Direction])->value = &params[currentTransformer][currentWinding].dir;
+              ((UIntMenuItem*)menu[TurnsSet])->value = &params[currentWinding].turns;
+              ((UIntMenuItem*)menu[StepSet])->value = &params[currentWinding].step;
+              ((UIntMenuItem*)menu[SpeedSet])->value = &params[currentWinding].speed;
+              ((UIntMenuItem*)menu[LaySet])->value = &params[currentWinding].layers;              
+              ((BoolMenuItem*)menu[Direction])->value = &params[currentWinding].dir;
               break;
       case WindingBack:  menu.index = Autowinding1 + currentTransformer; break;
       case PosControl:   menu.index = ShaftPos; break;
@@ -212,7 +212,7 @@ void loop()
       case miSettingsStopPerLevel: 
               menu.IncCurrent(1);
               break;
-      case miSettingsBack: menu.index = miSettings; break;
+      case miSettingsBack: SaveSettings(); menu.index = miSettings; break;
     }
     menu.Draw();
   }
@@ -220,7 +220,7 @@ void loop()
 
 void UpdateMenuItemText(byte i)
 {
-  ((ValMenuItem*)menu[Winding1 + i])->value = params[currentTransformer][i].turns * params[currentTransformer][i].layers;
+  ((ValMenuItem*)menu[Winding1 + i])->value = params[i].turns * params[i].layers;
 }
 
 void ValueEdit()
@@ -285,7 +285,7 @@ ISR(TIMER1_COMPA_vect)
 void AutoWindingPrg()                                       // Подпрограмма автоматической намотки
 {  
   Winding current;                                          // Текущий виток и слой при автонамотке
-  const Winding &w = params[currentTransformer][currentWinding];
+  const Winding &w = params[currentWinding];
   MainScreen screen(lcd, w, current);
  
   DebugWrite("Start");
@@ -302,15 +302,15 @@ void AutoWindingPrg()                                       // Подпрогр�
   
   EnableSteppers(true);   // Разрешение управления двигателями
  
-  planner.setAcceleration(STEPPERS_STEPS_COUNT * settings.acceleration / 60);
-  planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed / 60);
+  planner.setAcceleration(STEPPERS_STEPS_COUNT * settings.acceleration / 60L);
+  planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed / 60L);
  
   int32_t dShaft = -STEPPERS_STEPS_COUNT * w.turns;
-  int32_t dLayer = -STEPPERS_STEPS_COUNT * w.turns *  w.step / int32_t(THREAD_PITCH) * (w.dir ? 1 : -1); 
+  int32_t dLayer = -STEPPERS_STEPS_COUNT * w.turns * w.step / int32_t(THREAD_PITCH) * (w.dir ? 1 : -1); 
 
   planner.reset();
   initTimer();  
-  startTimer(); 
+ //! startTimer(); 
   
   while (1)
   {
@@ -353,7 +353,7 @@ void AutoWindingPrg()                                       // Подпрогр�
     if (encoder.turn()) 
     {                                                                                             // Если повернуть энкодер во время автонамотки, 
       current.speed = constrain(current.speed + encoder.dir() * 30, 30, 600);                     // то меняем значение скорости
-      planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed / 60);
+      planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed / 60L);
       screen.UpdateSpeed();
     }
 
@@ -384,6 +384,7 @@ void WaitButton()
   } while (!encoder.click());
 }
 
+
 void LoadSettings()
 {
   int p=0;
@@ -393,8 +394,20 @@ void LoadSettings()
     return;
 
   for (int i=0; i<TRANSFORMER_COUNT; ++i)
-    for (int j=0; j<WINDING_COUNT; ++j)
-      Load(params[i][j], p);
+  {
+    if (i == currentTransformer)
+    {
+      EEPROM_load(p, v);    
+      
+      for (int j=0; j<WINDING_COUNT; ++j)
+        if (v == EEPROM_DATA_VERSION)
+          Load(params[j], p);
+        else
+          { params[j] = Winding(); p += sizeof(Winding); }
+    }
+    else
+      p += sizeof(Winding) * WINDING_COUNT + 1;
+  }
 
   Load(settings, p);
 }
@@ -406,8 +419,16 @@ void SaveSettings()
   EEPROM_save(p, v);          
 
   for (int i=0; i<TRANSFORMER_COUNT; ++i)
-    for (int j=0; j<WINDING_COUNT; ++j)
-      Save(params[i][j], p);
+  {
+    if (i == currentTransformer)
+    {
+      EEPROM_save(p, v);   
+      for (int j=0; j<WINDING_COUNT; ++j)
+        Save(params[j], p);
+    }
+    else
+      p += sizeof(Winding) * WINDING_COUNT + 1;
+  }
 
   Save(settings, p);
 }

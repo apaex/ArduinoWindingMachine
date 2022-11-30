@@ -70,14 +70,13 @@ class VariableMenuItem : public MenuItem
     T *value;            // Указатель на адрес текущей переменной изменяемой на экране
     T minVal;            // Ограничение значения переменной снизу
     T maxVal;            // Ограничение значения переменной сверху
-    T scale;             // Размерный коэффициент значения переменной
     T increment;
 
-    VariableMenuItem(byte screen_, byte num_, const char* text_, const char* format_, T* value_, T min_, T max_, T increment_ = 1, T scale_ = 1) : MenuItem(screen_, num_, text_), format(format_), value(value_), minVal(min_), maxVal(max_), scale(scale_), increment(increment_) {}
+    VariableMenuItem(byte screen_, byte num_, const char* text_, const char* format_, T* value_, T min_, T max_, T increment_ = 1) : MenuItem(screen_, num_, text_), format(format_), value(value_), minVal(min_), maxVal(max_), increment(increment_) {}
 
     virtual void Update(LiquidCrystalCyr &lcd, byte row)
     {
-      lcd.printfAt_P(10, row, format, int(*value) * scale);
+      lcd.printfAt_P(10, row, format, int(*value));
     }
 
     virtual void IncValue(int8_t inc)
