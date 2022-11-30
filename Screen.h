@@ -37,4 +37,18 @@ public:
   {  
     lcd.printfAt_P(2, 1, LINE6_FORMAT, current.speed);
   }
+
+  void PlannerStatus(byte status)
+  {
+    if (lcd.nRows < 4)
+      return;
+    
+    if (status >= LENGTH(plannerStatuses))
+      return;
+
+    lcd.printAt_P(0, 3, plannerStatuses[status]);
+
+    for (byte i = strlen_P(plannerStatuses[status]); i < lcd.nCols; ++i)
+      lcd.print(' ');
+  }
 };

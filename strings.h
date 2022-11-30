@@ -47,8 +47,11 @@ const char PROGMEM MENU_19[] = "ондювю:";
 const char PROGMEM MENU_22[] = "ярноякни";
 const char PROGMEM MENU_23[] = "сяйнпем.";
 
-
-
+const char PROGMEM PLANNER_STATUS_0[] = "оюсгю";
+const char PROGMEM PLANNER_STATUS_1[] = "мюлнрйю";
+const char PROGMEM PLANNER_STATUS_2[] = "нярюмнбйю";
+const char PROGMEM PLANNER_STATUS_3[] = "";
+const char PROGMEM PLANNER_STATUS_4[] = "рнплнфемхе";
 
 #else
 
@@ -79,4 +82,12 @@ const char PROGMEM MENU_19[] = "LA pos:";
 const char PROGMEM MENU_22[] = "LayerStop";
 const char PROGMEM MENU_23[] = "Accel";
 
+const char PROGMEM PLANNER_STATUS_0[] = "Pause";
+const char PROGMEM PLANNER_STATUS_1[] = "Run";
+const char PROGMEM PLANNER_STATUS_2[] = "Wait";
+const char PROGMEM PLANNER_STATUS_3[] = "";
+const char PROGMEM PLANNER_STATUS_4[] = "Brake";
+
 #endif
+
+const char* const plannerStatuses[] = {PLANNER_STATUS_0, PLANNER_STATUS_1, PLANNER_STATUS_2, PLANNER_STATUS_3, PLANNER_STATUS_4};

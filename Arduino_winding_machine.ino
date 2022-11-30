@@ -33,7 +33,10 @@ https://cxem.net/arduino/arduino245.php
 */
     
 #define LANGUAGE RU     // EN, RU
-//#define DEBUG
+#define DEBUG
+#include "debug.h"
+#define FPSTR(pstr) (const __FlashStringHelper*)(pstr)
+#define LENGTH(a) (sizeof(a) / sizeof(*a))
 
 #include <LiquidCrystal.h>
 //#include <LiquidCrystal_I2C.h>
@@ -44,7 +47,6 @@ https://cxem.net/arduino/arduino245.php
 #include "LiquidCrystalCyr.h"
 #include "Menu.h"
 #include "timer.h"
-#include "tools.h"
 
 #include "Screen.h"
 #include "Winding.h"
@@ -314,7 +316,7 @@ void AutoWindingPrg()                                       // Подпрогр�
   
   while (1)
   {
-    if (!planner.getStatus() && !pause) 
+    if (planner.getStatus() == 0 && !pause) 
     {   
       DebugWrite("READY");
       if (current.layers >= w.layers)
@@ -322,7 +324,7 @@ void AutoWindingPrg()                                       // Подпрогр�
 
       if (settings.stopPerLayer && (current.layers > 0)) 
       {
-        lcd.printfAt_P(0, 1, STRING_2);           // "PRESS CONTINUE  "    
+        lcd.printAt_P(0, 1, STRING_2);           // "PRESS CONTINUE  "    
         WaitButton();
         screen.Draw();
       }      
@@ -343,11 +345,16 @@ void AutoWindingPrg()                                       // Подпрогр�
     button.tick();
     if (encoder.click())
     {
+      
       if (pause)
+      {
         planner.resume();
+        startTimer();                   
+        setPeriod(planner.getPeriod());
+      }
       else 
         planner.stop();
-      pause != pause;
+      pause = !pause;
     }
             
     if (encoder.turn()) 
@@ -366,13 +373,17 @@ void AutoWindingPrg()                                       // Подпрогр�
       current.turns = total_turns - (current.layers-1) * w.turns;
       
       screen.UpdateTurns();
+      //DebugWrite("planner.getStatus", planner.getStatus());
       //DebugWrite("", shaftStepper.pos, layerStepper.pos);   
+
+      screen.PlannerStatus(planner.getStatus());
+
     }
   }
 
   EnableSteppers(false);
 
-  lcd.printfAt_P(0, 1, STRING_1);             // "AUTOWINDING DONE"  
+  lcd.printAt_P(0, 1, STRING_1);             // "AUTOWINDING DONE"  
   WaitButton();
 }
 
