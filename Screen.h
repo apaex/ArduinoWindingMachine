@@ -51,6 +51,7 @@ public:
     PrintLine((lcd.nRows < 4) ? 1 : 3, st);
   }
 
+private:
   void PrintLine(byte row, PGM_P st)
   {
     if (row >= lcd.nRows)
