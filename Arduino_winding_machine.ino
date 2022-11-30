@@ -377,7 +377,8 @@ void AutoWindingPrg()                                       // Подпрогр�
 
     }
   }
-
+  screen.PlannerStatus(planner.getStatus());
+  
   EnableSteppers(false);
 
   lcd.printAt_P(0, 1, STRING_1);             // "AUTOWINDING DONE"  
