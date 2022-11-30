@@ -41,6 +41,7 @@
 
 #define DISPLAY_NCOL        20           // размер дисплея: ширина
 #define DISPLAY_NROW        4            // размер дисплея: высота
+#define DISPLAY_ADDRESS     0x27         // I2C адрес дисплея (0x27 для PCF8574T, 0x3F для PCF8574AT)
 
 #define STEPPERS_STEPS      200          // число шагов двигателя на 1 оборот
 #define STEPPERS_MICROSTEPS 16           // делитель на плате драйвера двигателя

@@ -113,7 +113,7 @@ byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100}
 LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7);                  // Назначаем пины для управления LCD 
 #endif
 #ifdef LiquidCrystal_I2C_h
-LiquidCrystalCyr lcd(0x27, DISPLAY_NCOL, DISPLAY_NROW);                // 0x3F I2C адрес для PCF8574AT
+LiquidCrystalCyr lcd(DISPLAY_ADDRESS, DISPLAY_NCOL, DISPLAY_NROW);                
 #endif
 
 MainMenu menu(menuItems, LENGTH(menuItems), lcd);
