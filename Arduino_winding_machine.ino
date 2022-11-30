@@ -321,7 +321,7 @@ void AutoWindingPrg()                                       // Подпрогр�
 
       if (settings.stopPerLayer && (current.layers > 0)) 
       {
-        lcd.printAt_P(0, 1, STRING_2);           // "PRESS CONTINUE  "    
+        screen.Message(STRING_2);           // "PRESS CONTINUE  "    
         WaitButton();
         screen.Draw();
       }      
@@ -374,14 +374,12 @@ void AutoWindingPrg()                                       // Подпрогр�
       //DebugWrite("", shaftStepper.pos, layerStepper.pos);   
 
       screen.PlannerStatus(planner.getStatus());
-
     }
   }
-  screen.PlannerStatus(planner.getStatus());
   
   EnableSteppers(false);
 
-  lcd.printAt_P(0, 1, STRING_1);             // "AUTOWINDING DONE"  
+  screen.Message(STRING_1);             // "AUTOWINDING DONE"  
   WaitButton();
 }
 
