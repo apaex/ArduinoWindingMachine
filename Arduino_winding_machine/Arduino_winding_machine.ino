@@ -1,8 +1,5 @@
 /* Name: Winding machine    
    Description: Arduino ATmega 328P + Stepper motor control CNC Shield v3 + 2004 LCD + Encoder KY-040
-   Author:      TDA
-   Ver:         3.0b
-   Date:        19/11/2022
 
        Arduino pinout diagram:
           _______________
@@ -56,7 +53,11 @@ https://cxem.net/arduino/arduino245.php
 #include "strings.h"
 
 #define STEPPERS_STEPS_COUNT (int32_t(STEPPERS_STEPS) * STEPPERS_MICROSTEPS)
+ifdef DEBUG
+#define SPEED_LIMIT 600
+#else
 #define SPEED_LIMIT 240
+#endif
 #define EEPROM_DATA_VERSION 1
 #define TRANSFORMER_COUNT 3
 #define WINDING_COUNT 3
