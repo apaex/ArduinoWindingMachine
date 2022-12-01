@@ -56,9 +56,8 @@ https://cxem.net/arduino/arduino245.php
 #include "strings.h"
 
 #define STEPPERS_STEPS_COUNT (int32_t(STEPPERS_STEPS) * STEPPERS_MICROSTEPS)
-
+#define SPEED_LIMIT 240
 #define EEPROM_DATA_VERSION 1
-
 #define TRANSFORMER_COUNT 3
 #define WINDING_COUNT 3
 
@@ -91,7 +90,7 @@ MenuItem* menuItems[] =
   new UIntMenuItem(2, 0, MENU_10, MENU_FORMAT_10, NULL, 1, 999),
   new UIntMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 99),
   new UIntMenuItem(2, 2, MENU_11, MENU_FORMAT_11, NULL, 5, 995, 5),
-  new UIntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, 30, 600, 30),
+  new UIntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, 30, SPEED_LIMIT, 30),
   new BoolMenuItem(2, 4, MENU_14, NULL, dirSet),
   new MenuItem(2, 5, MENU_15),
   new MenuItem(2, 6, MENU_09),
@@ -360,7 +359,7 @@ void AutoWindingPrg()                                       // Подпрогр�
             
     if (encoder.turn()) 
     {                                                                                             // Если повернуть энкодер во время автонамотки, 
-      current.speed = constrain(current.speed + encoder.dir() * 30, 30, 600);                     // то меняем значение скорости
+      current.speed = constrain(current.speed + encoder.dir() * 30, 30, SPEED_LIMIT);             // то меняем значение скорости
       planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed / 60L);
       screen.UpdateSpeed();
     }
