@@ -348,7 +348,9 @@ void AutoWindingPrg()                                       // Подпрогр�
         setPeriod(planner.getPeriod());
       }
       else 
+        noInterrupts();
         planner.stop();
+        interrupts();
       pause = !pause;
     }
             
@@ -365,7 +367,7 @@ void AutoWindingPrg()                                       // Подпрогр�
       tmr = millis();
 
       int total_turns = (abs(shaftStepper.pos)) / STEPPERS_STEPS_COUNT;
-      current.turns = total_turns - (current.layers-1) * w.turns;
+      current.turns = total_turns % w.turns;
       
       screen.UpdateTurns();
       //DebugWrite("planner.getStatus", planner.getStatus());
