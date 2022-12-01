@@ -4,13 +4,13 @@
 #define ENCODER_DT          5 
 #define ENCODER_SW          3
 
-#define STEPPERS_STEP_Z     4 
-#define STEPPERS_DIR_Z      7
-#define STEPPERS_STEP_A     12
-#define STEPPERS_DIR_A      13
-#define STEPPERS_EN         8
+#define STEPPER_STEP_Z      4 
+#define STEPPER_DIR_Z       7
+#define STEPPER_STEP_A      12
+#define STEPPER_DIR_A       13
+#define STEPPER_EN          8
 
-#define BUZZ_OUT            10
+#define BUZZER              10
 #define BUTTON_STOP         11
 
 #define DISPLAY_RS          14
@@ -27,8 +27,8 @@
 #define DISPLAY_I2C         0            // использовать I2C подключение дисплея
 #define DISPLAY_ADDRESS     0x27         // I2C адрес дисплея (0x27 для PCF8574T, 0x3F для PCF8574AT)
 
-#define STEPPERS_STEPS      200          // число шагов двигателя на 1 оборот
-#define STEPPERS_MICROSTEPS 16           // делитель на плате драйвера двигателя
+#define STEPPER_STEPS       200          // число шагов двигателя на 1 оборот
+#define STEPPER_MICROSTEPS  16           // делитель на плате драйвера двигателя
 
 #define ENCODER_TYPE        EB_HALFSTEP  // тип энкодера: EB_FULLSTEP или EB_HALFSTEP. если энкодер делает один поворот за два щелчка, нужно изменить настройку
 #define ENCODER_INPUT       INPUT        // если есть подтягивающие резисторы - ставьте INPUT, если нет - INPUT_PULLUP

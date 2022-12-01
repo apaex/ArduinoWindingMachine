@@ -52,8 +52,8 @@ https://cxem.net/arduino/arduino245.php
 #include "Winding.h"
 #include "strings.h"
 
-#define STEPPERS_STEPS_COUNT (int32_t(STEPPERS_STEPS) * STEPPERS_MICROSTEPS)
-ifdef DEBUG
+#define STEPPER_STEPS_COUNT (int32_t(STEPPER_STEPS) * STEPPER_MICROSTEPS)
+#ifdef DEBUG
 #define SPEED_LIMIT 600
 #else
 #define SPEED_LIMIT 240
@@ -118,8 +118,8 @@ LiquidCrystalCyr lcd(DISPLAY_ADDRESS, DISPLAY_NCOL, DISPLAY_NROW);
 
 MainMenu menu(menuItems, LENGTH(menuItems), lcd);
 
-GStepper2<STEPPER2WIRE> shaftStepper(STEPPERS_STEPS_COUNT, STEPPERS_STEP_Z, STEPPERS_DIR_Z, STEPPERS_EN);
-GStepper2<STEPPER2WIRE> layerStepper(STEPPERS_STEPS_COUNT, STEPPERS_STEP_A, STEPPERS_DIR_A, STEPPERS_EN);
+GStepper2<STEPPER2WIRE> shaftStepper(STEPPER_STEPS_COUNT, STEPPER_STEP_Z, STEPPER_DIR_Z, STEPPER_EN);
+GStepper2<STEPPER2WIRE> layerStepper(STEPPER_STEPS_COUNT, STEPPER_STEP_A, STEPPER_DIR_A, STEPPER_EN);
 GPlanner< STEPPER2WIRE, 2> planner;
 
 EncButton<EB_TICK, ENCODER_CLK, ENCODER_DT, ENCODER_SW> encoder(ENCODER_INPUT);  
@@ -131,8 +131,8 @@ void setup()
   Serial.begin(9600);
   LoadSettings();
 
-  pinMode(STEPPERS_EN, OUTPUT);
-  pinMode(BUZZ_OUT,OUTPUT);
+  pinMode(STEPPER_EN, OUTPUT);
+  pinMode(BUZZER,OUTPUT);
 
   EnableSteppers(false); // Запрет управления двигателями  
   planner.addStepper(0, shaftStepper);
@@ -236,17 +236,17 @@ void ValueEdit()
 
 void EnableSteppers(bool b)
 {
-  digitalWrite(STEPPERS_EN, b ? LOW : HIGH); 
+  digitalWrite(STEPPER_EN, b ? LOW : HIGH); 
 }
 
 void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
 {
   EnableSteppers(true);
 
-  stepper.setAcceleration(STEPPERS_STEPS_COUNT * settings.acceleration / 60);
-  stepper.setMaxSpeed(STEPPERS_STEPS_COUNT/2);
+  stepper.setAcceleration(STEPPER_STEPS_COUNT * settings.acceleration / 60);
+  stepper.setMaxSpeed(STEPPER_STEPS_COUNT/2);
 
-  int oldPos = -pos * STEPPERS_MICROSTEPS * 2;
+  int oldPos = -pos * STEPPER_MICROSTEPS * 2;
   stepper.setCurrent(oldPos);
   stepper.setTarget(oldPos);
 
@@ -255,7 +255,7 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
     stepper.tick();
     encoder.tick(); 
 
-    int newPos = -pos * STEPPERS_MICROSTEPS * 2;
+    int newPos = -pos * STEPPER_MICROSTEPS * 2;
     if (newPos != oldPos)
     {                              
       stepper.setTarget(newPos);
@@ -301,11 +301,11 @@ void AutoWindingPrg()                                       // Подпрогр�
   
   EnableSteppers(true);   // Разрешение управления двигателями
  
-  planner.setAcceleration(STEPPERS_STEPS_COUNT * settings.acceleration / 60L);
-  planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed / 60L);
+  planner.setAcceleration(STEPPER_STEPS_COUNT * settings.acceleration / 60L);
+  planner.setMaxSpeed(STEPPER_STEPS_COUNT * current.speed / 60L);
  
-  int32_t dShaft = -STEPPERS_STEPS_COUNT * w.turns;
-  int32_t dLayer = -STEPPERS_STEPS_COUNT * w.turns * w.step / int32_t(THREAD_PITCH) * (w.dir ? 1 : -1); 
+  int32_t dShaft = -STEPPER_STEPS_COUNT * w.turns;
+  int32_t dLayer = -STEPPER_STEPS_COUNT * w.turns * w.step / int32_t(THREAD_PITCH) * (w.dir ? 1 : -1); 
   int32_t p[] = {dShaft, dLayer}; 
 
   planner.reset();
@@ -361,7 +361,7 @@ void AutoWindingPrg()                                       // Подпрогр�
     if (encoder.turn()) 
     {                                                                                             // Если повернуть энкодер во время автонамотки, 
       current.speed = constrain(current.speed + encoder.dir() * 30, 30, SPEED_LIMIT);             // то меняем значение скорости
-      planner.setMaxSpeed(STEPPERS_STEPS_COUNT * current.speed / 60L);
+      planner.setMaxSpeed(STEPPER_STEPS_COUNT * current.speed / 60L);
       screen.UpdateSpeed();
     }
 
@@ -370,7 +370,7 @@ void AutoWindingPrg()                                       // Подпрогр�
     {
       tmr = millis();
 
-      int total_turns = (abs(shaftStepper.pos)) / STEPPERS_STEPS_COUNT;
+      int total_turns = (abs(shaftStepper.pos)) / STEPPER_STEPS_COUNT;
       current.turns = total_turns % w.turns;
       
       screen.UpdateTurns();
