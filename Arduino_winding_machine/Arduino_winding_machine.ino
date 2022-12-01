@@ -31,19 +31,22 @@ https://cxem.net/arduino/arduino235.php
 https://cxem.net/arduino/arduino245.php
 
 */
-    
-#define LANGUAGE RU     // EN, RU
-//#define DEBUG
+
+#include "config.h"   // все настройки железа здесь 
 #include "debug.h"
+
+
 #define FPSTR(pstr) (const __FlashStringHelper*)(pstr)
 #define LENGTH(a) (sizeof(a) / sizeof(*a))
 
-#include <LiquidCrystal.h>
+#if DISPLAY_I2C == 1
 //#include <LiquidCrystal_I2C.h>
+#else
+#include <LiquidCrystal.h>
+#endif
 #include <EncButton.h>
 #include <GyverPlanner.h>
 #include <GyverStepper2.h>
-#include <HardwareSerial.h>
 #include "LiquidCrystalCyr.h"
 #include "Menu.h"
 #include "timer.h"
@@ -51,8 +54,6 @@ https://cxem.net/arduino/arduino245.php
 #include "Screen.h"
 #include "Winding.h"
 #include "strings.h"
-#include "config.h"   // все настройки железа здесь
-
 
 #define STEPPERS_STEPS_COUNT (int32_t(STEPPERS_STEPS) * STEPPERS_MICROSTEPS)
 
@@ -109,21 +110,20 @@ MenuItem* menuItems[] =
 byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // Создаем свой символ ⯅ для LCD
 byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100};   // Создаем свой символ ⯆ для LCD
 
-#ifdef LiquidCrystal_h
-LiquidCrystalCyr lcd(RS,EN,D4,D5,D6,D7);                  // Назначаем пины для управления LCD 
-#endif
-#ifdef LiquidCrystal_I2C_h
-LiquidCrystalCyr lcd(DISPLAY_ADDRESS, DISPLAY_NCOL, DISPLAY_NROW);                
+#if DISPLAY_I2C == 0
+LiquidCrystalCyr lcd(DISPLAY_RS, DISPLAY_EN, DISPLAY_D4, DISPLAY_D5, DISPLAY_D6, DISPLAY_D7);                  // Назначаем пины для управления LCD 
+#else
+LiquidCrystalCyr lcd(DISPLAY_ADDRESS, DISPLAY_NCOL, DISPLAY_NROW);     
 #endif
 
 MainMenu menu(menuItems, LENGTH(menuItems), lcd);
 
-GStepper2<STEPPER2WIRE> shaftStepper(STEPPERS_STEPS_COUNT, STEP_Z, DIR_Z, EN_STEP);
-GStepper2<STEPPER2WIRE> layerStepper(STEPPERS_STEPS_COUNT, STEP_A, DIR_A, EN_STEP);
+GStepper2<STEPPER2WIRE> shaftStepper(STEPPERS_STEPS_COUNT, STEPPERS_STEP_Z, STEPPERS_DIR_Z, STEPPERS_EN);
+GStepper2<STEPPER2WIRE> layerStepper(STEPPERS_STEPS_COUNT, STEPPERS_STEP_A, STEPPERS_DIR_A, STEPPERS_EN);
 GPlanner< STEPPER2WIRE, 2> planner;
 
-EncButton<EB_TICK, ENC_CLK, ENC_DT, ENC_SW> encoder(ENCODER_INPUT);  
-EncButton<EB_TICK, STOP_BT> button;
+EncButton<EB_TICK, ENCODER_CLK, ENCODER_DT, ENCODER_SW> encoder(ENCODER_INPUT);  
+EncButton<EB_TICK, BUTTON_STOP> button;
 
 
 void setup() 
@@ -131,7 +131,7 @@ void setup()
   Serial.begin(9600);
   LoadSettings();
 
-  pinMode(EN_STEP, OUTPUT);
+  pinMode(STEPPERS_EN, OUTPUT);
   pinMode(BUZZ_OUT,OUTPUT);
 
   EnableSteppers(false); // Запрет управления двигателями  
@@ -236,7 +236,7 @@ void ValueEdit()
 
 void EnableSteppers(bool b)
 {
-  digitalWrite(EN_STEP, b ? LOW : HIGH); 
+  digitalWrite(STEPPERS_EN, b ? LOW : HIGH); 
 }
 
 void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)

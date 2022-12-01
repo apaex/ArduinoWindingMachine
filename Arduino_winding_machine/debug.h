@@ -1,5 +1,7 @@
 #pragma once
 
+#include <HardwareSerial.h>
+
 template<class T>
 void DebugWrite(T v)
 {

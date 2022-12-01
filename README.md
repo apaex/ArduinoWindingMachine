@@ -34,18 +34,5 @@
 Все библиотеки доступны в менеджере библиотек Arduino IDE
 
 ### Настройки в коде
-В файле [config.h](https://github.com/apaex/ArduinoWindingMachine/blob/main/Arduino_winding_machine/config.h) нужно проверить следующие настройки на соответствие железу:
+В файле [config.h](https://github.com/apaex/ArduinoWindingMachine/blob/main/Arduino_winding_machine/config.h), который лежит в каталоге прошивки, нужно проверить все настройки на соответствие вашему железу.
 
-```cpp
-#define THREAD_PITCH        1000         // Шаг резьбы вала укладчика в мкм
-
-#define DISPLAY_NCOL        20           // размер дисплея: ширина
-#define DISPLAY_NROW        4            // размер дисплея: высота
-#define DISPLAY_ADDRESS     0x27         // I2C адрес дисплея (0x27 для PCF8574T, 0x3F для PCF8574AT)
-
-#define STEPPERS_STEPS      200          // число шагов двигателя на 1 оборот
-#define STEPPERS_MICROSTEPS 16           // делитель на плате драйвера двигателя
-
-#define ENCODER_TYPE        EB_HALFSTEP  // тип энкодера: EB_FULLSTEP или EB_HALFSTEP. если энкодер делает один поворот за два щелчка, нужно изменить настройку
-#define ENCODER_INPUT       INPUT        // если есть подтягивающие резисторы - ставь INPUT, если нет - INPUT_PULLUP
-```
