@@ -324,16 +324,16 @@ void AutoWindingPrg()                                       // Подпрогр�
         screen.Message(STRING_2);           // "PRESS CONTINUE  "    
         WaitButton();
         screen.Draw();
-      }      
-      
+      }  
+
+      DebugWrite("setTarget", p[0], p[1]);      
       planner.setTarget(p, RELATIVE);
-      DebugWrite("setTarget", p[0], p[1]);
       ++current.layers;   
       p[1] = -p[1];
 
       startTimer();                   
-      setPeriod(planner.getPeriod());
-
+      setPeriod(planner.getPeriod());     
+  
       screen.UpdateLayers();            
     }
 
@@ -343,14 +343,18 @@ void AutoWindingPrg()                                       // Подпрогр�
     {      
       if (pause)
       {
+        noInterrupts();
         planner.resume();
+        interrupts();
         startTimer();                   
-        setPeriod(planner.getPeriod());
+        setPeriod(planner.getPeriod());        
       }
       else 
+      {
         noInterrupts();
         planner.stop();
         interrupts();
+      }
       pause = !pause;
     }
             
