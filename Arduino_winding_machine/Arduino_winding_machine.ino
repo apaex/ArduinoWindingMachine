@@ -40,7 +40,7 @@ https://cxem.net/arduino/arduino245.php
 #define LENGTH(a) (sizeof(a) / sizeof(*a))
 
 #if DISPLAY_I2C == 1
-//#include <LiquidCrystal_I2C.h>
+#include <LiquidCrystal_I2C.h>
 #else
 #include <LiquidCrystal.h>
 #endif
