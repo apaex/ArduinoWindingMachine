@@ -102,75 +102,52 @@ public:
         LCD_CLASS::write((byte)c);        
     }
 
-    void printAt(uint8_t col, uint8_t row, const char *s) 
-    {
-        setCursor(col, row);
-        print(s);
-    }   
-
     void printAt(uint8_t col, uint8_t row, char ch) 
     {
-        setCursor(col, row);
-        write(byte(ch));
+      setCursor(col, row);
+      write(byte(ch));
     }   
 
 
-
-    void print_P(PGM_P s)
+    void printAt(uint8_t col, uint8_t row, const char *s) 
     {
-      char buf[strlen_P(s)+1];
-      strcpy_P(buf, s); 
-      print(buf);
-    }
-    
+      setCursor(col, row);
+      print(s);
+    }   
+
     void printAt_P(uint8_t col, uint8_t row, PGM_P s)
     {
       setCursor(col, row);
-      print_P(s);
+      
+      char buf[strlen_P(s)+1];
+      strcpy_P(buf, s); 
+      print(buf);    
     }
 
 // printf 
     
-    void printf(const char *format, ...)
-    {
-        char buf[21];
-        va_list args;
-        va_start(args, format);
-        vsnprintf(buf, 21, format, args);
-        va_end(args);
-        print(buf);
-    }
-
-    void printf_P(PGM_P format, ...)
-    {
-        char buf[21];
-        va_list args;
-        va_start(args, format);
-        vsnprintf_P(buf, 21, format, args);
-        va_end(args);
-        print(buf);
-    }
-
     void printfAt(uint8_t col, uint8_t row, const char *format, ...)
     {
-        char buf[21];
-        va_list args;
-        va_start(args, format);
-        vsnprintf(buf, 21, format, args);
-        va_end(args);
-        setCursor(col, row);
-        print(buf);
+      setCursor(col, row);
+
+      char buf[21];
+      va_list args;
+      va_start(args, format);
+      vsnprintf(buf, 21, format, args);
+      va_end(args);
+      print(buf);
     }
 
     void printfAt_P(uint8_t col, uint8_t row, PGM_P format, ...)
     {
-        char buf[21];
-        va_list args;
-        va_start(args, format);
-        vsnprintf_P(buf, 21, format, args);
-        va_end(args);
-        setCursor(col, row);
-        print(buf);
+      setCursor(col, row);
+
+      char buf[21];
+      va_list args;
+      va_start(args, format);
+      vsnprintf_P(buf, 21, format, args);
+      va_end(args);
+      print(buf);
     }
 
 
