@@ -31,3 +31,16 @@ void DebugWrite(const char *st, int32_t x, int32_t y)
   Serial.println(")");
 #endif
 }
+
+template <class T>
+void DebugWrite(const T arr[], int n)
+{
+#ifdef DEBUG
+  for (int i = 0; i < n; ++i)
+  {
+    Serial.print(arr[i]);
+    Serial.print(',');
+  }
+  Serial.println("");
+#endif
+}
