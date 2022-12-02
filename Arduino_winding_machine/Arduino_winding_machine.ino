@@ -58,6 +58,7 @@ https://cxem.net/arduino/arduino245.php
 #else
 #define SPEED_LIMIT 260
 #endif
+#define SPEED_INC 10
 #define EEPROM_DATA_VERSION 1
 #define TRANSFORMER_COUNT 3
 #define WINDING_COUNT 3
@@ -91,7 +92,7 @@ MenuItem* menuItems[] =
   new UIntMenuItem(2, 0, MENU_10, MENU_FORMAT_10, NULL, 1, 999),
   new UIntMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 99),
   new UIntMenuItem(2, 2, MENU_11, MENU_FORMAT_11, NULL, 5, 995, 5),
-  new UIntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, 10, SPEED_LIMIT, 10),
+  new UIntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, SPEED_INC, SPEED_LIMIT, SPEED_INC),
   new BoolMenuItem(2, 4, MENU_14, NULL, dirSet),
   new MenuItem(2, 5, MENU_15),
   new MenuItem(2, 6, MENU_09),
@@ -359,8 +360,8 @@ void AutoWindingPrg()                                       // Подпрогр�
     }
             
     if (encoder.turn()) 
-    {                                                                                             // Если повернуть энкодер во время автонамотки, 
-      current.speed = constrain(current.speed + encoder.dir() * 30, 30, SPEED_LIMIT);             // то меняем значение скорости
+    {                                                                                                           // Если повернуть энкодер во время автонамотки, 
+      current.speed = constrain(current.speed + encoder.dir() * SPEED_INC, SPEED_INC, SPEED_LIMIT);             // то меняем значение скорости
       planner.setMaxSpeed(STEPPER_STEPS_COUNT * current.speed / 60L);
       screen.UpdateSpeed();
     }
