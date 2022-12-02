@@ -190,6 +190,7 @@ void loop()
       case SpeedSet:     
       case LaySet:      
       case AccelSet:     ValueEdit(); break;
+      case miSettingsStopPerLevel: 
       case Direction:    menu.IncCurrent(1); break;                          
       case Start:        SaveSettings(); AutoWindingPrg(); menu.index = Winding1 + currentWinding; UpdateMenuItemText(currentWinding); break; 
       case Cancel:       SaveSettings(); menu.index = Winding1 + currentWinding; UpdateMenuItemText(currentWinding); break;
@@ -205,9 +206,7 @@ void loop()
       case PosCancel:    menu.index = PosControl; settings.shaftPos = 0; settings.layerPos = 0; break;
       
       case miSettings:   menu.index = miSettingsStopPerLevel; break;
-      case miSettingsStopPerLevel: 
-              menu.IncCurrent(1);
-              break;
+
       case miSettingsBack: SaveSettings(); menu.index = miSettings; break;
     }
     menu.Draw();
