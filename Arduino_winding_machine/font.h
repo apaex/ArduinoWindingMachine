@@ -490,3 +490,5 @@ const unsigned char char_map[] = { 'A', 0, 'B', 1, 2, 'E', 3, '3', 4, 5, 'K', 6,
                                    'a', 20, 39, 21, 22, 'e', 23, 40, 24, 25, 41, 26, 'm', 42, 'o', 27, 'p', 'c', 28, 'y', 29, 'x', 30, 31, 32, 33, 34, 35, 'b', 36, 37, 38 
 #endif                                   
                                   };
+
+const byte CHAR_MAP_COUNT = sizeof(char_map);

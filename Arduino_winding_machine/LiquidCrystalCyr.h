@@ -91,7 +91,7 @@ public:
             {
                 c = createUserChar(c);
             }
-            else if (c >= 0xc0 && c <= 0xff)
+            else if (c >= 0xc0 && c < 0xc0 + CHAR_MAP_COUNT)
             {
                 c = char_map[c - 0xc0];
                 if (c < FONT_CHAR_COUNT)
