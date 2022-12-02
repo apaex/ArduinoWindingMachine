@@ -385,6 +385,7 @@ void AutoWindingPrg()                                       // Подпрогр�
   EnableSteppers(false);
 
   screen.Message(STRING_1);             // "AUTOWINDING DONE"  
+  multibeep(3, 600, 300);
   WaitButton();
 }
 
@@ -396,6 +397,16 @@ void WaitButton()
   } while (!encoder.click());
 }
 
+void multibeep (int beeps, int on, int off) 
+{
+  for (int i = 0; i < beeps; ++i) 
+  {
+     digitalWrite (BUZZER, HIGH);
+     delay (on);
+     digitalWrite (BUZZER, LOW);
+     delay (off);
+  }
+}
 
 void LoadSettings()
 {
