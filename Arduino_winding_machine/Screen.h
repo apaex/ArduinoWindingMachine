@@ -43,7 +43,7 @@ public:
     if (status >= LENGTH(plannerStatuses))
       return;
 
-    PrintLine((lcd.nRows < 4) ? 1 : 3, plannerStatuses[status]);
+    PrintLine(3, plannerStatuses[status]);
   }
 
   void Message(PGM_P st)
