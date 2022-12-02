@@ -1,4 +1,4 @@
-/* Name: Winding machine    
+/* Name: Winding machine
    Description: Arduino ATmega 328P + Stepper motor control CNC Shield v3 + 2004 LCD + Encoder KY-040
 
        Arduino pinout diagram:
@@ -21,7 +21,7 @@
   LCD D5 |A3 17   INT0  2| ENCODER DT
   LCD D6 |A4 18      TX 1|
   LCD D7 |A5 19      RX 0|
-         |__A6_A7________|            
+         |__A6_A7________|
 
 
 https://cxem.net/arduino/arduino235.php
@@ -29,11 +29,10 @@ https://cxem.net/arduino/arduino245.php
 
 */
 
-#include "config.h"   // все настройки железа здесь 
+#include "config.h" // все настройки железа здесь
 #include "debug.h"
 
-
-#define FPSTR(pstr) (const __FlashStringHelper*)(pstr)
+#define FPSTR(pstr) (const __FlashStringHelper *)(pstr)
 #define LENGTH(a) (sizeof(a) / sizeof(*a))
 
 #if DISPLAY_I2C == 1
@@ -70,64 +69,89 @@ int8_t currentWinding = -1;
 
 Settings settings;
 
-enum menu_states {Autowinding1, Autowinding2, Autowinding3, PosControl, miSettings, Winding1, Winding2, Winding3, WindingBack, TurnsSet, LaySet, StepSet, SpeedSet, Direction, Start, Cancel, ShaftPos, ShaftStepMul, LayerPos, LayerStepMul, PosCancel, miSettingsStopPerLevel, AccelSet, miSettingsBack}; // Нумерованный список строк экрана
+enum menu_states
+{
+  Autowinding1,
+  Autowinding2,
+  Autowinding3,
+  PosControl,
+  miSettings,
+  Winding1,
+  Winding2,
+  Winding3,
+  WindingBack,
+  TurnsSet,
+  LaySet,
+  StepSet,
+  SpeedSet,
+  Direction,
+  Start,
+  Cancel,
+  ShaftPos,
+  ShaftStepMul,
+  LayerPos,
+  LayerStepMul,
+  PosCancel,
+  miSettingsStopPerLevel,
+  AccelSet,
+  miSettingsBack
+}; // Нумерованный список строк экрана
 
 const char *boolSet[] = {STRING_OFF, STRING_ON};
 const char *dirSet[] = {"<<<", ">>>"};
 const uint8_t *stepSet[] = {1, 10, 100};
 
-MenuItem* menuItems[] = 
-{              
-  new MenuItem(0, 0, MENU_01),
-  new MenuItem(0, 1, MENU_02),
-  new MenuItem(0, 2, MENU_03),
-  new MenuItem(0, 3, MENU_04),
-  new MenuItem(0, 4, MENU_05),
+MenuItem *menuItems[] =
+    {
+        new MenuItem(0, 0, MENU_01),
+        new MenuItem(0, 1, MENU_02),
+        new MenuItem(0, 2, MENU_03),
+        new MenuItem(0, 3, MENU_04),
+        new MenuItem(0, 4, MENU_05),
 
-  new ValMenuItem(1, 0, MENU_06, MENU_FORMAT_06),
-  new ValMenuItem(1, 1, MENU_07, MENU_FORMAT_06),
-  new ValMenuItem(1, 2, MENU_08, MENU_FORMAT_06),
-  new MenuItem(1, 3, MENU_09),
-  
-  new UIntMenuItem(2, 0, MENU_10, MENU_FORMAT_10, NULL, 1, 999),
-  new UIntMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 99),
-  new UIntMenuItem(2, 2, MENU_11, MENU_FORMAT_11, NULL, 5, 995, 5),
-  new UIntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, SPEED_INC, SPEED_LIMIT, SPEED_INC),
-  new BoolMenuItem(2, 4, MENU_14, NULL, dirSet),
-  new MenuItem(2, 5, MENU_15),
-  new MenuItem(2, 6, MENU_09),
+        new ValMenuItem(1, 0, MENU_06, MENU_FORMAT_06),
+        new ValMenuItem(1, 1, MENU_07, MENU_FORMAT_06),
+        new ValMenuItem(1, 2, MENU_08, MENU_FORMAT_06),
+        new MenuItem(1, 3, MENU_09),
 
-  new IntMenuItem(10, 0, MENU_17, MENU_FORMAT_17, &settings.shaftPos, -999, 999),
-  new SetMenuItem(10, 1, MENU_18, MENU_FORMAT_10, &settings.shaftStep, stepSet, 3),
-  new IntMenuItem(10, 2, MENU_19, MENU_FORMAT_17, &settings.layerPos, -999, 999),
-  new SetMenuItem(10, 3, MENU_18, MENU_FORMAT_10, &settings.layerStep, stepSet, 3),
-  new MenuItem(10, 4, MENU_09),
+        new UIntMenuItem(2, 0, MENU_10, MENU_FORMAT_10, NULL, 1, 999),
+        new UIntMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 99),
+        new UIntMenuItem(2, 2, MENU_11, MENU_FORMAT_11, NULL, 5, 995, 5),
+        new UIntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, SPEED_INC, SPEED_LIMIT, SPEED_INC),
+        new BoolMenuItem(2, 4, MENU_14, NULL, dirSet),
+        new MenuItem(2, 5, MENU_15),
+        new MenuItem(2, 6, MENU_09),
 
-  new BoolMenuItem(11, 0, MENU_22, &settings.stopPerLayer, boolSet),
-  new UIntMenuItem(11, 1, MENU_23, MENU_FORMAT_10, &settings.acceleration, 0, 600, 10),
-  new MenuItem(11, 2, MENU_09),
-}; 
+        new IntMenuItem(10, 0, MENU_17, MENU_FORMAT_17, &settings.shaftPos, -999, 999),
+        new SetMenuItem(10, 1, MENU_18, MENU_FORMAT_10, &settings.shaftStep, stepSet, 3),
+        new IntMenuItem(10, 2, MENU_19, MENU_FORMAT_17, &settings.layerPos, -999, 999),
+        new SetMenuItem(10, 3, MENU_18, MENU_FORMAT_10, &settings.layerStep, stepSet, 3),
+        new MenuItem(10, 4, MENU_09),
 
-byte up[8] =   {0b00100,0b01110,0b11111,0b00000,0b00000,0b00000,0b00000,0b00000};   // Создаем свой символ ⯅ для LCD
-byte down[8] = {0b00000,0b00000,0b00000,0b00000,0b00000,0b11111,0b01110,0b00100};   // Создаем свой символ ⯆ для LCD
+        new BoolMenuItem(11, 0, MENU_22, &settings.stopPerLayer, boolSet),
+        new UIntMenuItem(11, 1, MENU_23, MENU_FORMAT_10, &settings.acceleration, 0, 600, 10),
+        new MenuItem(11, 2, MENU_09),
+};
+
+byte up[8] = {0b00100, 0b01110, 0b11111, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000};   // Создаем свой символ ⯅ для LCD
+byte down[8] = {0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b11111, 0b01110, 0b00100}; // Создаем свой символ ⯆ для LCD
 
 #if DISPLAY_I2C == 0
-LiquidCrystalCyr lcd(DISPLAY_RS, DISPLAY_EN, DISPLAY_D4, DISPLAY_D5, DISPLAY_D6, DISPLAY_D7);                  // Назначаем пины для управления LCD 
+LiquidCrystalCyr lcd(DISPLAY_RS, DISPLAY_EN, DISPLAY_D4, DISPLAY_D5, DISPLAY_D6, DISPLAY_D7); // Назначаем пины для управления LCD
 #else
-LiquidCrystalCyr lcd(DISPLAY_ADDRESS, DISPLAY_NCOL, DISPLAY_NROW);     
+LiquidCrystalCyr lcd(DISPLAY_ADDRESS, DISPLAY_NCOL, DISPLAY_NROW);
 #endif
 
 MainMenu menu(menuItems, LENGTH(menuItems), lcd);
 
 GStepper2<STEPPER2WIRE> shaftStepper(STEPPER_STEPS_COUNT, STEPPER_STEP_Z, STEPPER_DIR_Z, STEPPER_EN);
 GStepper2<STEPPER2WIRE> layerStepper(STEPPER_STEPS_COUNT, STEPPER_STEP_A, STEPPER_DIR_A, STEPPER_EN);
-GPlanner< STEPPER2WIRE, 2> planner;
+GPlanner<STEPPER2WIRE, 2> planner;
 
-EncButton<EB_TICK, ENCODER_CLK, ENCODER_DT, ENCODER_SW> encoder(ENCODER_INPUT);  
+EncButton<EB_TICK, ENCODER_CLK, ENCODER_DT, ENCODER_SW> encoder(ENCODER_INPUT);
 EncButton<EB_TICK, BUTTON_STOP> pedal;
 
-
-void setup() 
+void setup()
 {
   Serial.begin(9600);
   LoadSettings();
@@ -135,79 +159,107 @@ void setup()
   pinMode(STEPPER_EN, OUTPUT);
   pinMode(BUZZER, OUTPUT);
 
-  EnableSteppers(false); // Запрет управления двигателями  
+  EnableSteppers(false); // Запрет управления двигателями
   planner.addStepper(0, shaftStepper);
   planner.addStepper(1, layerStepper);
 
-  lcd.createChar(0, up);       // Записываем символ ⯅ в память LCD
-  lcd.createChar(1, down);     // Записываем символ ⯆ в память LCD
-  lcd.begin(DISPLAY_NCOL, DISPLAY_NROW);                                                        // Инициализация LCD Дисплей 
+  lcd.createChar(0, up);                 // Записываем символ ⯅ в память LCD
+  lcd.createChar(1, down);               // Записываем символ ⯆ в память LCD
+  lcd.begin(DISPLAY_NCOL, DISPLAY_NROW); // Инициализация LCD Дисплей
   menu.Draw();
 
-  encoder.setEncType(ENCODER_TYPE);  
-} 
+  encoder.setEncType(ENCODER_TYPE);
+}
 
-void loop() 
+void loop()
 {
-  encoder.tick(); 
+  encoder.tick();
 
-  if (encoder.turn())                               // Проверяем изменение позиции энкодера   
-  {                                                                               
-    menu.IncIndex(encoder.dir());                   // Если позиция энкодера изменена, то меняем menu.index и выводим экран
-    menu.Draw();   
+  if (encoder.turn()) // Проверяем изменение позиции энкодера
+  {
+    menu.IncIndex(encoder.dir()); // Если позиция энкодера изменена, то меняем menu.index и выводим экран
+    menu.Draw();
   }
 
-  if (encoder.click())                               // Проверяем нажатие кнопки
-  {  
-    switch (menu.index)                              // Если было нажатие, то выполняем действие, соответствующее текущей позиции курсора
-    {  
-      case Autowinding1:  
-      case Autowinding2: 
-      case Autowinding3: 
-              currentTransformer = menu.index - Autowinding1; 
-              LoadSettings();
-              menu.index = Winding1;  
+  if (encoder.click()) // Проверяем нажатие кнопки
+  {
+    switch (menu.index) // Если было нажатие, то выполняем действие, соответствующее текущей позиции курсора
+    {
+    case Autowinding1:
+    case Autowinding2:
+    case Autowinding3:
+      currentTransformer = menu.index - Autowinding1;
+      LoadSettings();
+      menu.index = Winding1;
 
-              UpdateMenuItemText(0);
-              UpdateMenuItemText(1);
-              UpdateMenuItemText(2);
-              break;
-      case Winding1:     
-      case Winding2: 
-      case Winding3:     
-              currentWinding = menu.index - Winding1; 
-              menu.index = TurnsSet;                                                          
-              ((UIntMenuItem*)menu[TurnsSet])->value = &params[currentWinding].turns;
-              ((UIntMenuItem*)menu[StepSet])->value = &params[currentWinding].step;
-              ((UIntMenuItem*)menu[SpeedSet])->value = &params[currentWinding].speed;
-              ((UIntMenuItem*)menu[LaySet])->value = &params[currentWinding].layers;              
-              ((BoolMenuItem*)menu[Direction])->value = &params[currentWinding].dir;
-              break;
-      case WindingBack:  menu.index = Autowinding1 + currentTransformer; break;
-      case PosControl:   menu.index = ShaftPos; break;
-      case TurnsSet:     
-      case StepSet:      
-      case SpeedSet:     
-      case LaySet:      
-      case AccelSet:     ValueEdit(); break;
-      case miSettingsStopPerLevel: 
-      case Direction:    menu.IncCurrent(1); break;                          
-      case Start:        SaveSettings(); AutoWindingPrg(); menu.index = Winding1 + currentWinding; UpdateMenuItemText(currentWinding); break; 
-      case Cancel:       SaveSettings(); menu.index = Winding1 + currentWinding; UpdateMenuItemText(currentWinding); break;
+      UpdateMenuItemText(0);
+      UpdateMenuItemText(1);
+      UpdateMenuItemText(2);
+      break;
+    case Winding1:
+    case Winding2:
+    case Winding3:
+      currentWinding = menu.index - Winding1;
+      menu.index = TurnsSet;
+      ((UIntMenuItem *)menu[TurnsSet])->value = &params[currentWinding].turns;
+      ((UIntMenuItem *)menu[StepSet])->value = &params[currentWinding].step;
+      ((UIntMenuItem *)menu[SpeedSet])->value = &params[currentWinding].speed;
+      ((UIntMenuItem *)menu[LaySet])->value = &params[currentWinding].layers;
+      ((BoolMenuItem *)menu[Direction])->value = &params[currentWinding].dir;
+      break;
+    case WindingBack:
+      menu.index = Autowinding1 + currentTransformer;
+      break;
+    case PosControl:
+      menu.index = ShaftPos;
+      break;
+    case TurnsSet:
+    case StepSet:
+    case SpeedSet:
+    case LaySet:
+    case AccelSet:
+      ValueEdit();
+      break;
+    case miSettingsStopPerLevel:
+    case Direction:
+      menu.IncCurrent(1);
+      break;
+    case Start:
+      SaveSettings();
+      AutoWindingPrg();
+      menu.index = Winding1 + currentWinding;
+      UpdateMenuItemText(currentWinding);
+      break;
+    case Cancel:
+      SaveSettings();
+      menu.index = Winding1 + currentWinding;
+      UpdateMenuItemText(currentWinding);
+      break;
 
-      case ShaftPos:
-      case LayerPos:     MoveTo((menu.index == LayerPos) ? layerStepper : shaftStepper, *((IntMenuItem*)menu[menu.index])->value); break;
+    case ShaftPos:
+    case LayerPos:
+      MoveTo((menu.index == LayerPos) ? layerStepper : shaftStepper, *((IntMenuItem *)menu[menu.index])->value);
+      break;
 
-      case ShaftStepMul:                                                                         
-      case LayerStepMul:    
-              menu.IncCurrent(1);
-              ((IntMenuItem*)menu[menu.index-1])->increment = *((SetMenuItem*)menu[menu.index])->value;
-              break;  
-      case PosCancel:    menu.index = PosControl; settings.shaftPos = 0; settings.layerPos = 0; break;
-      
-      case miSettings:   menu.index = miSettingsStopPerLevel; break;
+    case ShaftStepMul:
+    case LayerStepMul:
+      menu.IncCurrent(1);
+      ((IntMenuItem *)menu[menu.index - 1])->increment = *((SetMenuItem *)menu[menu.index])->value;
+      break;
+    case PosCancel:
+      menu.index = PosControl;
+      settings.shaftPos = 0;
+      settings.layerPos = 0;
+      break;
 
-      case miSettingsBack: SaveSettings(); menu.index = miSettings; break;
+    case miSettings:
+      menu.index = miSettingsStopPerLevel;
+      break;
+
+    case miSettingsBack:
+      SaveSettings();
+      menu.index = miSettings;
+      break;
     }
     menu.Draw();
   }
@@ -215,7 +267,7 @@ void loop()
 
 void UpdateMenuItemText(byte i)
 {
-  ((ValMenuItem*)menu[Winding1 + i])->value = params[i].turns * params[i].layers;
+  ((ValMenuItem *)menu[Winding1 + i])->value = params[i].turns * params[i].layers;
 }
 
 void ValueEdit()
@@ -223,18 +275,18 @@ void ValueEdit()
   menu.DrawQuotes(1);
   do
   {
-    encoder.tick(); 
+    encoder.tick();
 
-    if (encoder.turn())                               // Проверяем изменение позиции энкодера   
+    if (encoder.turn()) // Проверяем изменение позиции энкодера
       menu.IncCurrent(encoder.dir());
-    
+
   } while (!encoder.click());
   menu.DrawQuotes(0);
 }
 
 void EnableSteppers(bool b)
 {
-  digitalWrite(STEPPER_EN, b ? LOW : HIGH); 
+  digitalWrite(STEPPER_EN, b ? LOW : HIGH);
 }
 
 void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
@@ -243,7 +295,7 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
   EnableSteppers(true);
 
   stepper.setAcceleration(STEPPER_STEPS_COUNT * settings.acceleration / 60);
-  stepper.setMaxSpeed(STEPPER_STEPS_COUNT/2);
+  stepper.setMaxSpeed(STEPPER_STEPS_COUNT / 2);
 
   int oldPos = -pos * STEPPER_MICROSTEPS * 2;
   stepper.setCurrent(oldPos);
@@ -252,41 +304,38 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
   do
   {
     stepper.tick();
-    encoder.tick(); 
+    encoder.tick();
 
     int newPos = -pos * STEPPER_MICROSTEPS * 2;
     if (newPos != oldPos)
-    {                              
+    {
       stepper.setTarget(newPos);
       oldPos = newPos;
-    }    
+    }
 
-    if (encoder.turn())                               // Проверяем изменение позиции энкодера   
+    if (encoder.turn()) // Проверяем изменение позиции энкодера
       menu.IncCurrent(encoder.dir());
 
-  } while(!encoder.click() || stepper.getStatus() != 0);
+  } while (!encoder.click() || stepper.getStatus() != 0);
 
   EnableSteppers(false);
   menu.DrawQuotes(0);
 }
 
-
-
-ISR(TIMER1_COMPA_vect) 
+ISR(TIMER1_COMPA_vect)
 {
-  if (planner.tickManual()) 
+  if (planner.tickManual())
     setPeriod(planner.getPeriod());
-  else 
+  else
     stopTimer();
 }
 
-
-void AutoWindingPrg()                                       // Подпрограмма автоматической намотки
-{  
-  Winding current;                                          // Текущий виток и слой при автонамотке
+void AutoWindingPrg() // Подпрограмма автоматической намотки
+{
+  Winding current; // Текущий виток и слой при автонамотке
   const Winding &w = params[currentWinding];
   MainScreen screen(lcd, w, current);
- 
+
   DebugWrite("Start");
 
   current.turns = 0;
@@ -294,53 +343,53 @@ void AutoWindingPrg()                                       // Подпрогр�
   current.speed = w.speed;
   current.dir = w.dir;
   current.step = w.step;
-   
-  screen.Draw();  
+
+  screen.Draw();
 
   pedal.tick();
-  bool run = pedal.state();    // педаль нажата - работаем
-  
-  EnableSteppers(true);   // Разрешение управления двигателями
- 
+  bool run = pedal.state(); // педаль нажата - работаем
+
+  EnableSteppers(true); // Разрешение управления двигателями
+
   planner.setAcceleration(STEPPER_STEPS_COUNT * settings.acceleration / 60L);
   planner.setMaxSpeed(STEPPER_STEPS_COUNT * current.speed / 60L);
- 
+
   int32_t dShaft = -STEPPER_STEPS_COUNT * w.turns;
-  int32_t dLayer = -STEPPER_STEPS_COUNT * w.turns * w.step / int32_t(THREAD_PITCH) * (w.dir ? 1 : -1); 
-  int32_t p[] = {dShaft, dLayer}; 
+  int32_t dLayer = -STEPPER_STEPS_COUNT * w.turns * w.step / int32_t(THREAD_PITCH) * (w.dir ? 1 : -1);
+  int32_t p[] = {dShaft, dLayer};
 
   planner.reset();
-  initTimer();   
-  
+  initTimer();
+
   while (1)
   {
-    if (planner.getStatus() == 0 && run) 
-    {   
+    if (planner.getStatus() == 0 && run)
+    {
       DebugWrite("READY");
       if (current.layers >= w.layers)
-        break;      
+        break;
 
-      if (settings.stopPerLayer && (current.layers > 0)) 
+      if (settings.stopPerLayer && (current.layers > 0))
       {
-        screen.Message(STRING_2);           // "PRESS CONTINUE  "    
+        screen.Message(STRING_2); // "PRESS CONTINUE  "
         WaitButton();
         screen.Draw();
-      }  
+      }
 
-      DebugWrite("setTarget", p[0], p[1]);      
+      DebugWrite("setTarget", p[0], p[1]);
       planner.setTarget(p, RELATIVE);
-      ++current.layers;   
+      ++current.layers;
       p[1] = -p[1];
 
-      startTimer();                   
-      setPeriod(planner.getPeriod());     
-  
-      screen.UpdateLayers();            
+      startTimer();
+      setPeriod(planner.getPeriod());
+
+      screen.UpdateLayers();
     }
 
     encoder.tick();
     pedal.tick();
-    
+
     bool oldState = run;
     if (pedal.press() || pedal.release())
       run = pedal.state();
@@ -348,91 +397,94 @@ void AutoWindingPrg()                                       // Подпрогр�
       run = !run;
 
     if (run != oldState)
-    {  
+    {
       if (run)
       {
         noInterrupts();
         planner.resume();
         interrupts();
-        startTimer();                   
-        setPeriod(planner.getPeriod());        
+        startTimer();
+        setPeriod(planner.getPeriod());
       }
-      else 
+      else
       {
         noInterrupts();
         planner.stop();
         interrupts();
       }
     }
-            
-    if (encoder.turn()) 
-    {                                                                                                           // Если повернуть энкодер во время автонамотки, 
-      current.speed = constrain(current.speed + encoder.dir() * SPEED_INC, SPEED_INC, SPEED_LIMIT);             // то меняем значение скорости
+
+    if (encoder.turn())
+    {                                                                                               // Если повернуть энкодер во время автонамотки,
+      current.speed = constrain(current.speed + encoder.dir() * SPEED_INC, SPEED_INC, SPEED_LIMIT); // то меняем значение скорости
       planner.setMaxSpeed(STEPPER_STEPS_COUNT * current.speed / 60L);
       screen.UpdateSpeed();
     }
 
     static uint32_t tmr;
-    if (millis() - tmr >= 500) 
+    if (millis() - tmr >= 500)
     {
       tmr = millis();
 
       int total_turns = (abs(shaftStepper.pos)) / STEPPER_STEPS_COUNT;
       current.turns = total_turns % w.turns;
-      
+
       screen.UpdateTurns();
-      //DebugWrite("planner.getStatus", planner.getStatus());
-      //DebugWrite("", shaftStepper.pos, layerStepper.pos);   
+      // DebugWrite("planner.getStatus", planner.getStatus());
+      // DebugWrite("", shaftStepper.pos, layerStepper.pos);
 
       screen.PlannerStatus(planner.getStatus());
     }
   }
-  
+
   EnableSteppers(false);
 
-  screen.Message(STRING_1);             // "AUTOWINDING DONE"  
+  screen.Message(STRING_1); // "AUTOWINDING DONE"
   multibeep(3, 600, 300);
   WaitButton();
 }
 
-
 void WaitButton()
 {
-  do {
+  do
+  {
     encoder.tick();
   } while (!encoder.click());
 }
 
-void multibeep (int beeps, int on, int off) 
+void multibeep(int beeps, int on, int off)
 {
-  for (int i = 0; i < beeps; ++i) 
+  for (int i = 0; i < beeps; ++i)
   {
-     digitalWrite (BUZZER, HIGH);
-     delay (on);
-     digitalWrite (BUZZER, LOW);
-     delay (off);
+    digitalWrite(BUZZER, HIGH);
+    delay(on);
+    digitalWrite(BUZZER, LOW);
+    delay(off);
   }
 }
 
 void LoadSettings()
 {
-  int p=0;
+  int p = 0;
   byte v = 0;
-  EEPROM_load(p, v);        
+  EEPROM_load(p, v);
   if (v != EEPROM_DATA_VERSION)
     return;
 
-  for (int i=0; i<TRANSFORMER_COUNT; ++i)
+  for (int i = 0; i < TRANSFORMER_COUNT; ++i)
   {
     if (i == currentTransformer)
     {
-      EEPROM_load(p, v);    
-      
-      for (int j=0; j<WINDING_COUNT; ++j)
+      EEPROM_load(p, v);
+
+      for (int j = 0; j < WINDING_COUNT; ++j)
         if (v == EEPROM_DATA_VERSION)
           Load(params[j], p);
         else
-          { params[j] = Winding(); p += sizeof(Winding); }
+        {
+          params[j] = Winding();
+          p += sizeof(Winding);
+        }
     }
     else
       p += sizeof(Winding) * WINDING_COUNT + 1;
@@ -443,16 +495,16 @@ void LoadSettings()
 
 void SaveSettings()
 {
-  int p=0;
+  int p = 0;
   byte v = EEPROM_DATA_VERSION;
-  EEPROM_save(p, v);          
+  EEPROM_save(p, v);
 
-  for (int i=0; i<TRANSFORMER_COUNT; ++i)
+  for (int i = 0; i < TRANSFORMER_COUNT; ++i)
   {
     if (i == currentTransformer)
     {
-      EEPROM_save(p, v);   
-      for (int j=0; j<WINDING_COUNT; ++j)
+      EEPROM_save(p, v);
+      for (int j = 0; j < WINDING_COUNT; ++j)
         Save(params[j], p);
     }
     else
@@ -461,5 +513,3 @@ void SaveSettings()
 
   Save(settings, p);
 }
-
-
