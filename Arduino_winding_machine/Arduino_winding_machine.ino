@@ -124,7 +124,7 @@ GStepper2<STEPPER2WIRE> layerStepper(STEPPER_STEPS_COUNT, STEPPER_STEP_A, STEPPE
 GPlanner< STEPPER2WIRE, 2> planner;
 
 EncButton<EB_TICK, ENCODER_CLK, ENCODER_DT, ENCODER_SW> encoder(ENCODER_INPUT);  
-EncButton<EB_TICK, BUTTON_STOP> button;
+EncButton<EB_TICK, BUTTON_STOP> pedal;
 
 
 void setup() 
@@ -298,7 +298,8 @@ void AutoWindingPrg()                                       // Подпрогр�
    
   screen.Draw();  
 
-  bool pause = false;
+  pedal.tick();
+  bool run = pedal.state();    // педаль нажата - работаем
   
   EnableSteppers(true);   // Разрешение управления двигателями
  
@@ -314,7 +315,7 @@ void AutoWindingPrg()                                       // Подпрогр�
   
   while (1)
   {
-    if (planner.getStatus() == 0 && !pause) 
+    if (planner.getStatus() == 0 && run) 
     {   
       DebugWrite("READY");
       if (current.layers >= w.layers)
@@ -339,10 +340,17 @@ void AutoWindingPrg()                                       // Подпрогр�
     }
 
     encoder.tick();
-    button.tick();
-    if (encoder.click())
-    {      
-      if (pause)
+    pedal.tick();
+    
+    bool oldState = run;
+    if (pedal.press() || pedal.release())
+      run = pedal.state();
+    else if (pedal.state() && encoder.click())
+      run = !run;
+
+    if (run != oldState)
+    {  
+      if (run)
       {
         noInterrupts();
         planner.resume();
@@ -356,7 +364,6 @@ void AutoWindingPrg()                                       // Подпрогр�
         planner.stop();
         interrupts();
       }
-      pause = !pause;
     }
             
     if (encoder.turn()) 
