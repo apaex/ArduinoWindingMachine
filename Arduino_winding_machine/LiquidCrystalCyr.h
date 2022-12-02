@@ -102,6 +102,20 @@ public:
         LCD_CLASS::write((byte)c);        
     }
 
+    void printAt(uint8_t col, uint8_t row, const char *s) 
+    {
+        setCursor(col, row);
+        print(s);
+    }   
+
+    void printAt(uint8_t col, uint8_t row, char ch) 
+    {
+        setCursor(col, row);
+        write(byte(ch));
+    }   
+
+
+
     void print_P(PGM_P s)
     {
       char buf[strlen_P(s)+1];
@@ -109,12 +123,6 @@ public:
       print(buf);
     }
     
-    void printAt(uint8_t col, uint8_t row, char ch) 
-    {
-        setCursor(col, row);
-        write(byte(ch));
-    }   
-
     void printAt_P(uint8_t col, uint8_t row, PGM_P s)
     {
       setCursor(col, row);

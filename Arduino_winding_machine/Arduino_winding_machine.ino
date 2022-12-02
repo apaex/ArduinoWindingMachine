@@ -133,7 +133,7 @@ void setup()
   LoadSettings();
 
   pinMode(STEPPER_EN, OUTPUT);
-  pinMode(BUZZER,OUTPUT);
+  pinMode(BUZZER, OUTPUT);
 
   EnableSteppers(false); // Запрет управления двигателями  
   planner.addStepper(0, shaftStepper);
@@ -185,21 +185,17 @@ void loop()
               break;
       case WindingBack:  menu.index = Autowinding1 + currentTransformer; break;
       case PosControl:   menu.index = ShaftPos; break;
-      case TurnsSet:     menu.SetQuote(9,13); ValueEdit(); menu.ClearQuote(9,13); break;
-      case StepSet:      menu.SetQuote(9,15); ValueEdit(); menu.ClearQuote(9,15); break;  
-      case SpeedSet:     menu.SetQuote(9,13); ValueEdit(); menu.ClearQuote(9,13); break;
-      case LaySet:       menu.SetQuote(9,12); ValueEdit(); menu.ClearQuote(9,12); break;   
-      case AccelSet:     menu.SetQuote(9,13); ValueEdit(); menu.ClearQuote(9,13); break;
+      case TurnsSet:     
+      case StepSet:      
+      case SpeedSet:     
+      case LaySet:      
+      case AccelSet:     ValueEdit(); break;
       case Direction:    menu.IncCurrent(1); break;                          
       case Start:        SaveSettings(); AutoWindingPrg(); menu.index = Winding1 + currentWinding; UpdateMenuItemText(currentWinding); break; 
       case Cancel:       SaveSettings(); menu.index = Winding1 + currentWinding; UpdateMenuItemText(currentWinding); break;
 
       case ShaftPos:
-      case LayerPos:    
-              menu.SetQuote(9,14);                         
-              MoveTo((menu.index == LayerPos) ? layerStepper : shaftStepper, *((IntMenuItem*)menu[menu.index])->value);                         
-              menu.ClearQuote(9,14);
-              break;
+      case LayerPos:     MoveTo((menu.index == LayerPos) ? layerStepper : shaftStepper, *((IntMenuItem*)menu[menu.index])->value); break;
 
       case ShaftStepMul:                                                                         
       case LayerStepMul:    
@@ -225,6 +221,7 @@ void UpdateMenuItemText(byte i)
 
 void ValueEdit()
 {
+  menu.DrawQuotes(1);
   do
   {
     encoder.tick(); 
@@ -233,6 +230,7 @@ void ValueEdit()
       menu.IncCurrent(encoder.dir());
     
   } while (!encoder.click());
+  menu.DrawQuotes(0);
 }
 
 void EnableSteppers(bool b)
@@ -242,6 +240,7 @@ void EnableSteppers(bool b)
 
 void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
 {
+  menu.DrawQuotes(1);
   EnableSteppers(true);
 
   stepper.setAcceleration(STEPPER_STEPS_COUNT * settings.acceleration / 60);
@@ -269,6 +268,7 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
   } while(!encoder.click() || stepper.getStatus() != 0);
 
   EnableSteppers(false);
+  menu.DrawQuotes(0);
 }
 
 

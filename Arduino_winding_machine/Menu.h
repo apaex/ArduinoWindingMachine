@@ -1,114 +1,87 @@
 #pragma once
 #include "LiquidCrystalCyr.h"
 
-#define CH_UP 0
+#define CH_UP (char)0
 #define CH_DW 1
 #define CH_QL 0x3C
 #define CH_QR 0x3E
 #define CH_CR 0x3E
 
 class MenuItem
-{                       
-  public:
-    byte screen;        // Индекс экрана
-    byte line;          // Номер строки на экране
-    const char* text;   
+{
+public:
+  byte screen; // Индекс экрана
+  byte line;   // Номер строки на экране
+  const char *text;
 
-    MenuItem(byte screen_, byte line_, const char* text_) : screen(screen_), line(line_), text(text_) {}
+  MenuItem(byte screen_, byte line_, const char *text_) : screen(screen_), line(line_), text(text_) {}
 
-    virtual void Draw(LiquidCrystalCyr &lcd, byte row)
-    {
-      lcd.printAt_P((lcd.nCols > 16) ? 2 : 1, row, text);
-      Update(lcd, row);
-    }
-
-    virtual void Update(LiquidCrystalCyr &lcd, byte row) {}
-    virtual void IncValue(int8_t inc) {}
+  virtual void GetText(char *s) const { strcpy_P(s, text); }
+  virtual void GetValue(char *s) const { s[0] = 0; }
+  virtual void IncValue(int8_t inc) {}
 };
 
 class BoolMenuItem : public MenuItem
-{  
-  public:
-    bool* value;   
-    const char ** items;
+{
+public:
+  bool *value;
+  const char **items;
 
-    BoolMenuItem(byte screen_, byte num_, const char* text_, bool * value_, const char ** items_) : MenuItem(screen_, num_, text_), value(value_), items(items_) {}
+  BoolMenuItem(byte screen_, byte num_, const char *text_, bool *value_, const char **items_) : MenuItem(screen_, num_, text_), value(value_), items(items_) {}
 
-    virtual void Update(LiquidCrystalCyr &lcd, byte row) 
-    {
-      lcd.setCursor((lcd.nCols > 16) ? 12 : 10, row);
-      lcd.print(items[*value]);     
-    }
-
-    virtual void IncValue(int8_t )
-    {
-      *value = !*value;
-    }
+  virtual void GetValue(char *s) const { strcpy(s, items[*value]); }
+  virtual void IncValue(int8_t) { *value = !*value; }
 };
 
 template <class T>
 class ValueMenuItem : public MenuItem
-{    
-  public:                   
-    const char* format;  // Формат значения при вводе переменной
-    T value = 0;
+{
+public:
+  const char *format; // Формат значения при вводе переменной
+  T value = 0;
 
-    ValueMenuItem(byte screen_, byte num_, const char* text_, const char* format_) : MenuItem(screen_, num_, text_), format(format_) {}
+  ValueMenuItem(byte screen_, byte num_, const char *text_, const char *format_) : MenuItem(screen_, num_, text_), format(format_) {}
 
-    virtual void Update(LiquidCrystalCyr &lcd, byte row)
-    {
-      lcd.printfAt_P((lcd.nCols > 16) ? 12 : 10, row, format, value);
-    }
+  virtual void GetValue(char *s) const { sprintf_P(s, format, value); }
 };
-
 
 template <class T>
 class VariableMenuItem : public MenuItem
-{    
-  public:                   
-    const char* format;  // Формат значения при вводе переменной
-    T *value;            // Указатель на адрес текущей переменной изменяемой на экране
-    T minVal;            // Ограничение значения переменной снизу
-    T maxVal;            // Ограничение значения переменной сверху
-    T increment;
+{
+public:
+  const char *format; // Формат значения при вводе переменной
+  T *value;           // Указатель на адрес текущей переменной изменяемой на экране
+  T minVal;           // Ограничение значения переменной снизу
+  T maxVal;           // Ограничение значения переменной сверху
+  T increment;
 
-    VariableMenuItem(byte screen_, byte num_, const char* text_, const char* format_, T* value_, T min_, T max_, T increment_ = 1) : MenuItem(screen_, num_, text_), format(format_), value(value_), minVal(min_), maxVal(max_), increment(increment_) {}
+  VariableMenuItem(byte screen_, byte num_, const char *text_, const char *format_, T *value_, T min_, T max_, T increment_ = 1) : MenuItem(screen_, num_, text_), format(format_), value(value_), minVal(min_), maxVal(max_), increment(increment_) {}
 
-    virtual void Update(LiquidCrystalCyr &lcd, byte row)
-    {
-      lcd.printfAt_P(10, row, format, int(*value));
-    }
-
-    virtual void IncValue(int8_t inc)
-    {       
-      *value = constrain(int(*value + inc * increment), (int)minVal, (int)maxVal);    
-    }
+  virtual void GetValue(char *s) const { sprintf_P(s, format, int(*value)); }
+  virtual void IncValue(int8_t inc) { *value = constrain(int(*value + inc * increment), (int)minVal, (int)maxVal); }
 };
 
+
 class SetMenuItem : public MenuItem
-{  
-  public:
-    const char* format; // Формат значения при вводе переменной
-    uint8_t* value;   
-    const uint8_t ** items;
-    uint8_t nItems;
+{
+public:
+  const char *format; // Формат значения при вводе переменной
+  uint8_t *value;
+  const uint8_t **items;
+  uint8_t nItems;
 
-    SetMenuItem(byte screen_, byte num_, const char* text_, const char* format_, uint8_t * value_, const uint8_t ** items_, uint8_t nItems_) : MenuItem(screen_, num_, text_), format(format_), value(value_), items(items_), nItems(nItems_) {}
+  SetMenuItem(byte screen_, byte num_, const char *text_, const char *format_, uint8_t *value_, const uint8_t **items_, uint8_t nItems_) : MenuItem(screen_, num_, text_), format(format_), value(value_), items(items_), nItems(nItems_) {}
 
-    virtual void Update(LiquidCrystalCyr &lcd, byte row) 
-    {
-      lcd.printfAt_P((lcd.nCols > 16) ? 10 : 10, row, format, *value);
-    }
+  virtual void GetValue(char *s) const { sprintf_P(s, format, *value); }
+  virtual void IncValue(int8_t)
+  {
+    if (++index >= nItems)
+      index = 0;
+    *value = items[index];
+  }
 
-    virtual void IncValue(int8_t )
-    {
-      if (++index >= nItems)
-        index = 0;
-      *value = items[index];
-    }
-
-  private:
-    uint8_t index = 0;
+private:
+  uint8_t index = 0;
 };
 
 typedef VariableMenuItem<uint8_t> ByteMenuItem;
@@ -118,99 +91,118 @@ typedef ValueMenuItem<uint16_t> ValMenuItem;
 
 class MainMenu
 {
-private:
-    LiquidCrystalCyr &lcd;
-
 public:
-    MenuItem **items;
-    byte nItems;
+  MenuItem **items;
+  byte nItems;
 
-    byte index = 0; // Переменная хранит номер текущей строки меню
+  byte index = 0; // Переменная хранит номер текущей строки меню
 
-    MainMenu(MenuItem **menu, byte count, LiquidCrystalCyr &lcd_) : items(menu), nItems(count), lcd(lcd_) {}
+  MainMenu(MenuItem **menu, byte count, LiquidCrystalCyr &lcd_) : items(menu), nItems(count), lcd(lcd_) {}
+ 
+  // для текущего меню получаем индекс первого элемента
+  byte GetFirstIndex() const
+  {
+    return index - items[index]->line;
+  }
 
-    // для текущего меню получаем индекс первого элемента
-    byte GetFirstIndex() const
+  // для текущего меню получаем индекс последнего элемента
+  byte GetLastIndex() const
+  {
+    byte scr = items[index]->screen;
+    byte r = index;
+    while ((r + 1 < nItems) && (items[r + 1]->screen == scr))
+      ++r;
+    return r;
+  }
+
+  void Draw()
+  {
+    byte scr = items[index]->screen;
+    byte page = items[index]->line / lcd.nRows;
+    byte cur = items[index]->line % lcd.nRows;
+    byte first = index - items[index]->line + page * lcd.nRows;
+
+    static byte prev_screen = -1;
+    static byte prev_page = -1;
+
+    if (scr != prev_screen || page != prev_page)
     {
-        return index - items[index]->line;
+      lcd.clear();
+
+      for (int i = 0; i < lcd.nRows; ++i)
+      {
+        if (first + i >= nItems)
+          break;
+
+        MenuItem *m = items[first + i];
+
+        if (m->screen != scr)
+          break;
+
+        DrawItem(m, i);
+        UpdateItem(m, i);
+      }
+
+      prev_screen = scr;
+      prev_page = page;
     }
 
-    // для текущего меню получаем индекс последнего элемента
-    byte GetLastIndex() const
-    {
-        byte scr = items[index]->screen;
-        byte r = index;
-        while ((r + 1 < nItems) && (items[r + 1]->screen == scr))
-          ++r;
-        return r;
-    }
+    for (int i = 0; i < lcd.nRows; ++i)
+      lcd.printAt(0, i, (i == cur) ? CH_CR : ' ');
 
-    void Draw()
-    {
-        byte scr = items[index]->screen;
-        byte page = items[index]->line / lcd.nRows;
-        byte cur = items[index]->line % lcd.nRows;
-        byte first = index - items[index]->line + page * lcd.nRows;
+    if (page > 0) // Выводим стрелки ⯅⯆ на соответствующих строках меню
+      lcd.printAt(lcd.nCols - 1, 0, CH_UP);
+    if (items[first + lcd.nRows]->screen == scr)
+      lcd.printAt(lcd.nCols - 1, lcd.nRows - 1, CH_DW);
+  }
 
-        static byte prev_screen = -1;
-        static byte prev_page = -1;
+  byte GetCursor() const
+  {
+    return items[index]->line % lcd.nRows;
+  }
 
-        if (scr != prev_screen || page != prev_page)
-        {
-            lcd.clear();
+  void IncCurrent(int8_t increment)
+  {
+    byte cur = GetCursor();
 
-            for (int i = 0; i < lcd.nRows; ++i)
-            {
-                if (first + i >= nItems)
-                    break;
-                    
-                MenuItem *m = items[first + i];
+    items[index]->IncValue(increment);
+    UpdateItem(items[index], cur);
+  }
 
-                if (m->screen != scr)
-                    break;
+  void DrawQuotes(bool enable)
+  {
+    byte cur = GetCursor();
 
-                m->Draw(lcd, i);
-            }
+    byte leftPos = GetValueCol()-1;
+    char s[21];
+    items[index]->GetValue(s);
+    byte rightPos = leftPos + strlen(s)+1;
 
-            prev_screen = scr;
-            prev_page = page;
-        }
+    lcd.printAt(leftPos, cur, enable ? CH_QR : ' ');  // Выводим символ >
+    lcd.printAt(rightPos, cur, enable ? CH_QL : ' '); // Выводим символ <
+    lcd.printAt(0, cur, !enable ? CH_CR : ' ');       // Стираем основной курсор
+  }
 
-        for (int i = 0; i < lcd.nRows; ++i)
-            lcd.printAt(0, i, (i == cur) ? CH_CR : ' ');
+  MenuItem *operator[](byte idx) { return items[idx]; }
+  const MenuItem *operator[](byte idx) const { return items[idx]; }
 
-        if (page > 0) // Выводим стрелки ⯅⯆ на соответствующих строках меню
-            lcd.printAt(lcd.nCols - 1, 0, CH_UP);
-        if (items[first + lcd.nRows]->screen == scr)
-            lcd.printAt(lcd.nCols - 1, lcd.nRows - 1, CH_DW);
-    }
-    
-    byte GetCursor() const
-    {
-      return items[index]->line % lcd.nRows;
-    }
+private:
+  LiquidCrystalCyr &lcd;
+ 
+  byte GetTextCol() const { return (lcd.nCols > 16) ? 2 : 1; }
+  byte GetValueCol() const { return (lcd.nCols > 16) ? 12 : 10; }
 
-    void IncCurrent(int8_t increment) 
-    {
-        byte cur = GetCursor();  
+  void DrawItem(MenuItem *m, byte row)
+  {
+    char s[21];
+    m->GetText(s);
+    lcd.printAt(GetTextCol(), row, s);
+  }
 
-        items[index]->IncValue(increment);     
-        items[index]->Update(lcd, cur);
-    }
-
-    void DrawQuotes(bool enable, byte leftPos, byte rightPos)
-    {
-        byte cur = GetCursor();
-        
-        lcd.printAt(leftPos, cur, enable ? CH_QR : ' ');  // Выводим символ >
-        lcd.printAt(rightPos, cur, enable ? CH_QL : ' '); // Выводим символ <
-        lcd.printAt(0, cur, !enable ? CH_CR : ' ');       // Стираем основной курсор
-    }
-
-    void SetQuote(byte leftPos, byte rightPos) { DrawQuotes(1, leftPos, rightPos); }
-    void ClearQuote(byte leftPos, byte rightPos) { DrawQuotes(0, leftPos, rightPos); }
-
-    MenuItem* operator[](byte idx)       { return items[idx]; }
-    const MenuItem* operator[](byte idx) const { return items[idx]; }
-
+  void UpdateItem(MenuItem *m, byte row)
+  {
+    char s[21];
+    m->GetValue(s);
+    lcd.printAt(GetValueCol(), row, s);
+  }
 };
