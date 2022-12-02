@@ -99,21 +99,7 @@ public:
 
   MainMenu(MenuItem **menu, byte count, LiquidCrystalCyr &lcd_) : items(menu), nItems(count), lcd(lcd_) {}
  
-  // для текущего меню получаем индекс первого элемента
-  byte GetFirstIndex() const
-  {
-    return index - items[index]->line;
-  }
-
-  // для текущего меню получаем индекс последнего элемента
-  byte GetLastIndex() const
-  {
-    byte scr = items[index]->screen;
-    byte r = index;
-    while ((r + 1 < nItems) && (items[r + 1]->screen == scr))
-      ++r;
-    return r;
-  }
+  void IncIndex(int8_t inc) { index = constrain(index + inc, GetFirstIndex(), GetLastIndex()); }
 
   void Draw()
   {
@@ -204,5 +190,21 @@ private:
     char s[21];
     m->GetValue(s);
     lcd.printAt(GetValueCol(), row, s);
+  }
+  
+  // для текущего меню получаем индекс первого элемента
+  byte GetFirstIndex() const
+  {
+    return index - items[index]->line;
+  }
+
+  // для текущего меню получаем индекс последнего элемента
+  byte GetLastIndex() const
+  {
+    byte scr = items[index]->screen;
+    byte r = index;
+    while ((r + 1 < nItems) && (items[r + 1]->screen == scr))
+      ++r;
+    return r;
   }
 };

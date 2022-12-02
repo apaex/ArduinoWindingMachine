@@ -153,7 +153,7 @@ void loop()
 
   if (encoder.turn())                               // Проверяем изменение позиции энкодера   
   {                                                                               
-    menu.index = constrain(menu.index + encoder.dir(), menu.GetFirstIndex(), menu.GetLastIndex()); // Если позиция энкодера изменена, то меняем menu.index и выводим экран
+    menu.IncIndex(encoder.dir());                   // Если позиция энкодера изменена, то меняем menu.index и выводим экран
     menu.Draw();   
   }
 
