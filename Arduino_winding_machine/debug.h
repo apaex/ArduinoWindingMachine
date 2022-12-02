@@ -2,7 +2,7 @@
 
 #include <HardwareSerial.h>
 
-template<class T>
+template <class T>
 void DebugWrite(T v)
 {
 #ifdef DEBUG
@@ -10,7 +10,7 @@ void DebugWrite(T v)
 #endif
 }
 
-template<class T>
+template <class T>
 void DebugWrite(const char *s, T v)
 {
 #ifdef DEBUG
@@ -20,14 +20,14 @@ void DebugWrite(const char *s, T v)
 #endif
 }
 
-void DebugWrite(const char* st, int32_t x, int32_t y)
+void DebugWrite(const char *st, int32_t x, int32_t y)
 {
 #ifdef DEBUG
   Serial.print(st);
   Serial.print("(");
   Serial.print(x);
   Serial.print(',');
-  Serial.print(y);     
+  Serial.print(y);
   Serial.println(")");
 #endif
 }

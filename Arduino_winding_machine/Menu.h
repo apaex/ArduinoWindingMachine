@@ -61,7 +61,6 @@ public:
   virtual void IncValue(int8_t inc) { *value = constrain(int(*value + inc * increment), (int)minVal, (int)maxVal); }
 };
 
-
 class SetMenuItem : public MenuItem
 {
 public:
@@ -98,7 +97,7 @@ public:
   byte index = 0; // Переменная хранит номер текущей строки меню
 
   MainMenu(MenuItem **menu, byte count, LiquidCrystalCyr &lcd_) : items(menu), nItems(count), lcd(lcd_) {}
- 
+
   void IncIndex(int8_t inc) { index = constrain(index + inc, GetFirstIndex(), GetLastIndex()); }
 
   void Draw()
@@ -142,7 +141,6 @@ public:
       lcd.printAt(lcd.nCols - 1, lcd.nRows - 1, CH_DW);
   }
 
-
   void IncCurrent(int8_t increment)
   {
     byte cur = GetCursor();
@@ -155,10 +153,10 @@ public:
   {
     byte cur = GetCursor();
 
-    byte leftPos = GetValueCol()-1;
+    byte leftPos = GetValueCol() - 1;
     char s[21];
     items[index]->GetValue(s);
-    byte rightPos = leftPos + strlen(s)+1;
+    byte rightPos = leftPos + strlen(s) + 1;
 
     lcd.printAt(leftPos, cur, enable ? CH_QR : ' ');  // Выводим символ >
     lcd.printAt(rightPos, cur, enable ? CH_QL : ' '); // Выводим символ <
@@ -170,7 +168,7 @@ public:
 
 private:
   LiquidCrystalCyr &lcd;
- 
+
   byte GetTextCol() const { return (lcd.nCols > 16) ? 2 : 1; }
   byte GetValueCol() const { return (lcd.nCols > 16) ? 12 : 10; }
 
@@ -187,7 +185,7 @@ private:
     m->GetValue(s);
     lcd.printAt(GetValueCol(), row, s);
   }
-  
+
   // для текущего меню получаем индекс первого элемента
   byte GetFirstIndex() const
   {
@@ -203,7 +201,7 @@ private:
       ++r;
     return r;
   }
-  
+
   byte GetCursor() const
   {
     return items[index]->line % lcd.nRows;
