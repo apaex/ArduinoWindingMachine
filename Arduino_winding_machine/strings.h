@@ -44,7 +44,7 @@ const char PROGMEM MENU_15[] = "ярюпр";
 const char PROGMEM MENU_17[] = "йюрсьйю:";
 const char PROGMEM MENU_18[] = "ьюц:";
 const char PROGMEM MENU_19[] = "ондювю:";
-const char PROGMEM MENU_22[] = "ярноякни";
+const char PROGMEM MENU_22[] = "якниярно";
 const char PROGMEM MENU_23[] = "сяйнпем.";
 
 const char PROGMEM PLANNER_STATUS_0[] = "оюсгю";
