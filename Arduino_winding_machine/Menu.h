@@ -142,10 +142,6 @@ public:
       lcd.printAt(lcd.nCols - 1, lcd.nRows - 1, CH_DW);
   }
 
-  byte GetCursor() const
-  {
-    return items[index]->line % lcd.nRows;
-  }
 
   void IncCurrent(int8_t increment)
   {
@@ -206,5 +202,10 @@ private:
     while ((r + 1 < nItems) && (items[r + 1]->screen == scr))
       ++r;
     return r;
+  }
+  
+  byte GetCursor() const
+  {
+    return items[index]->line % lcd.nRows;
   }
 };
