@@ -53,10 +53,10 @@ https://cxem.net/arduino/arduino245.php
 #include "strings.h"
 
 #define STEPPER_STEPS_COUNT (int32_t(STEPPER_STEPS) * STEPPER_MICROSTEPS)
-#ifdef DEBUG
+#ifdef GS_FAST_PROFILE
 #define SPEED_LIMIT 600
 #else
-#define SPEED_LIMIT 240
+#define SPEED_LIMIT 260
 #endif
 #define EEPROM_DATA_VERSION 1
 #define TRANSFORMER_COUNT 3
@@ -91,7 +91,7 @@ MenuItem* menuItems[] =
   new UIntMenuItem(2, 0, MENU_10, MENU_FORMAT_10, NULL, 1, 999),
   new UIntMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 99),
   new UIntMenuItem(2, 2, MENU_11, MENU_FORMAT_11, NULL, 5, 995, 5),
-  new UIntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, 30, SPEED_LIMIT, 30),
+  new UIntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, 10, SPEED_LIMIT, 10),
   new BoolMenuItem(2, 4, MENU_14, NULL, dirSet),
   new MenuItem(2, 5, MENU_15),
   new MenuItem(2, 6, MENU_09),
