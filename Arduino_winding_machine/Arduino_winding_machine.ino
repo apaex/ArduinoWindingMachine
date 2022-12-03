@@ -46,6 +46,7 @@ https://cxem.net/arduino/arduino245.php
 #include "LiquidCrystalCyr.h"
 #include "Menu.h"
 #include "timer.h"
+#include "buzzer.h"
 
 #include "Screen.h"
 #include "Winding.h"
@@ -151,13 +152,14 @@ GPlanner<STEPPER2WIRE, 2> planner;
 EncButton<EB_TICK, ENCODER_CLK, ENCODER_DT, ENCODER_SW> encoder(ENCODER_INPUT);
 EncButton<EB_TICK, BUTTON_STOP> pedal;
 
+Buzzer buzzer(BUZZER);
+
 void setup()
 {
   Serial.begin(9600);
   LoadSettings();
 
   pinMode(STEPPER_EN, OUTPUT);
-  pinMode(BUZZER, OUTPUT);
 
   EnableSteppers(false); // Запрет управления двигателями
   planner.addStepper(0, shaftStepper);
@@ -440,7 +442,7 @@ void AutoWindingPrg() // Подпрограмма автоматической �
   EnableSteppers(false);
 
   screen.Message(STRING_1); // "AUTOWINDING DONE"
-  multibeep(3, 600, 300);
+  buzzer.Multibeep(3, 600, 300);
   WaitButton();
 }
 
@@ -450,17 +452,6 @@ void WaitButton()
   {
     encoder.tick();
   } while (!encoder.click());
-}
-
-void multibeep(int beeps, int on, int off)
-{
-  for (int i = 0; i < beeps; ++i)
-  {
-    digitalWrite(BUZZER, HIGH);
-    delay(on);
-    digitalWrite(BUZZER, LOW);
-    delay(off);
-  }
 }
 
 void LoadSettings()
