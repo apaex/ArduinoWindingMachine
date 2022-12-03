@@ -159,9 +159,8 @@ void setup()
   Serial.begin(9600);
   LoadSettings();
 
-  pinMode(STEPPER_EN, OUTPUT);
-
-  EnableSteppers(false); // Запрет управления двигателями
+  layerStepper.disable();
+  shaftStepper.disable(); 
   planner.addStepper(0, shaftStepper);
   planner.addStepper(1, layerStepper);
 
@@ -286,15 +285,10 @@ void ValueEdit()
   menu.DrawQuotes(0);
 }
 
-void EnableSteppers(bool b)
-{
-  digitalWrite(STEPPER_EN, b ? LOW : HIGH);
-}
-
 void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
 {
   menu.DrawQuotes(1);
-  EnableSteppers(true);
+  stepper.enable();
 
   stepper.setAcceleration(STEPPER_STEPS_COUNT * settings.acceleration / 60);
   stepper.setMaxSpeed(STEPPER_STEPS_COUNT / 2);
@@ -320,7 +314,7 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
 
   } while (!encoder.click() || stepper.getStatus() != 0);
 
-  EnableSteppers(false);
+  stepper.disable();
   menu.DrawQuotes(0);
 }
 
@@ -351,7 +345,8 @@ void AutoWindingPrg() // Подпрограмма автоматической �
   pedal.tick();
   bool run = pedal.state(); // педаль нажата - работаем
 
-  EnableSteppers(true); // Разрешение управления двигателями
+  shaftStepper.enable(); // Разрешение управления двигателями
+  layerStepper.enable();
 
   planner.setAcceleration(STEPPER_STEPS_COUNT * settings.acceleration / 60L);
   planner.setMaxSpeed(STEPPER_STEPS_COUNT * current.speed / 60L);
@@ -439,7 +434,8 @@ void AutoWindingPrg() // Подпрограмма автоматической �
     }
   }
 
-  EnableSteppers(false);
+  layerStepper.disable();
+  shaftStepper.disable(); 
 
   screen.Message(STRING_1); // "AUTOWINDING DONE"
   buzzer.Multibeep(3, 600, 300);
