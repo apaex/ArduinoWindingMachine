@@ -105,11 +105,10 @@ enum menu_states {
 const char *boolSet[] = { STRING_OFF, STRING_ON };
 const char *dirSet[] = { "<<<", ">>>" };
 const uint8_t *stepSet[] = { 1, 10, 100 };
-const uint8_t *transSet[] = { 1, 2, 3};
 
 MenuItem *menuItems[] = {
   new MenuItem(0, 0, MENU_01),
-  new SetMenuItem(0, 1, MENU_02, MENU_FORMAT_02, &settings.currentTransformer, transSet, 3),
+  new ByteMenuItem(0, 1, MENU_02, MENU_FORMAT_02, &settings.currentTransformer, 1, TRANSFORMER_COUNT),
   new MenuItem(0, 2, MENU_04),
   new MenuItem(0, 3, MENU_05),
 
@@ -220,9 +219,9 @@ void loop() {
       case SpeedSet:
       case LaySet:
       case AccelSet:
+      case CurrentTrans:
         ValueEdit();
         break;
-      case CurrentTrans:
       case miSettingsStopPerLevel:
       case Direction:
         menu.IncCurrent(1);
