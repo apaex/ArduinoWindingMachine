@@ -424,11 +424,13 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
 
 void AutoWindingAll(const Winding windings[], byte n) {
   bool direction = windings[0].dir;
+
   for (byte i = 0; i < n; ++i) {
     const Winding &w = windings[i];
     if (!w.turns || !w.layers || !w.step || !w.speed) continue;
 
     screen.Init(w);
+    
     if (n > 1) {
       screen.Draw();
       screen.Message(STRING_3, i + 1);

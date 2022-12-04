@@ -40,11 +40,15 @@ public:
     if (status >= LENGTH(plannerStatuses))
       return;
 
-    PrintLine_P(3, plannerStatuses[status]);
+    char s[21];
+    strcpy_P(s, plannerStatuses[status]);
+    PrintLine(3, s);
   }
 
   void Message(PGM_P st) {
-    PrintLine_P((lcd.nRows < 4) ? 1 : 3, st);
+    char s[21];
+    strcpy_P(s, st);
+    PrintLine((lcd.nRows < 4) ? 1 : 3, s);
   }
 
   void Message(PGM_P format, byte param) {
@@ -54,23 +58,13 @@ public:
   }
 
 private:
-  void PrintLine(byte row, PGM_P st) {
+  void PrintLine(byte row, const char *st) {
     if (row >= lcd.nRows)
       return;
 
     lcd.printAt(0, row, st);
 
     for (byte i = strlen(st); i < lcd.nCols; ++i)
-      lcd.print(' ');
-  }
-
-  void PrintLine_P(byte row, PGM_P st) {
-    if (row >= lcd.nRows)
-      return;
-
-    lcd.printAt_P(0, row, st);
-
-    for (byte i = strlen_P(st); i < lcd.nCols; ++i)
       lcd.print(' ');
   }
 };
