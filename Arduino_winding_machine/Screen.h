@@ -8,16 +8,23 @@ class MainScreen
 {
 public:
   LiquidCrystalCyr &lcd;
-  const Winding &w;
-  const Winding &current;
+  const Winding *w = 0;
+  const Winding *current = 0;
 
-  MainScreen(LiquidCrystalCyr &lcd_, const Winding &w_, const Winding &current_) : lcd(lcd_), w(w_), current(current_) {}
+  MainScreen(LiquidCrystalCyr &lcd_) : lcd(lcd_) {}
+
+  void Init(const Winding &w_, const Winding &current_)
+  {
+    w = &w_;
+    current = &current_;
+  }
 
   void Draw() // Подпрограмма вывода экрана автонамотки
   {
+    if (!w || !current) return;
     lcd.clear();
-    lcd.printfAt_P(0, 0, LINE1_FORMAT, current.turns, w.turns, current.layers, w.layers);
-    lcd.printfAt_P(0, 1, LINE2_FORMAT, current.speed, w.step);
+    lcd.printfAt_P(0, 0, LINE1_FORMAT, current->turns, w->turns, current->layers, w->layers);
+    lcd.printfAt_P(0, 1, LINE2_FORMAT, current->speed, w->step);
     UpdateTurns();
     UpdateLayers();
     UpdateSpeed();
@@ -25,17 +32,20 @@ public:
 
   void UpdateTurns()
   {
-    lcd.printfAt_P(1, 0, LINE4_FORMAT, current.turns + 1);
+    if (!w || !current) return;
+    lcd.printfAt_P(1, 0, LINE4_FORMAT, current->turns + 1);
   }
 
   void UpdateLayers()
   {
-    lcd.printfAt_P(10, 0, LINE5_FORMAT, current.layers);
+    if (!w || !current) return;
+    lcd.printfAt_P(10, 0, LINE5_FORMAT, current->layers);
   }
 
   void UpdateSpeed()
   {
-    lcd.printfAt_P(2, 1, LINE6_FORMAT, current.speed);
+    if (!w || !current) return;
+    lcd.printfAt_P(2, 1, LINE6_FORMAT, current->speed);
   }
 
   void PlannerStatus(byte status)

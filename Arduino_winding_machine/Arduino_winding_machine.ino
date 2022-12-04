@@ -80,6 +80,7 @@ enum menu_states
   Winding1,
   Winding2,
   Winding3,
+  StartAll,
   WindingBack,
   TurnsSet,
   LaySet,
@@ -113,7 +114,8 @@ MenuItem *menuItems[] =
         new ValMenuItem(1, 0, MENU_06, MENU_FORMAT_06),
         new ValMenuItem(1, 1, MENU_07, MENU_FORMAT_06),
         new ValMenuItem(1, 2, MENU_08, MENU_FORMAT_06),
-        new MenuItem(1, 3, MENU_09),
+        new MenuItem(1, 3, MENU_15),
+        new MenuItem(1, 4, MENU_09),
 
         new UIntMenuItem(2, 0, MENU_10, MENU_FORMAT_10, NULL, 1, 999),
         new UIntMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 99),
@@ -144,6 +146,8 @@ LiquidCrystalCyr lcd(DISPLAY_ADDRESS, DISPLAY_NCOL, DISPLAY_NROW);
 #endif
 
 MainMenu menu(menuItems, LENGTH(menuItems), lcd);
+MainScreen screen(lcd);
+
 
 GStepper2<STEPPER2WIRE> shaftStepper(STEPPER_STEPS_COUNT, STEPPER_STEP_Z, STEPPER_DIR_Z, STEPPER_EN);
 GStepper2<STEPPER2WIRE> layerStepper(STEPPER_STEPS_COUNT, STEPPER_STEP_A, STEPPER_DIR_A, STEPPER_EN);
@@ -224,6 +228,10 @@ void loop()
     case miSettingsStopPerLevel:
     case Direction:
       menu.IncCurrent(1);
+      break;
+    case StartAll:
+      AutoWindingAllPrg();
+      menu.Draw(true);
       break;
     case Start:
       SaveSettings();
@@ -326,11 +334,12 @@ ISR(TIMER1_COMPA_vect)
     stopTimer();
 }
 
-void AutoWindingPrg() // Подпрограмма автоматической намотки
+void AutoWinding(const Winding &w, bool& direction) // Подпрограмма автоматической намотки
 {
+  if (!w.turns || !w.layers || !w.step || !w.speed) return;
+
   Winding current; // Текущий виток и слой при автонамотке
-  const Winding &w = params[currentWinding];
-  MainScreen screen(lcd, w, current);
+  screen.Init(w,current);
 
   DebugWrite("Start");
 
@@ -352,7 +361,7 @@ void AutoWindingPrg() // Подпрограмма автоматической �
   planner.setMaxSpeed(STEPPER_STEPS_COUNT * current.speed / 60L);
 
   int32_t dShaft = -STEPPER_STEPS_COUNT * w.turns;
-  int32_t dLayer = -STEPPER_STEPS_COUNT * w.turns * w.step / int32_t(THREAD_PITCH) * (w.dir ? 1 : -1);
+  int32_t dLayer = -STEPPER_STEPS_COUNT * w.turns * w.step / int32_t(THREAD_PITCH) * (direction ? 1 : -1);
   int32_t p[] = {dShaft, dLayer};
 
   planner.reset();
@@ -377,6 +386,7 @@ void AutoWindingPrg() // Подпрограмма автоматической �
       planner.setTarget(p, RELATIVE);
       ++current.layers;
       p[1] = -p[1];
+      direction = !direction;
 
       startTimer();
       setPeriod(planner.getPeriod());
@@ -436,10 +446,33 @@ void AutoWindingPrg() // Подпрограмма автоматической �
 
   layerStepper.disable();
   shaftStepper.disable(); 
+}
 
+void AutoWindingPrg() // Подпрограмма автоматической намотки
+{
+  bool direction = params[currentWinding].dir;
+  AutoWinding(params[currentWinding], direction);  
+   
   screen.Message(STRING_1); // "AUTOWINDING DONE"
   buzzer.Multibeep(3, 600, 300);
   WaitButton();
+}
+
+void AutoWindingAllPrg()
+{
+  bool direction = params[0].dir;
+  for (byte i = 0; i < WINDING_COUNT; ++i)
+  {
+    const Winding &w = params[i];
+    
+    if (!w.turns || !w.layers || !w.step || !w.speed) continue;
+ 
+    AutoWinding(w, direction);  
+    
+    screen.Message(STRING_1); // "AUTOWINDING DONE"
+    buzzer.Multibeep(3, 600, 300);
+    WaitButton();
+  }
 }
 
 void WaitButton()

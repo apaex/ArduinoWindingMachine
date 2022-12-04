@@ -100,7 +100,7 @@ public:
 
   void IncIndex(int8_t inc) { index = constrain(index + inc, GetFirstIndex(), GetLastIndex()); }
 
-  void Draw()
+  void Draw(bool force = false)
   {
     byte scr = items[index]->screen;
     byte page = items[index]->line / lcd.nRows;
@@ -110,7 +110,7 @@ public:
     static byte prev_screen = -1;
     static byte prev_page = -1;
 
-    if (scr != prev_screen || page != prev_page)
+    if (scr != prev_screen || page != prev_page || force)
     {
       lcd.clear();
 
