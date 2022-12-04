@@ -176,13 +176,13 @@ void loop()
 {
   encoder.tick();
 
-  if (encoder.turn()) // Проверяем изменение позиции энкодера
+  if (encoder.turn()) 
   {
     menu.IncIndex(encoder.dir()); // Если позиция энкодера изменена, то меняем menu.index и выводим экран
     menu.Draw();
   }
 
-  if (encoder.click()) // Проверяем нажатие кнопки
+  if (encoder.click()) 
   {
     switch (menu.index) // Если было нажатие, то выполняем действие, соответствующее текущей позиции курсора
     {
@@ -278,7 +278,7 @@ void ValueEdit()
   {
     encoder.tick();
 
-    if (encoder.turn() || encoder.turnH()) // Проверяем изменение позиции энкодера
+    if (encoder.turn() || encoder.turnH()) 
       menu.IncCurrent(encoder.dir() * (encoder.state() ? 10 : 1));
 
   } while (!encoder.click());
@@ -309,7 +309,7 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
       oldPos = newPos;
     }
 
-    if (encoder.turn()) // Проверяем изменение позиции энкодера
+    if (encoder.turn()) 
       menu.IncCurrent(encoder.dir());
 
   } while (!encoder.click() || stepper.getStatus() != 0);
