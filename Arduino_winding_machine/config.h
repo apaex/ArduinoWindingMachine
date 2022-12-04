@@ -35,4 +35,4 @@
 
 #define LANGUAGE            RU           // EN, RU
 //#define DEBUG
-
+#define TRANSFORMER_COUNT   3

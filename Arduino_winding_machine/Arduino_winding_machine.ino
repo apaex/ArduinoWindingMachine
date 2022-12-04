@@ -64,7 +64,9 @@ https://cxem.net/arduino/arduino245.php
 #define EEPROM_SETTINGS_ADDR 0x00
 #define EEPROM_WINDINGS_ADDR 0x10
 #define EEPROM_WINDINGS_CLASTER (sizeof(Winding) * WINDING_COUNT + 1)
+#ifndef TRANSFORMER_COUNT
 #define TRANSFORMER_COUNT 3
+#endif
 #define WINDING_COUNT 3
 
 Winding params[WINDING_COUNT];
