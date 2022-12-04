@@ -71,7 +71,6 @@ https://cxem.net/arduino/arduino245.php
 
 Winding params[WINDING_COUNT];
 
-int8_t currentTransformer = 0;
 int8_t currentWinding = 0;
 
 Settings settings;
@@ -106,11 +105,11 @@ enum menu_states {
 const char *boolSet[] = { STRING_OFF, STRING_ON };
 const char *dirSet[] = { "<<<", ">>>" };
 const uint8_t *stepSet[] = { 1, 10, 100 };
-const uint8_t *transSet[] = { 0, 1, 2 };
+const uint8_t *transSet[] = { 1, 2, 3};
 
 MenuItem *menuItems[] = {
   new MenuItem(0, 0, MENU_01),
-  new SetMenuItem(0, 1, MENU_02, MENU_FORMAT_02, &currentTransformer, transSet, 3),
+  new SetMenuItem(0, 1, MENU_02, MENU_FORMAT_02, &settings.currentTransformer, transSet, 3),
   new MenuItem(0, 2, MENU_04),
   new MenuItem(0, 3, MENU_05),
 
@@ -466,8 +465,7 @@ void LoadSettings() {
     return;
 
   Load(settings, p);
-  EEPROM_load(p, currentTransformer);
-  currentTransformer = constrain(currentTransformer, 0, TRANSFORMER_COUNT - 1);
+  settings.currentTransformer = constrain(settings.currentTransformer, 1, TRANSFORMER_COUNT);
 }
 
 void SaveSettings() {
@@ -475,11 +473,10 @@ void SaveSettings() {
   byte v = EEPROM_SETTINGS_VERSION;
   EEPROM_save(p, v);
   Save(settings, p);
-  EEPROM_save(p, currentTransformer);
 }
 
 void LoadWindings() {
-  int p = EEPROM_WINDINGS_ADDR + currentTransformer * EEPROM_WINDINGS_CLASTER;
+  int p = EEPROM_WINDINGS_ADDR + (settings.currentTransformer - 1) * EEPROM_WINDINGS_CLASTER;
 
   byte v = 0;
   EEPROM_load(p, v);
@@ -492,7 +489,7 @@ void LoadWindings() {
 }
 
 void SaveWindings() {
-  int p = EEPROM_WINDINGS_ADDR + currentTransformer * EEPROM_WINDINGS_CLASTER;
+  int p = EEPROM_WINDINGS_ADDR + (settings.currentTransformer - 1) * EEPROM_WINDINGS_CLASTER;
 
   byte v = EEPROM_WINDINGS_VERSION;
   EEPROM_save(p, v);
