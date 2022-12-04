@@ -2,17 +2,15 @@
 
 #include <HardwareSerial.h>
 
-template <class T>
-void DebugWrite(T v)
-{
+template<class T>
+void DebugWrite(T v) {
 #ifdef DEBUG
   Serial.println(v);
 #endif
 }
 
-template <class T>
-void DebugWrite(const char *s, T v)
-{
+template<class T>
+void DebugWrite(const char *s, T v) {
 #ifdef DEBUG
   Serial.print(s);
   Serial.print(": ");
@@ -20,8 +18,7 @@ void DebugWrite(const char *s, T v)
 #endif
 }
 
-void DebugWrite(const char *st, int32_t x, int32_t y)
-{
+void DebugWrite(const char *st, int32_t x, int32_t y) {
 #ifdef DEBUG
   Serial.print(st);
   Serial.print("(");
@@ -32,12 +29,10 @@ void DebugWrite(const char *st, int32_t x, int32_t y)
 #endif
 }
 
-template <class T>
-void DebugWrite(const T arr[], int n)
-{
+template<class T>
+void DebugWrite(const T arr[], int n) {
 #ifdef DEBUG
-  for (int i = 0; i < n; ++i)
-  {
+  for (int i = 0; i < n; ++i) {
     Serial.print(arr[i]);
     Serial.print(',');
   }

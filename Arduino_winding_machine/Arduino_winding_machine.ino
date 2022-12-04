@@ -29,7 +29,7 @@ https://cxem.net/arduino/arduino245.php
 
 */
 
-#include "config.h" // все настройки железа здесь
+#include "config.h"  // все настройки железа здесь
 #include "debug.h"
 
 #define FPSTR(pstr) (const __FlashStringHelper *)(pstr)
@@ -70,8 +70,7 @@ int8_t currentWinding = -1;
 
 Settings settings;
 
-enum menu_states
-{
+enum menu_states {
   Autowinding1,
   Autowinding2,
   Autowinding3,
@@ -97,50 +96,49 @@ enum menu_states
   miSettingsStopPerLevel,
   AccelSet,
   miSettingsBack
-}; // Нумерованный список строк экрана
+};  // Нумерованный список строк экрана
 
-const char *boolSet[] = {STRING_OFF, STRING_ON};
-const char *dirSet[] = {"<<<", ">>>"};
-const uint8_t *stepSet[] = {1, 10, 100};
+const char *boolSet[] = { STRING_OFF, STRING_ON };
+const char *dirSet[] = { "<<<", ">>>" };
+const uint8_t *stepSet[] = { 1, 10, 100 };
 
-MenuItem *menuItems[] =
-    {
-        new MenuItem(0, 0, MENU_01),
-        new MenuItem(0, 1, MENU_02),
-        new MenuItem(0, 2, MENU_03),
-        new MenuItem(0, 3, MENU_04),
-        new MenuItem(0, 4, MENU_05),
+MenuItem *menuItems[] = {
+  new MenuItem(0, 0, MENU_01),
+  new MenuItem(0, 1, MENU_02),
+  new MenuItem(0, 2, MENU_03),
+  new MenuItem(0, 3, MENU_04),
+  new MenuItem(0, 4, MENU_05),
 
-        new ValMenuItem(1, 0, MENU_06, MENU_FORMAT_06),
-        new ValMenuItem(1, 1, MENU_07, MENU_FORMAT_06),
-        new ValMenuItem(1, 2, MENU_08, MENU_FORMAT_06),
-        new MenuItem(1, 3, MENU_15),
-        new MenuItem(1, 4, MENU_09),
+  new ValMenuItem(1, 0, MENU_06, MENU_FORMAT_06),
+  new ValMenuItem(1, 1, MENU_07, MENU_FORMAT_06),
+  new ValMenuItem(1, 2, MENU_08, MENU_FORMAT_06),
+  new MenuItem(1, 3, MENU_15),
+  new MenuItem(1, 4, MENU_09),
 
-        new UIntMenuItem(2, 0, MENU_10, MENU_FORMAT_10, NULL, 1, 999),
-        new UIntMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 99),
-        new UIntMenuItem(2, 2, MENU_11, MENU_FORMAT_11, NULL, 5, 995, 5),
-        new UIntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, SPEED_INC, SPEED_LIMIT, SPEED_INC),
-        new BoolMenuItem(2, 4, MENU_14, NULL, dirSet),
-        new MenuItem(2, 5, MENU_15),
-        new MenuItem(2, 6, MENU_09),
+  new UIntMenuItem(2, 0, MENU_10, MENU_FORMAT_10, NULL, 1, 999),
+  new UIntMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 99),
+  new UIntMenuItem(2, 2, MENU_11, MENU_FORMAT_11, NULL, 5, 995, 5),
+  new UIntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, SPEED_INC, SPEED_LIMIT, SPEED_INC),
+  new BoolMenuItem(2, 4, MENU_14, NULL, dirSet),
+  new MenuItem(2, 5, MENU_15),
+  new MenuItem(2, 6, MENU_09),
 
-        new IntMenuItem(10, 0, MENU_17, MENU_FORMAT_17, &settings.shaftPos, -999, 999),
-        new SetMenuItem(10, 1, MENU_18, MENU_FORMAT_10, &settings.shaftStep, stepSet, 3),
-        new IntMenuItem(10, 2, MENU_19, MENU_FORMAT_17, &settings.layerPos, -999, 999),
-        new SetMenuItem(10, 3, MENU_18, MENU_FORMAT_10, &settings.layerStep, stepSet, 3),
-        new MenuItem(10, 4, MENU_09),
+  new IntMenuItem(10, 0, MENU_17, MENU_FORMAT_17, &settings.shaftPos, -999, 999),
+  new SetMenuItem(10, 1, MENU_18, MENU_FORMAT_10, &settings.shaftStep, stepSet, 3),
+  new IntMenuItem(10, 2, MENU_19, MENU_FORMAT_17, &settings.layerPos, -999, 999),
+  new SetMenuItem(10, 3, MENU_18, MENU_FORMAT_10, &settings.layerStep, stepSet, 3),
+  new MenuItem(10, 4, MENU_09),
 
-        new BoolMenuItem(11, 0, MENU_22, &settings.stopPerLayer, boolSet),
-        new UIntMenuItem(11, 1, MENU_23, MENU_FORMAT_10, &settings.acceleration, 0, 600, 10),
-        new MenuItem(11, 2, MENU_09),
+  new BoolMenuItem(11, 0, MENU_22, &settings.stopPerLayer, boolSet),
+  new UIntMenuItem(11, 1, MENU_23, MENU_FORMAT_10, &settings.acceleration, 0, 600, 10),
+  new MenuItem(11, 2, MENU_09),
 };
 
-byte up[8] = {0b00100, 0b01110, 0b11111, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000};   // Создаем свой символ ⯅ для LCD
-byte down[8] = {0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b11111, 0b01110, 0b00100}; // Создаем свой символ ⯆ для LCD
+byte up[8] = { 0b00100, 0b01110, 0b11111, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000 };    // Создаем свой символ ⯅ для LCD
+byte down[8] = { 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b11111, 0b01110, 0b00100 };  // Создаем свой символ ⯆ для LCD
 
 #if DISPLAY_I2C == 0
-LiquidCrystalCyr lcd(DISPLAY_RS, DISPLAY_EN, DISPLAY_D4, DISPLAY_D5, DISPLAY_D6, DISPLAY_D7); // Назначаем пины для управления LCD
+LiquidCrystalCyr lcd(DISPLAY_RS, DISPLAY_EN, DISPLAY_D4, DISPLAY_D5, DISPLAY_D6, DISPLAY_D7);  // Назначаем пины для управления LCD
 #else
 LiquidCrystalCyr lcd(DISPLAY_ADDRESS, DISPLAY_NCOL, DISPLAY_NROW);
 #endif
@@ -158,143 +156,135 @@ EncButton<EB_TICK, BUTTON_STOP> pedal;
 
 Buzzer buzzer(BUZZER);
 
-void setup()
-{
+void setup() {
   Serial.begin(9600);
   LoadSettings();
 
   layerStepper.disable();
-  shaftStepper.disable(); 
+  shaftStepper.disable();
   planner.addStepper(0, shaftStepper);
   planner.addStepper(1, layerStepper);
 
-  lcd.createChar(0, up);                 // Записываем символ ⯅ в память LCD
-  lcd.createChar(1, down);               // Записываем символ ⯆ в память LCD
-  lcd.begin(DISPLAY_NCOL, DISPLAY_NROW); // Инициализация LCD Дисплей
+  lcd.createChar(0, up);                  // Записываем символ ⯅ в память LCD
+  lcd.createChar(1, down);                // Записываем символ ⯆ в память LCD
+  lcd.begin(DISPLAY_NCOL, DISPLAY_NROW);  // Инициализация LCD Дисплей
   menu.Draw();
 
   encoder.setEncType(ENCODER_TYPE);
 }
 
-void loop()
-{
+void loop() {
   encoder.tick();
 
-  if (encoder.turn()) 
-  {
-    menu.IncIndex(encoder.dir()); // Если позиция энкодера изменена, то меняем menu.index и выводим экран
+  if (encoder.turn()) {
+    menu.IncIndex(encoder.dir());  // Если позиция энкодера изменена, то меняем menu.index и выводим экран
     menu.Draw();
   }
 
-  if (encoder.click()) 
-  {
-    switch (menu.index) // Если было нажатие, то выполняем действие, соответствующее текущей позиции курсора
+  if (encoder.click()) {
+    switch (menu.index)  // Если было нажатие, то выполняем действие, соответствующее текущей позиции курсора
     {
-    case Autowinding1:
-    case Autowinding2:
-    case Autowinding3:
-      currentTransformer = menu.index - Autowinding1;
-      LoadSettings();
-      menu.index = Winding1;
+      case Autowinding1:
+      case Autowinding2:
+      case Autowinding3:
+        currentTransformer = menu.index - Autowinding1;
+        LoadSettings();
+        menu.index = Winding1;
 
-      UpdateMenuItemText(0);
-      UpdateMenuItemText(1);
-      UpdateMenuItemText(2);
-      break;
-    case Winding1:
-    case Winding2:
-    case Winding3:
-      currentWinding = menu.index - Winding1;
-      menu.index = TurnsSet;
-      ((UIntMenuItem *)menu[TurnsSet])->value = &params[currentWinding].turns;
-      ((UIntMenuItem *)menu[StepSet])->value = &params[currentWinding].step;
-      ((UIntMenuItem *)menu[SpeedSet])->value = &params[currentWinding].speed;
-      ((UIntMenuItem *)menu[LaySet])->value = &params[currentWinding].layers;
-      ((BoolMenuItem *)menu[Direction])->value = &params[currentWinding].dir;
-      break;
-    case WindingBack:
-      menu.index = Autowinding1 + currentTransformer;
-      break;
-    case PosControl:
-      menu.index = ShaftPos;
-      break;
-    case TurnsSet:
-    case StepSet:
-    case SpeedSet:
-    case LaySet:
-    case AccelSet:
-      ValueEdit();
-      break;
-    case miSettingsStopPerLevel:
-    case Direction:
-      menu.IncCurrent(1);
-      break;
-    case StartAll:
-      AutoWindingAll(params, WINDING_COUNT);
-      menu.Draw(true);
-      break;
-    case Start:
-      SaveSettings();
-      AutoWindingAll(params + currentWinding, 1);
-      menu.index = Winding1 + currentWinding;
-      UpdateMenuItemText(currentWinding);
-      break;
-    case Cancel:
-      SaveSettings();
-      menu.index = Winding1 + currentWinding;
-      UpdateMenuItemText(currentWinding);
-      break;
+        UpdateMenuItemText(0);
+        UpdateMenuItemText(1);
+        UpdateMenuItemText(2);
+        break;
+      case Winding1:
+      case Winding2:
+      case Winding3:
+        currentWinding = menu.index - Winding1;
+        menu.index = TurnsSet;
+        ((UIntMenuItem *)menu[TurnsSet])->value = &params[currentWinding].turns;
+        ((UIntMenuItem *)menu[StepSet])->value = &params[currentWinding].step;
+        ((UIntMenuItem *)menu[SpeedSet])->value = &params[currentWinding].speed;
+        ((UIntMenuItem *)menu[LaySet])->value = &params[currentWinding].layers;
+        ((BoolMenuItem *)menu[Direction])->value = &params[currentWinding].dir;
+        break;
+      case WindingBack:
+        menu.index = Autowinding1 + currentTransformer;
+        break;
+      case PosControl:
+        menu.index = ShaftPos;
+        break;
+      case TurnsSet:
+      case StepSet:
+      case SpeedSet:
+      case LaySet:
+      case AccelSet:
+        ValueEdit();
+        break;
+      case miSettingsStopPerLevel:
+      case Direction:
+        menu.IncCurrent(1);
+        break;
+      case StartAll:
+        AutoWindingAll(params, WINDING_COUNT);
+        menu.Draw(true);
+        break;
+      case Start:
+        SaveSettings();
+        AutoWindingAll(params + currentWinding, 1);
+        menu.index = Winding1 + currentWinding;
+        UpdateMenuItemText(currentWinding);
+        break;
+      case Cancel:
+        SaveSettings();
+        menu.index = Winding1 + currentWinding;
+        UpdateMenuItemText(currentWinding);
+        break;
 
-    case ShaftPos:
-    case LayerPos:
-      MoveTo((menu.index == LayerPos) ? layerStepper : shaftStepper, *((IntMenuItem *)menu[menu.index])->value);
-      break;
+      case ShaftPos:
+      case LayerPos:
+        MoveTo((menu.index == LayerPos) ? layerStepper : shaftStepper, *((IntMenuItem *)menu[menu.index])->value);
+        break;
 
-    case ShaftStepMul:
-    case LayerStepMul:
-      menu.IncCurrent(1);
-      ((IntMenuItem *)menu[menu.index - 1])->increment = *((SetMenuItem *)menu[menu.index])->value;
-      break;
-    case PosCancel:
-      menu.index = PosControl;
-      settings.shaftPos = 0;
-      settings.layerPos = 0;
-      break;
+      case ShaftStepMul:
+      case LayerStepMul:
+        menu.IncCurrent(1);
+        ((IntMenuItem *)menu[menu.index - 1])->increment = *((SetMenuItem *)menu[menu.index])->value;
+        break;
+      case PosCancel:
+        menu.index = PosControl;
+        settings.shaftPos = 0;
+        settings.layerPos = 0;
+        break;
 
-    case miSettings:
-      menu.index = miSettingsStopPerLevel;
-      break;
+      case miSettings:
+        menu.index = miSettingsStopPerLevel;
+        break;
 
-    case miSettingsBack:
-      SaveSettings();
-      menu.index = miSettings;
-      break;
+      case miSettingsBack:
+        SaveSettings();
+        menu.index = miSettings;
+        break;
     }
     menu.Draw();
   }
 }
 
-void UpdateMenuItemText(byte i)
-{
+void UpdateMenuItemText(byte i) {
   ((ValMenuItem *)menu[Winding1 + i])->value = params[i].turns * params[i].layers;
 }
 
-void ValueEdit()
-{
+void ValueEdit() {
   menu.DrawQuotes(1);
-  do
-  {
+  do {
     encoder.tick();
 
-    if (encoder.turn() || encoder.turnH()) 
+    if (encoder.turn() || encoder.turnH())
       menu.IncCurrent(encoder.dir() * (encoder.state() ? 10 : 1));
 
   } while (!encoder.click());
   menu.DrawQuotes(0);
 }
 
-void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
-{
+void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos) {
   menu.DrawQuotes(1);
   stepper.enable();
 
@@ -305,19 +295,17 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
   stepper.setCurrent(oldPos);
   stepper.setTarget(oldPos);
 
-  do
-  {
+  do {
     stepper.tick();
     encoder.tick();
 
     int newPos = -pos * STEPPER_MICROSTEPS * 2;
-    if (newPos != oldPos)
-    {
+    if (newPos != oldPos) {
       stepper.setTarget(newPos);
       oldPos = newPos;
     }
 
-    if (encoder.turn()) 
+    if (encoder.turn())
       menu.IncCurrent(encoder.dir());
 
   } while (!encoder.click() || stepper.getStatus() != 0);
@@ -326,17 +314,16 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos)
   menu.DrawQuotes(0);
 }
 
-ISR(TIMER1_COMPA_vect)
-{
+ISR(TIMER1_COMPA_vect) {
   if (planner.tickManual())
     setPeriod(planner.getPeriod());
   else
     stopTimer();
 }
 
-void AutoWinding(const Winding &w, bool& direction) // Подпрограмма автоматической намотки
+void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма автоматической намотки
 {
-  Winding current; // Текущий виток и слой при автонамотке
+  Winding current;  // Текущий виток и слой при автонамотке
 
   DebugWrite("Start");
 
@@ -349,9 +336,9 @@ void AutoWinding(const Winding &w, bool& direction) // Подпрограмма 
   screen.Draw();
 
   pedal.tick();
-  bool run = pedal.state(); // педаль нажата - работаем
+  bool run = pedal.state();  // педаль нажата - работаем
 
-  shaftStepper.enable(); // Разрешение управления двигателями
+  shaftStepper.enable();  // Разрешение управления двигателями
   layerStepper.enable();
 
   planner.setAcceleration(STEPPER_STEPS_COUNT * settings.acceleration / 60L);
@@ -359,22 +346,19 @@ void AutoWinding(const Winding &w, bool& direction) // Подпрограмма 
 
   int32_t dShaft = -STEPPER_STEPS_COUNT * w.turns;
   int32_t dLayer = -STEPPER_STEPS_COUNT * w.turns * w.step / int32_t(THREAD_PITCH) * (direction ? 1 : -1);
-  int32_t p[] = {dShaft, dLayer};
+  int32_t p[] = { dShaft, dLayer };
 
   planner.reset();
   initTimer();
 
-  while (1)
-  {
-    if (planner.getStatus() == 0 && run)
-    {
+  while (1) {
+    if (planner.getStatus() == 0 && run) {
       DebugWrite("READY");
       if (current.layers >= w.layers)
         break;
 
-      if (settings.stopPerLayer && (current.layers > 0))
-      {
-        screen.Message(STRING_2); // "PRESS CONTINUE  "
+      if (settings.stopPerLayer && (current.layers > 0)) {
+        screen.Message(STRING_2);  // "PRESS CONTINUE  "
         WaitButton();
         screen.Draw();
       }
@@ -400,34 +384,28 @@ void AutoWinding(const Winding &w, bool& direction) // Подпрограмма 
     else if (pedal.state() && encoder.click())
       run = !run;
 
-    if (run != oldState)
-    {
-      if (run)
-      {
+    if (run != oldState) {
+      if (run) {
         noInterrupts();
         planner.resume();
         interrupts();
         startTimer();
         setPeriod(planner.getPeriod());
-      }
-      else
-      {
+      } else {
         noInterrupts();
         planner.stop();
         interrupts();
       }
     }
 
-    if (encoder.turn())
-    {                                                                                               // Если повернуть энкодер во время автонамотки,
-      current.speed = constrain(current.speed + encoder.dir() * SPEED_INC, SPEED_INC, SPEED_LIMIT); // то меняем значение скорости
+    if (encoder.turn()) {                                                                            // Если повернуть энкодер во время автонамотки,
+      current.speed = constrain(current.speed + encoder.dir() * SPEED_INC, SPEED_INC, SPEED_LIMIT);  // то меняем значение скорости
       planner.setMaxSpeed(STEPPER_STEPS_COUNT * current.speed / 60L);
       screen.UpdateSpeed(current.speed);
     }
 
     static uint32_t tmr;
-    if (millis() - tmr >= 500)
-    {
+    if (millis() - tmr >= 500) {
       tmr = millis();
 
       int total_turns = (abs(shaftStepper.pos)) / STEPPER_STEPS_COUNT;
@@ -441,88 +419,74 @@ void AutoWinding(const Winding &w, bool& direction) // Подпрограмма 
   }
 
   layerStepper.disable();
-  shaftStepper.disable(); 
+  shaftStepper.disable();
 }
 
-void AutoWindingAll(const Winding windings[], byte n)
-{  
+void AutoWindingAll(const Winding windings[], byte n) {
   bool direction = windings[0].dir;
-  for (byte i = 0; i < n; ++i)
-  {
-    const Winding &w = windings[i]; 
+  for (byte i = 0; i < n; ++i) {
+    const Winding &w = windings[i];
     if (!w.turns || !w.layers || !w.step || !w.speed) continue;
 
     screen.Init(w);
-    if (n > 1)
-    {
-      screen.Draw(); 
-      screen.Message(STRING_3, i+1);
+    if (n > 1) {
+      screen.Draw();
+      screen.Message(STRING_3, i + 1);
       buzzer.Multibeep(2, 200, 200);
-      WaitButton();      
+      WaitButton();
     }
 
-    AutoWinding(w, direction);  
+    AutoWinding(w, direction);
   }
 
-  screen.Message(STRING_1); // "AUTOWINDING DONE"
+  screen.Message(STRING_1);  // "AUTOWINDING DONE"
   buzzer.Multibeep(3, 200, 200);
   WaitButton();
 }
 
 
-void WaitButton()
-{
-  do
-  {
+void WaitButton() {
+  do {
     encoder.tick();
   } while (!encoder.click());
 }
 
-void LoadSettings()
-{
+void LoadSettings() {
   int p = 0;
   byte v = 0;
   EEPROM_load(p, v);
   if (v != EEPROM_DATA_VERSION)
     return;
 
-  for (int i = 0; i < TRANSFORMER_COUNT; ++i)
-  {
-    if (i == currentTransformer)
-    {
+  for (int i = 0; i < TRANSFORMER_COUNT; ++i) {
+    if (i == currentTransformer) {
       EEPROM_load(p, v);
 
       for (int j = 0; j < WINDING_COUNT; ++j)
         if (v == EEPROM_DATA_VERSION)
           Load(params[j], p);
-        else
-        {
+        else {
           params[j] = Winding();
           p += sizeof(Winding);
         }
-    }
-    else
+    } else
       p += sizeof(Winding) * WINDING_COUNT + 1;
   }
 
   Load(settings, p);
 }
 
-void SaveSettings()
-{
+void SaveSettings() {
   int p = 0;
   byte v = EEPROM_DATA_VERSION;
   EEPROM_save(p, v);
 
-  for (int i = 0; i < TRANSFORMER_COUNT; ++i)
-  {
-    if (i == currentTransformer)
-    {
+  for (int i = 0; i < TRANSFORMER_COUNT; ++i) {
+    if (i == currentTransformer) {
       EEPROM_save(p, v);
       for (int j = 0; j < WINDING_COUNT; ++j)
         Save(params[j], p);
-    }
-    else
+    } else
       p += sizeof(Winding) * WINDING_COUNT + 1;
   }
 

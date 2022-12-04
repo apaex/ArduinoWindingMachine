@@ -2,8 +2,7 @@
 
 #include "EEPROM.h"
 
-struct Winding
-{
+struct Winding {
   uint16_t turns = 0;
   uint16_t step = 0;
   uint16_t speed = 30;
@@ -11,8 +10,7 @@ struct Winding
   bool dir = 1;
 };
 
-void Load(Winding &o, int &p)
-{
+void Load(Winding &o, int &p) {
   EEPROM_load(p, o.turns);
   EEPROM_load(p, o.step);
   EEPROM_load(p, o.speed);
@@ -20,8 +18,7 @@ void Load(Winding &o, int &p)
   EEPROM_load(p, o.dir);
 }
 
-void Save(const Winding &o, int &p)
-{
+void Save(const Winding &o, int &p) {
   EEPROM_save(p, o.turns);
   EEPROM_save(p, o.step);
   EEPROM_save(p, o.speed);
@@ -29,8 +26,7 @@ void Save(const Winding &o, int &p)
   EEPROM_save(p, o.dir);
 }
 
-struct Settings
-{
+struct Settings {
   bool stopPerLayer = 0;
   uint8_t shaftStep = 1;
   uint8_t layerStep = 1;
@@ -39,14 +35,12 @@ struct Settings
   uint16_t acceleration = 30;
 };
 
-void Load(Settings &o, int &p)
-{
+void Load(Settings &o, int &p) {
   EEPROM_load(p, o.stopPerLayer);
   EEPROM_load(p, o.acceleration);
 }
 
-void Save(const Settings &o, int &p)
-{
+void Save(const Settings &o, int &p) {
   EEPROM_save(p, o.stopPerLayer);
   EEPROM_save(p, o.acceleration);
 }
