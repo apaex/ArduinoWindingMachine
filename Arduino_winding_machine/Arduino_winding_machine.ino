@@ -230,12 +230,12 @@ void loop()
       menu.IncCurrent(1);
       break;
     case StartAll:
-      AutoWindingAllPrg();
+      AutoWindingAll(params, WINDING_COUNT);
       menu.Draw(true);
       break;
     case Start:
       SaveSettings();
-      AutoWindingPrg();
+      AutoWindingAll(params + currentWinding, 1);
       menu.index = Winding1 + currentWinding;
       UpdateMenuItemText(currentWinding);
       break;
@@ -339,7 +339,6 @@ void AutoWinding(const Winding &w, bool& direction) // Подпрограмма 
   if (!w.turns || !w.layers || !w.step || !w.speed) return;
 
   Winding current; // Текущий виток и слой при автонамотке
-  screen.SetCurrent(current);
 
   DebugWrite("Start");
 
@@ -391,7 +390,7 @@ void AutoWinding(const Winding &w, bool& direction) // Подпрограмма 
       startTimer();
       setPeriod(planner.getPeriod());
 
-      screen.UpdateLayers();
+      screen.UpdateLayers(current.layers);
     }
 
     encoder.tick();
@@ -425,7 +424,7 @@ void AutoWinding(const Winding &w, bool& direction) // Подпрограмма 
     {                                                                                               // Если повернуть энкодер во время автонамотки,
       current.speed = constrain(current.speed + encoder.dir() * SPEED_INC, SPEED_INC, SPEED_LIMIT); // то меняем значение скорости
       planner.setMaxSpeed(STEPPER_STEPS_COUNT * current.speed / 60L);
-      screen.UpdateSpeed();
+      screen.UpdateSpeed(current.speed);
     }
 
     static uint32_t tmr;
@@ -436,7 +435,7 @@ void AutoWinding(const Winding &w, bool& direction) // Подпрограмма 
       int total_turns = (abs(shaftStepper.pos)) / STEPPER_STEPS_COUNT;
       current.turns = total_turns % w.turns;
 
-      screen.UpdateTurns();
+      screen.UpdateTurns(current.turns);
       // DebugWrite("planner.getStatus", planner.getStatus());
       // DebugWrite("", shaftStepper.pos, layerStepper.pos);
 
@@ -448,32 +447,22 @@ void AutoWinding(const Winding &w, bool& direction) // Подпрограмма 
   shaftStepper.disable(); 
 }
 
-void AutoWindingPrg() // Подпрограмма автоматической намотки
-{
-  bool direction = params[currentWinding].dir;
-
-  const Winding &w = params[currentWinding]; 
-  screen.Init(w);
-  AutoWinding(w, direction);  
-   
-  screen.Message(STRING_1); // "AUTOWINDING DONE"
-  buzzer.Multibeep(3, 200, 200);
-  WaitButton();
-}
-
-void AutoWindingAllPrg()
+void AutoWindingAll(const Winding windings[], byte n)
 {  
-  bool direction = params[0].dir;
-  for (byte i = 0; i < WINDING_COUNT; ++i)
+  bool direction = windings[0].dir;
+  for (byte i = 0; i < n; ++i)
   {
-    const Winding &w = params[i]; 
-    screen.Init(w);
-    screen.Draw();   
+    const Winding &w = windings[i]; 
     if (!w.turns || !w.layers || !w.step || !w.speed) continue;
 
-    screen.Message(STRING_3, i+1);
-    buzzer.Multibeep(2, 200, 200);
-    WaitButton();
+    screen.Init(w);
+    if (n > 1)
+    {
+      screen.Draw(); 
+      screen.Message(STRING_3, i+1);
+      buzzer.Multibeep(2, 200, 200);
+      WaitButton();      
+    }
 
     AutoWinding(w, direction);  
   }
@@ -482,6 +471,7 @@ void AutoWindingAllPrg()
   buzzer.Multibeep(3, 200, 200);
   WaitButton();
 }
+
 
 void WaitButton()
 {
