@@ -59,20 +59,24 @@ https://cxem.net/arduino/arduino245.php
 #define SPEED_LIMIT 260
 #endif
 #define SPEED_INC 10
-#define EEPROM_DATA_VERSION 1
+#define EEPROM_SETTINGS_VERSION 2
+#define EEPROM_WINDINGS_VERSION 2
+#define EEPROM_SETTINGS_ADDR 0x00
+#define EEPROM_WINDINGS_ADDR 0x10
+#define EEPROM_WINDINGS_CLASTER (sizeof(Winding) * WINDING_COUNT + 1)
 #define TRANSFORMER_COUNT 3
 #define WINDING_COUNT 3
 
 Winding params[WINDING_COUNT];
 
-int8_t currentTransformer = -1;
-int8_t currentWinding = -1;
+int8_t currentTransformer = 0;
+int8_t currentWinding = 0;
 
 Settings settings;
 
 enum menu_states {
   Autowinding1,
-  CurrentTrans,  
+  CurrentTrans,
   PosControl,
   miSettings,
   Winding1,
@@ -184,15 +188,15 @@ void loop() {
     switch (menu.index)  // Если было нажатие, то выполняем действие, соответствующее текущей позиции курсора
     {
       case Autowinding1:
-        currentTransformer = menu.index - Autowinding1;
-        LoadSettings();
+        SaveSettings();
+        LoadWindings();
         menu.index = Winding1;
 
         UpdateMenuItemText(0);
         UpdateMenuItemText(1);
         UpdateMenuItemText(2);
         break;
-      case CurrentTrans: break;
+
       case Winding1:
       case Winding2:
       case Winding3:
@@ -205,7 +209,7 @@ void loop() {
         ((BoolMenuItem *)menu[Direction])->value = &params[currentWinding].dir;
         break;
       case WindingBack:
-        menu.index = Autowinding1 + currentTransformer;
+        menu.index = Autowinding1;
         break;
       case PosControl:
         menu.index = ShaftPos;
@@ -217,6 +221,7 @@ void loop() {
       case AccelSet:
         ValueEdit();
         break;
+      case CurrentTrans:
       case miSettingsStopPerLevel:
       case Direction:
         menu.IncCurrent(1);
@@ -226,13 +231,13 @@ void loop() {
         menu.Draw(true);
         break;
       case Start:
-        SaveSettings();
+        SaveWindings();
         AutoWindingAll(params + currentWinding, 1);
         menu.index = Winding1 + currentWinding;
         UpdateMenuItemText(currentWinding);
         break;
       case Cancel:
-        SaveSettings();
+        SaveWindings();
         menu.index = Winding1 + currentWinding;
         UpdateMenuItemText(currentWinding);
         break;
@@ -452,43 +457,43 @@ void WaitButton() {
 }
 
 void LoadSettings() {
-  int p = 0;
+  int p = EEPROM_SETTINGS_ADDR;
   byte v = 0;
   EEPROM_load(p, v);
-  if (v != EEPROM_DATA_VERSION)
+  if (v != EEPROM_SETTINGS_VERSION)
     return;
 
-  for (int i = 0; i < TRANSFORMER_COUNT; ++i) {
-    if (i == currentTransformer) {
-      EEPROM_load(p, v);
-
-      for (int j = 0; j < WINDING_COUNT; ++j)
-        if (v == EEPROM_DATA_VERSION)
-          Load(params[j], p);
-        else {
-          params[j] = Winding();
-          p += sizeof(Winding);
-        }
-    } else
-      p += sizeof(Winding) * WINDING_COUNT + 1;
-  }
-
   Load(settings, p);
+  EEPROM_load(p, currentTransformer);
+  currentTransformer = constrain(currentTransformer, 0, TRANSFORMER_COUNT - 1);
 }
 
 void SaveSettings() {
-  int p = 0;
-  byte v = EEPROM_DATA_VERSION;
+  int p = EEPROM_SETTINGS_ADDR;
+  byte v = EEPROM_SETTINGS_VERSION;
   EEPROM_save(p, v);
-
-  for (int i = 0; i < TRANSFORMER_COUNT; ++i) {
-    if (i == currentTransformer) {
-      EEPROM_save(p, v);
-      for (int j = 0; j < WINDING_COUNT; ++j)
-        Save(params[j], p);
-    } else
-      p += sizeof(Winding) * WINDING_COUNT + 1;
-  }
-
   Save(settings, p);
+  EEPROM_save(p, currentTransformer);
+}
+
+void LoadWindings() {
+  int p = EEPROM_WINDINGS_ADDR + currentTransformer * EEPROM_WINDINGS_CLASTER;
+
+  byte v = 0;
+  EEPROM_load(p, v);
+
+  for (int j = 0; j < WINDING_COUNT; ++j)
+    if (v == EEPROM_WINDINGS_VERSION)
+      Load(params[j], p);
+    else
+      params[j] = Winding();
+}
+
+void SaveWindings() {
+  int p = EEPROM_WINDINGS_ADDR + currentTransformer * EEPROM_WINDINGS_CLASTER;
+
+  byte v = EEPROM_WINDINGS_VERSION;
+  EEPROM_save(p, v);
+  for (int j = 0; j < WINDING_COUNT; ++j)
+    Save(params[j], p);
 }
