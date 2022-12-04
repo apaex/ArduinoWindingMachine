@@ -336,8 +336,6 @@ ISR(TIMER1_COMPA_vect)
 
 void AutoWinding(const Winding &w, bool& direction) // Подпрограмма автоматической намотки
 {
-  if (!w.turns || !w.layers || !w.step || !w.speed) return;
-
   Winding current; // Текущий виток и слой при автонамотке
 
   DebugWrite("Start");
@@ -433,9 +431,8 @@ void AutoWinding(const Winding &w, bool& direction) // Подпрограмма 
       tmr = millis();
 
       int total_turns = (abs(shaftStepper.pos)) / STEPPER_STEPS_COUNT;
-      current.turns = total_turns % w.turns;
 
-      screen.UpdateTurns(current.turns);
+      screen.UpdateTurns(total_turns % w.turns + 1);
       // DebugWrite("planner.getStatus", planner.getStatus());
       // DebugWrite("", shaftStepper.pos, layerStepper.pos);
 
