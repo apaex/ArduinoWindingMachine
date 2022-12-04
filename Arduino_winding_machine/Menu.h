@@ -22,7 +22,7 @@ public:
   virtual void GetValue(char *s) const {
     s[0] = 0;
   }
-  virtual void IncValue(int8_t inc) {}
+  virtual void IncValue(int8_t inc, bool cycle = false) {}
 };
 
 class BoolMenuItem : public MenuItem {
@@ -36,7 +36,7 @@ public:
   virtual void GetValue(char *s) const {
     strcpy(s, items[*value]);
   }
-  virtual void IncValue(int8_t) {
+  virtual void IncValue(int8_t, bool cycle) {
     *value = !*value;
   }
 };
@@ -70,8 +70,14 @@ public:
   virtual void GetValue(char *s) const {
     sprintf_P(s, format, int(*value));
   }
-  virtual void IncValue(int8_t inc) {
-    *value = constrain(int(*value + inc * increment), (int)minVal, (int)maxVal);
+  virtual void IncValue(int8_t inc, bool cycle) {
+    int a = *value + inc * increment;
+    if (a > maxVal)
+      a = cycle ? minVal : maxVal;
+    else if (a < minVal)
+      a = cycle ? maxVal : minVal;
+
+    *value = a;
   }
 };
 
@@ -88,7 +94,7 @@ public:
   virtual void GetValue(char *s) const {
     sprintf_P(s, format, *value);
   }
-  virtual void IncValue(int8_t) {
+  virtual void IncValue(int8_t, bool) {
     if (++index >= nItems)
       index = 0;
     *value = items[index];
@@ -155,10 +161,10 @@ public:
       lcd.printAt(lcd.nCols - 1, lcd.nRows - 1, CH_DW);
   }
 
-  void IncCurrent(int8_t increment) {
+  void IncCurrent(int8_t increment, bool cycle = false) {
     byte cur = GetCursor();
 
-    items[index]->IncValue(increment);
+    items[index]->IncValue(increment, cycle);
     UpdateItem(items[index], cur);
   }
 

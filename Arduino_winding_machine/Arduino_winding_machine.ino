@@ -219,12 +219,12 @@ void loop() {
       case SpeedSet:
       case LaySet:
       case AccelSet:
-      case CurrentTrans:
         ValueEdit();
         break;
+      case CurrentTrans:
       case miSettingsStopPerLevel:
       case Direction:
-        menu.IncCurrent(1);
+        menu.IncCurrent(1, true);
         break;
       case StartAll:
         AutoWindingAll(params, WINDING_COUNT);
@@ -249,7 +249,7 @@ void loop() {
 
       case ShaftStepMul:
       case LayerStepMul:
-        menu.IncCurrent(1);
+        menu.IncCurrent(1, true);
         ((IntMenuItem *)menu[menu.index - 1])->increment = *((SetMenuItem *)menu[menu.index])->value;
         break;
       case PosCancel:
