@@ -80,6 +80,7 @@ enum menu_states
   Winding1,
   Winding2,
   Winding3,
+  StartAll,
   WindingBack,
   TurnsSet,
   LaySet,
@@ -113,7 +114,8 @@ MenuItem *menuItems[] =
         new ValMenuItem(1, 0, MENU_06, MENU_FORMAT_06),
         new ValMenuItem(1, 1, MENU_07, MENU_FORMAT_06),
         new ValMenuItem(1, 2, MENU_08, MENU_FORMAT_06),
-        new MenuItem(1, 3, MENU_09),
+        new MenuItem(1, 3, MENU_15),
+        new MenuItem(1, 4, MENU_09),
 
         new UIntMenuItem(2, 0, MENU_10, MENU_FORMAT_10, NULL, 1, 999),
         new UIntMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 99),
@@ -144,6 +146,8 @@ LiquidCrystalCyr lcd(DISPLAY_ADDRESS, DISPLAY_NCOL, DISPLAY_NROW);
 #endif
 
 MainMenu menu(menuItems, LENGTH(menuItems), lcd);
+MainScreen screen(lcd);
+
 
 GStepper2<STEPPER2WIRE> shaftStepper(STEPPER_STEPS_COUNT, STEPPER_STEP_Z, STEPPER_DIR_Z, STEPPER_EN);
 GStepper2<STEPPER2WIRE> layerStepper(STEPPER_STEPS_COUNT, STEPPER_STEP_A, STEPPER_DIR_A, STEPPER_EN);
@@ -225,9 +229,13 @@ void loop()
     case Direction:
       menu.IncCurrent(1);
       break;
+    case StartAll:
+      AutoWindingAll(params, WINDING_COUNT);
+      menu.Draw(true);
+      break;
     case Start:
       SaveSettings();
-      AutoWindingPrg();
+      AutoWindingAll(params + currentWinding, 1);
       menu.index = Winding1 + currentWinding;
       UpdateMenuItemText(currentWinding);
       break;
@@ -326,11 +334,11 @@ ISR(TIMER1_COMPA_vect)
     stopTimer();
 }
 
-void AutoWindingPrg() // Подпрограмма автоматической намотки
+void AutoWinding(const Winding &w, bool& direction) // Подпрограмма автоматической намотки
 {
+  if (!w.turns || !w.layers || !w.step || !w.speed) return;
+
   Winding current; // Текущий виток и слой при автонамотке
-  const Winding &w = params[currentWinding];
-  MainScreen screen(lcd, w, current);
 
   DebugWrite("Start");
 
@@ -352,7 +360,7 @@ void AutoWindingPrg() // Подпрограмма автоматической �
   planner.setMaxSpeed(STEPPER_STEPS_COUNT * current.speed / 60L);
 
   int32_t dShaft = -STEPPER_STEPS_COUNT * w.turns;
-  int32_t dLayer = -STEPPER_STEPS_COUNT * w.turns * w.step / int32_t(THREAD_PITCH) * (w.dir ? 1 : -1);
+  int32_t dLayer = -STEPPER_STEPS_COUNT * w.turns * w.step / int32_t(THREAD_PITCH) * (direction ? 1 : -1);
   int32_t p[] = {dShaft, dLayer};
 
   planner.reset();
@@ -377,11 +385,12 @@ void AutoWindingPrg() // Подпрограмма автоматической �
       planner.setTarget(p, RELATIVE);
       ++current.layers;
       p[1] = -p[1];
+      direction = !direction;
 
       startTimer();
       setPeriod(planner.getPeriod());
 
-      screen.UpdateLayers();
+      screen.UpdateLayers(current.layers);
     }
 
     encoder.tick();
@@ -415,7 +424,7 @@ void AutoWindingPrg() // Подпрограмма автоматической �
     {                                                                                               // Если повернуть энкодер во время автонамотки,
       current.speed = constrain(current.speed + encoder.dir() * SPEED_INC, SPEED_INC, SPEED_LIMIT); // то меняем значение скорости
       planner.setMaxSpeed(STEPPER_STEPS_COUNT * current.speed / 60L);
-      screen.UpdateSpeed();
+      screen.UpdateSpeed(current.speed);
     }
 
     static uint32_t tmr;
@@ -426,7 +435,7 @@ void AutoWindingPrg() // Подпрограмма автоматической �
       int total_turns = (abs(shaftStepper.pos)) / STEPPER_STEPS_COUNT;
       current.turns = total_turns % w.turns;
 
-      screen.UpdateTurns();
+      screen.UpdateTurns(current.turns);
       // DebugWrite("planner.getStatus", planner.getStatus());
       // DebugWrite("", shaftStepper.pos, layerStepper.pos);
 
@@ -436,11 +445,33 @@ void AutoWindingPrg() // Подпрограмма автоматической �
 
   layerStepper.disable();
   shaftStepper.disable(); 
+}
+
+void AutoWindingAll(const Winding windings[], byte n)
+{  
+  bool direction = windings[0].dir;
+  for (byte i = 0; i < n; ++i)
+  {
+    const Winding &w = windings[i]; 
+    if (!w.turns || !w.layers || !w.step || !w.speed) continue;
+
+    screen.Init(w);
+    if (n > 1)
+    {
+      screen.Draw(); 
+      screen.Message(STRING_3, i+1);
+      buzzer.Multibeep(2, 200, 200);
+      WaitButton();      
+    }
+
+    AutoWinding(w, direction);  
+  }
 
   screen.Message(STRING_1); // "AUTOWINDING DONE"
   buzzer.Multibeep(3, 200, 200);
   WaitButton();
 }
+
 
 void WaitButton()
 {

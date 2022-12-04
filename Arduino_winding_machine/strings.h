@@ -24,7 +24,8 @@ const char STRING_ON[] = "бйк ";
 const char STRING_OFF[] = "бшйк";
 
 const char PROGMEM STRING_1[] = "мюлнрйю нйнмвемю";
-const char PROGMEM STRING_2[] = "мюфлхре щмйндеп ";
+const char PROGMEM STRING_2[] = "мюфлхре щмйндеп";
+const char PROGMEM STRING_3[] = "налнрйю %d ярюпр";
 
 const char PROGMEM MENU_01[] = "цпсоою 1";
 const char PROGMEM MENU_02[] = "цпсоою 2";
@@ -59,7 +60,8 @@ const char STRING_ON[] = "ON ";
 const char STRING_OFF[] = "OFF";
 
 const char PROGMEM STRING_1[] = "AUTOWINDING DONE";
-const char PROGMEM STRING_2[] = "PRESS CONTINUE  ";
+const char PROGMEM STRING_2[] = "PRESS CONTINUE";
+const char PROGMEM STRING_3[] = "WINDING %d START";
 
 const char PROGMEM MENU_01[] = "Setup 1";
 const char PROGMEM MENU_02[] = "Setup 2";

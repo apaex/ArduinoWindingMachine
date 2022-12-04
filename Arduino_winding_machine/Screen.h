@@ -8,34 +8,37 @@ class MainScreen
 {
 public:
   LiquidCrystalCyr &lcd;
-  const Winding &w;
-  const Winding &current;
+  const Winding *w = 0;
 
-  MainScreen(LiquidCrystalCyr &lcd_, const Winding &w_, const Winding &current_) : lcd(lcd_), w(w_), current(current_) {}
+  MainScreen(LiquidCrystalCyr &lcd_) : lcd(lcd_) {}
 
-  void Draw() // Подпрограмма вывода экрана автонамотки
+  void Init(const Winding &w_)
   {
+    w = &w_;
+  }
+
+  void Draw() 
+  {
+    if (!w) return;
     lcd.clear();
-    lcd.printfAt_P(0, 0, LINE1_FORMAT, current.turns, w.turns, current.layers, w.layers);
-    lcd.printfAt_P(0, 1, LINE2_FORMAT, current.speed, w.step);
-    UpdateTurns();
-    UpdateLayers();
-    UpdateSpeed();
+    
+    lcd.printfAt_P(0, 0, LINE1_FORMAT, 0, w->turns, 0, w->layers);
+    lcd.printfAt_P(0, 1, LINE2_FORMAT, w->speed, w->step);    
   }
 
-  void UpdateTurns()
+  void UpdateTurns(uint16_t v)
   {
-    lcd.printfAt_P(1, 0, LINE4_FORMAT, current.turns + 1);
+    lcd.printfAt_P(1, 0, LINE4_FORMAT, v);
   }
 
-  void UpdateLayers()
+  void UpdateLayers(uint16_t v)
   {
-    lcd.printfAt_P(10, 0, LINE5_FORMAT, current.layers);
+    lcd.printfAt_P(10, 0, LINE5_FORMAT, v);
   }
 
-  void UpdateSpeed()
+  void UpdateSpeed(uint16_t v)
   {
-    lcd.printfAt_P(2, 1, LINE6_FORMAT, current.speed);
+    lcd.printfAt_P(2, 1, LINE6_FORMAT, v);
   }
 
   void PlannerStatus(byte status)
@@ -43,16 +46,34 @@ public:
     if (status >= LENGTH(plannerStatuses))
       return;
 
-    PrintLine(3, plannerStatuses[status]);
+    PrintLine_P(3, plannerStatuses[status]);
   }
 
   void Message(PGM_P st)
   {
-    PrintLine((lcd.nRows < 4) ? 1 : 3, st);
+    PrintLine_P((lcd.nRows < 4) ? 1 : 3, st);
+  }
+
+  void Message(PGM_P format, byte param)
+  {
+    char s[21];
+    sprintf_P(s, format, param);
+    PrintLine((lcd.nRows < 4) ? 1 : 3, s);
   }
 
 private:
   void PrintLine(byte row, PGM_P st)
+  {
+    if (row >= lcd.nRows)
+      return;
+
+    lcd.printAt(0, row, st);
+
+    for (byte i = strlen(st); i < lcd.nCols; ++i)
+      lcd.print(' ');
+  }
+
+  void PrintLine_P(byte row, PGM_P st)
   {
     if (row >= lcd.nRows)
       return;
