@@ -278,8 +278,8 @@ void ValueEdit()
   {
     encoder.tick();
 
-    if (encoder.turn()) // Проверяем изменение позиции энкодера
-      menu.IncCurrent(encoder.dir());
+    if (encoder.turn() || encoder.turnH()) // Проверяем изменение позиции энкодера
+      menu.IncCurrent(encoder.dir() * (encoder.state() ? 10 : 1));
 
   } while (!encoder.click());
   menu.DrawQuotes(0);
