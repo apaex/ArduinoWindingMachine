@@ -339,7 +339,7 @@ void AutoWinding(const Winding &w, bool& direction) // Подпрограмма 
   if (!w.turns || !w.layers || !w.step || !w.speed) return;
 
   Winding current; // Текущий виток и слой при автонамотке
-  screen.Init(w,current);
+  screen.SetCurrent(current);
 
   DebugWrite("Start");
 
@@ -451,28 +451,36 @@ void AutoWinding(const Winding &w, bool& direction) // Подпрограмма 
 void AutoWindingPrg() // Подпрограмма автоматической намотки
 {
   bool direction = params[currentWinding].dir;
-  AutoWinding(params[currentWinding], direction);  
+
+  const Winding &w = params[currentWinding]; 
+  screen.Init(w);
+  AutoWinding(w, direction);  
    
   screen.Message(STRING_1); // "AUTOWINDING DONE"
-  buzzer.Multibeep(3, 600, 300);
+  buzzer.Multibeep(3, 200, 200);
   WaitButton();
 }
 
 void AutoWindingAllPrg()
-{
+{  
   bool direction = params[0].dir;
   for (byte i = 0; i < WINDING_COUNT; ++i)
   {
-    const Winding &w = params[i];
-    
+    const Winding &w = params[i]; 
+    screen.Init(w);
+    screen.Draw();   
     if (!w.turns || !w.layers || !w.step || !w.speed) continue;
- 
-    AutoWinding(w, direction);  
-    
-    screen.Message(STRING_1); // "AUTOWINDING DONE"
-    buzzer.Multibeep(3, 600, 300);
+
+    screen.Message(STRING_3, i+1);
+    buzzer.Multibeep(2, 200, 200);
     WaitButton();
+
+    AutoWinding(w, direction);  
   }
+
+  screen.Message(STRING_1); // "AUTOWINDING DONE"
+  buzzer.Multibeep(3, 200, 200);
+  WaitButton();
 }
 
 void WaitButton()
