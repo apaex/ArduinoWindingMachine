@@ -1,4 +1,3 @@
-#include "config.h"
 #pragma once
 
 class Buzzer {
