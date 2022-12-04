@@ -438,7 +438,7 @@ void AutoWindingPrg() // Подпрограмма автоматической �
   shaftStepper.disable(); 
 
   screen.Message(STRING_1); // "AUTOWINDING DONE"
-  buzzer.Multibeep(3, 600, 300);
+  buzzer.Multibeep(3, 200, 200);
   WaitButton();
 }
 

@@ -9,14 +9,15 @@ public:
     pinMode(BUZZER, OUTPUT);
   };
   
-  void Multibeep(int beeps, int on, int off)
+  void Multibeep(byte beeps, unsigned int on, unsigned int off)
   {
-    for (int i = 0; i < beeps; ++i)
+    for (byte i = 0; i < beeps; ++i)
     {
       digitalWrite(_pin, HIGH);
       delay(on);
       digitalWrite(_pin, LOW);
-      delay(off);
+      if (i + 1 < beeps)
+        delay(off);
     }
   }
 
