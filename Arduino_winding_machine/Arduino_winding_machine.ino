@@ -72,8 +72,7 @@ Settings settings;
 
 enum menu_states {
   Autowinding1,
-  Autowinding2,
-  Autowinding3,
+  CurrentTrans,  
   PosControl,
   miSettings,
   Winding1,
@@ -101,13 +100,13 @@ enum menu_states {
 const char *boolSet[] = { STRING_OFF, STRING_ON };
 const char *dirSet[] = { "<<<", ">>>" };
 const uint8_t *stepSet[] = { 1, 10, 100 };
+const uint8_t *transSet[] = { 0, 1, 2 };
 
 MenuItem *menuItems[] = {
   new MenuItem(0, 0, MENU_01),
-  new MenuItem(0, 1, MENU_02),
-  new MenuItem(0, 2, MENU_03),
-  new MenuItem(0, 3, MENU_04),
-  new MenuItem(0, 4, MENU_05),
+  new SetMenuItem(0, 1, MENU_02, MENU_FORMAT_02, &currentTransformer, transSet, 3),
+  new MenuItem(0, 2, MENU_04),
+  new MenuItem(0, 3, MENU_05),
 
   new ValMenuItem(1, 0, MENU_06, MENU_FORMAT_06),
   new ValMenuItem(1, 1, MENU_07, MENU_FORMAT_06),
@@ -185,8 +184,6 @@ void loop() {
     switch (menu.index)  // Если было нажатие, то выполняем действие, соответствующее текущей позиции курсора
     {
       case Autowinding1:
-      case Autowinding2:
-      case Autowinding3:
         currentTransformer = menu.index - Autowinding1;
         LoadSettings();
         menu.index = Winding1;
@@ -195,6 +192,7 @@ void loop() {
         UpdateMenuItemText(1);
         UpdateMenuItemText(2);
         break;
+      case CurrentTrans: break;
       case Winding1:
       case Winding2:
       case Winding3:
@@ -430,7 +428,7 @@ void AutoWindingAll(const Winding windings[], byte n) {
     if (!w.turns || !w.layers || !w.step || !w.speed) continue;
 
     screen.Init(w);
-    
+
     if (n > 1) {
       screen.Draw();
       screen.Message(STRING_3, i + 1);

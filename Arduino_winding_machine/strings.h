@@ -18,6 +18,8 @@ const char PROGMEM MENU_FORMAT_13[] = "%02d";
 const char PROGMEM MENU_FORMAT_11[] = "0.%03d";
 const char PROGMEM MENU_FORMAT_17[] = "%+04d";
 
+const char PROGMEM MENU_FORMAT_02[] = "%d";
+
 #if LANGUAGE == RU
 
 const char STRING_ON[] = "¬ À ";
@@ -27,9 +29,8 @@ const char PROGMEM STRING_1[] = "Õ¿ÃŒ“ ¿ Œ ŒÕ◊≈Õ¿";
 const char PROGMEM STRING_2[] = "Õ¿∆Ã»“≈ ›Õ Œƒ≈–";
 const char PROGMEM STRING_3[] = "Œ¡ÃŒ“ ¿ %d —“¿–“";
 
-const char PROGMEM MENU_01[] = "√–”œœ¿ 1";
-const char PROGMEM MENU_02[] = "√–”œœ¿ 2";
-const char PROGMEM MENU_03[] = "√–”œœ¿ 3";
+const char PROGMEM MENU_01[] = "¿¬“ŒÕ¿ÃŒ“ ¿";
+const char PROGMEM MENU_02[] = " ŒÕ‘»√";
 const char PROGMEM MENU_04[] = "œŒ«»÷»»";
 const char PROGMEM MENU_05[] = "Õ¿—“–Œ… »";
 const char PROGMEM MENU_06[] = "Œ¡ÃŒ“ ¿ 1";
@@ -63,9 +64,8 @@ const char PROGMEM STRING_1[] = "AUTOWINDING DONE";
 const char PROGMEM STRING_2[] = "PRESS CONTINUE";
 const char PROGMEM STRING_3[] = "WINDING %d START";
 
-const char PROGMEM MENU_01[] = "Setup 1";
-const char PROGMEM MENU_02[] = "Setup 2";
-const char PROGMEM MENU_03[] = "Setup 3";
+const char PROGMEM MENU_01[] = "Autowinding";
+const char PROGMEM MENU_02[] = "Setup";
 const char PROGMEM MENU_04[] = "Pos control";
 const char PROGMEM MENU_05[] = "Settings";
 const char PROGMEM MENU_06[] = "Winding 1";
