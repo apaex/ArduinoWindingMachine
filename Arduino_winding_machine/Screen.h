@@ -20,8 +20,8 @@ public:
     if (!w) return;
     lcd.clear();
 
-    lcd.printfAt_P(0, 0, LINE1_FORMAT, 0, w->turns, 0, w->layers);
-    lcd.printfAt_P(0, 1, LINE2_FORMAT, w->speed, w->step);
+    lcd.printfAt_P(0, 0, LINE1_FORMAT, 0, w->turns, w->speed);
+    lcd.printfAt_P(0, 1, LINE2_FORMAT,  0, w->layers, w->step);
   }
 
   void UpdateTurns(uint16_t v) {
@@ -29,11 +29,11 @@ public:
   }
 
   void UpdateLayers(uint16_t v) {
-    lcd.printfAt_P(10, 0, LINE5_FORMAT, v);
+    lcd.printfAt_P(1, 1, LINE5_FORMAT, v);
   }
 
   void UpdateSpeed(uint16_t v) {
-    lcd.printfAt_P(2, 1, LINE6_FORMAT, v);
+    lcd.printfAt_P(9, 0, LINE6_FORMAT, v);
   }
 
   void PlannerStatus(byte status) {
