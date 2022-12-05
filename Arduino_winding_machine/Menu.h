@@ -68,10 +68,10 @@ public:
     : MenuItem(screen_, num_, text_), format(format_), value(value_), minVal(min_), maxVal(max_), increment(increment_) {}
 
   virtual void GetValue(char *s) const {
-    sprintf_P(s, format, int(*value));
+    sprintf_P(s, format, *value);
   }
   virtual void IncValue(int8_t inc, bool cycle) {
-    int a = *value + inc * increment;
+    T a = *value + inc * increment;
     if (a > maxVal)
       a = cycle ? minVal : maxVal;
     else if (a < minVal)
@@ -104,9 +104,8 @@ private:
   uint8_t index = 0;
 };
 
-typedef VariableMenuItem<uint8_t> ByteMenuItem;
+typedef VariableMenuItem<int8_t> ByteMenuItem;
 typedef VariableMenuItem<int16_t> IntMenuItem;
-typedef VariableMenuItem<uint16_t> UIntMenuItem;
 typedef ValueMenuItem<uint16_t> ValMenuItem;
 
 class MainMenu {
