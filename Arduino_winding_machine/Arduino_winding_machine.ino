@@ -133,7 +133,7 @@ MenuItem *menuItems[] = {
   new MenuItem(10, 4, MENU_09),
 
   new BoolMenuItem(11, 0, MENU_22, &settings.stopPerLayer, boolSet),
-  new IntMenuItem(11, 1, MENU_23, MENU_FORMAT_10, &settings.acceleration, 0, 600, 10),
+  new IntMenuItem(11, 1, MENU_23, MENU_FORMAT_10, &settings.acceleration, 0, 600, 1),
   new MenuItem(11, 2, MENU_09),
 };
 
