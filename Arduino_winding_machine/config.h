@@ -35,4 +35,4 @@
 
 #define LANGUAGE            RU           // EN, RU
 //#define DEBUG
-#define TRANSFORMER_COUNT   3
+#define TRANSFORMER_COUNT   3            // 36 max
