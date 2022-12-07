@@ -317,12 +317,20 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos) {
   menu.DrawQuotes(0);
 }
 
+double speedMult = 1;
+
 ISR(TIMER1_COMPA_vect) {
   if (planner.tickManual())
-    setPeriod(planner.getPeriod());
+    setPeriod(planner.getPeriod() * speedMult);
   else
     stopTimer();
 }
+
+uint32_t getSpeed() {
+  uint32_t p = planner.getPeriod();
+  return (p == 0) ? 0 : (60000000ul / (STEPPER_STEPS_COUNT * p));
+}
+
 
 void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма автоматической намотки
 {
@@ -333,6 +341,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
   current.turns = 0;
   current.layers = 0;
   current.speed = w.speed;
+  speedMult = 1;
   current.dir = w.dir;
   current.step = w.step;
 
@@ -345,7 +354,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
   layerStepper.enable();
 
   planner.setAcceleration(STEPPER_STEPS_COUNT * settings.acceleration / 60L);
-  planner.setMaxSpeed(STEPPER_STEPS_COUNT * current.speed / 60L);
+  planner.setMaxSpeed(STEPPER_STEPS_COUNT * w.speed / 60L);
 
   int32_t dShaft = -STEPPER_STEPS_COUNT * w.turns;
   int32_t dLayer = -STEPPER_STEPS_COUNT * w.turns * w.step / int32_t(THREAD_PITCH) * (direction ? 1 : -1);
@@ -373,7 +382,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
       direction = !direction;
 
       startTimer();
-      setPeriod(planner.getPeriod());
+      setPeriod(planner.getPeriod() * speedMult);
 
       screen.UpdateLayers(current.layers);
     }
@@ -393,7 +402,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
         planner.resume();
         interrupts();
         startTimer();
-        setPeriod(planner.getPeriod());
+        setPeriod(planner.getPeriod() * speedMult);
       } else {
         noInterrupts();
         planner.stop();
@@ -403,7 +412,8 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
 
     if (encoder.turn()) {                                                                            // Если повернуть энкодер во время автонамотки,
       current.speed = constrain(current.speed + encoder.dir() * SPEED_INC, SPEED_INC, SPEED_LIMIT);  // то меняем значение скорости
-      planner.setMaxSpeed(STEPPER_STEPS_COUNT * current.speed / 60L);
+      //planner.setMaxSpeed(STEPPER_STEPS_COUNT * current.speed / 60L);
+      speedMult = double(w.speed) / double(current.speed);
       screen.UpdateSpeed(current.speed);
     }
 
@@ -416,7 +426,6 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
       screen.UpdateTurns(total_turns % w.turns + 1);
       // DebugWrite("planner.getStatus", planner.getStatus());
       // DebugWrite("", shaftStepper.pos, layerStepper.pos);
-
       screen.PlannerStatus(planner.getStatus());
     }
   }
