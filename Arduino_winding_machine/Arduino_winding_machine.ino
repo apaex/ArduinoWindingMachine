@@ -68,6 +68,12 @@ https://cxem.net/arduino/arduino245.php
 #define TRANSFORMER_COUNT 3
 #endif
 #define WINDING_COUNT 3
+#ifndef STEPPER_Z_REVERSE
+#define STEPPER_Z_REVERSE 0
+#endif
+#ifndef STEPPER_A_REVERSE
+#define STEPPER_A_REVERSE 0
+#endif
 
 Winding params[WINDING_COUNT];
 
@@ -165,6 +171,8 @@ void setup() {
 
   layerStepper.disable();
   shaftStepper.disable();
+  layerStepper.reverse(STEPPER_Z_REVERSE);
+  shaftStepper.reverse(STEPPER_A_REVERSE);
   planner.addStepper(0, shaftStepper);
   planner.addStepper(1, layerStepper);
 
