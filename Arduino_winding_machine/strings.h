@@ -7,7 +7,7 @@
 #define RU 2
 
 const char PROGMEM LINE1_FORMAT[] = "T%03d/%03d %03drpm";
-const char PROGMEM LINE2_FORMAT[] = "L%02d/%02d 0.%03dmm";
+const char PROGMEM LINE2_FORMAT[] = "L%02d/%02d %d.%03dmm";
 const char PROGMEM LINE4_FORMAT[] = "%03d";
 const char PROGMEM LINE5_FORMAT[] = "%02d";
 const char PROGMEM LINE6_FORMAT[] = "%03d";
@@ -16,7 +16,7 @@ const char PROGMEM MENU_FORMAT_02[] = "%d";
 const char PROGMEM MENU_FORMAT_06[] = "% 4dT";
 const char PROGMEM MENU_FORMAT_10[] = "%03d";
 const char PROGMEM MENU_FORMAT_13[] = "%02d";
-const char PROGMEM MENU_FORMAT_11[] = "0.%03d";
+const char PROGMEM MENU_FORMAT_11[] = "%d.%03d";
 const char PROGMEM MENU_FORMAT_17[] = "%+04d";
 
 

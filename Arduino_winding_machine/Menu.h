@@ -81,6 +81,17 @@ public:
   }
 };
 
+class FloatMenuItem : public VariableMenuItem<int> {
+public:
+  FloatMenuItem(byte screen_, byte num_, const char *text_, const char *format_, int *value_, int min_, int max_, int increment_ = 1)
+    : VariableMenuItem<int>(screen_, num_, text_, format_, value_, min_, max_, increment_) {}
+
+  virtual void GetValue(char *s) const {
+    sprintf_P(s, format, *value / 1000, *value % 1000);
+  }
+};
+
+
 class SetMenuItem : public MenuItem {
 public:
   const char *format;  // Формат значения при вводе переменной
