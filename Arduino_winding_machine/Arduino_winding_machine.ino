@@ -409,8 +409,11 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
         noInterrupts();
         planner.resume();
         interrupts();
-        startTimer();
-        setPeriod(planner.getPeriod() * speedMult);
+        if (planner.getStatus())
+        {
+          startTimer();
+          setPeriod(planner.getPeriod() * speedMult);
+        }
       } else {
         noInterrupts();
         planner.stop();
@@ -432,8 +435,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
       int total_turns = (abs(shaftStepper.pos)) / STEPPER_STEPS_COUNT;
 
       screen.UpdateTurns(total_turns % w.turns + 1);
-      // DebugWrite("planner.getStatus", planner.getStatus());
-      // DebugWrite("", shaftStepper.pos, layerStepper.pos);
+      // DebugWrite("pos", shaftStepper.pos, layerStepper.pos);
       screen.PlannerStatus(planner.getStatus());
     }
   }
