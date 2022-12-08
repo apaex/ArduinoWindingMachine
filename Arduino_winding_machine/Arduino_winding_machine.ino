@@ -327,7 +327,7 @@ ISR(TIMER1_COMPA_vect) {
 }
 
 uint32_t getSpeed() {
-  uint32_t p = planner.getPeriod();
+  uint32_t p = planner.getPeriod() * speedMult;
   return (p == 0) ? 0 : (60000000ul / (STEPPER_STEPS_COUNT * p));
 }
 
