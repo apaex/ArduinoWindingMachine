@@ -6,7 +6,7 @@ struct Winding {
   uint16_t turns = 0;
   uint16_t step = 0;
   uint16_t speed = 30;
-  uint16_t layers = 0;
+  uint16_t total_turns = 0;
   bool dir = 1;
 };
 
@@ -14,7 +14,7 @@ void Load(Winding &o, int &p) {
   EEPROM_load(p, o.turns);
   EEPROM_load(p, o.step);
   EEPROM_load(p, o.speed);
-  EEPROM_load(p, o.layers);
+  EEPROM_load(p, o.total_turns);
   EEPROM_load(p, o.dir);
 }
 
@@ -22,7 +22,7 @@ void Save(const Winding &o, int &p) {
   EEPROM_save(p, o.turns);
   EEPROM_save(p, o.step);
   EEPROM_save(p, o.speed);
-  EEPROM_save(p, o.layers);
+  EEPROM_save(p, o.total_turns);
   EEPROM_save(p, o.dir);
 }
 

@@ -21,7 +21,7 @@ public:
     lcd.clear();
 
     lcd.printfAt_P(0, 0, LINE1_FORMAT, 0, w->turns, w->speed);
-    lcd.printfAt_P(0, 1, LINE2_FORMAT,  0, w->layers, w->step / 1000, w->step % 1000);
+    lcd.printfAt_P(0, 1, LINE2_FORMAT,  0, w->total_turns / w->turns, w->step / 1000, w->step % 1000);
   }
 
   void UpdateTurns(uint16_t v) {

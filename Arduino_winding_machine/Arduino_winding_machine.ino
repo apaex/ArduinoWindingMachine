@@ -124,8 +124,8 @@ MenuItem *menuItems[] = {
   new MenuItem(1, 3, MENU_15),
   new MenuItem(1, 4, MENU_09),
 
-  new IntMenuItem(2, 0, MENU_10, MENU_FORMAT_10, NULL, 1, 999),
-  new IntMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 99),
+  new IntMenuItem(2, 0, MENU_13, MENU_FORMAT_13, NULL, 1, 9999),
+  new IntMenuItem(2, 1, MENU_10, MENU_FORMAT_10, NULL, 1, 999),
   new FloatMenuItem(2, 2, MENU_11, MENU_FORMAT_11, NULL, 5, 9995, 5),
   new IntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, SPEED_INC, SPEED_LIMIT, SPEED_INC),
   new BoolMenuItem(2, 4, MENU_14, NULL, dirSet),
@@ -213,7 +213,7 @@ void loop() {
         ((IntMenuItem *)menu[TurnsSet])->value = &params[currentWinding].turns;
         ((IntMenuItem *)menu[StepSet])->value = &params[currentWinding].step;
         ((IntMenuItem *)menu[SpeedSet])->value = &params[currentWinding].speed;
-        ((IntMenuItem *)menu[LaySet])->value = &params[currentWinding].layers;
+        ((IntMenuItem *)menu[LaySet])->value = &params[currentWinding].total_turns;
         ((BoolMenuItem *)menu[Direction])->value = &params[currentWinding].dir;
         break;
       case WindingBack:
@@ -280,7 +280,7 @@ void loop() {
 }
 
 void UpdateMenuItemText(byte i) {
-  ((ValMenuItem *)menu[Winding1 + i])->value = params[i].turns * params[i].layers;
+  ((ValMenuItem *)menu[Winding1 + i])->value = params[i].total_turns;
 }
 
 void ValueEdit() {
@@ -347,7 +347,8 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
   DebugWrite("Start");
 
   current.turns = 0;
-  current.layers = 0;
+  current.total_turns = 0;
+  int current_layers = 0;
   current.speed = w.speed;
   speedMult = 1;
   current.dir = w.dir;
@@ -374,30 +375,38 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
   while (1) {
     if (planner.getStatus() == 0 && run) {
       DebugWrite("READY");
-      if (current.layers >= w.layers)
+      if (current.total_turns >= w.total_turns)
         break;
 
-      if (settings.stopPerLayer && (current.layers > 0)) {
+      if (settings.stopPerLayer && (current_layers > 0)) {
         screen.Message(STRING_2);  // "PRESS CONTINUE  "
         WaitButton();
         screen.Draw();
       }
 
+      if (w.total_turns - current.total_turns < w.turns)
+        p[1] = -STEPPER_STEPS_COUNT * (w.total_turns - current.total_turns) * w.step / int32_t(THREAD_PITCH) * (direction ? 1 : -1);
+
       DebugWrite("setTarget", p[0], p[1]);
       planner.setTarget(p, RELATIVE);
-      ++current.layers;
+      
+      ++current_layers;
+
+
+
       p[1] = -p[1];
+      current.total_turns += w.turns;
       direction = !direction;
 
       startTimer();
       setPeriod(planner.getPeriod() * speedMult);
 
-      screen.UpdateLayers(current.layers);
+      screen.UpdateLayers(current_layers);
     }
 
     encoder.tick();
     pedal.tick();
-
+    
     bool oldState = run;
     if (pedal.press() || pedal.release())
       run = pedal.state();
@@ -449,7 +458,7 @@ void AutoWindingAll(const Winding windings[], byte n) {
 
   for (byte i = 0; i < n; ++i) {
     const Winding &w = windings[i];
-    if (!w.turns || !w.layers || !w.step || !w.speed) continue;
+    if (!w.turns || !w.total_turns || !w.step || !w.speed) continue;
 
     screen.Init(w);
 
