@@ -52,7 +52,30 @@ https://cxem.net/arduino/arduino245.php
 #include "Winding.h"
 #include "strings.h"
 
-#define STEPPER_STEPS_COUNT (int32_t(STEPPER_STEPS) * STEPPER_MICROSTEPS)
+#ifndef STEPPER_A_STEPS
+#define STEPPER_A_STEPS STEPPER_STEPS
+#endif
+#ifndef STEPPER_Z_STEPS
+#define STEPPER_Z_STEPS STEPPER_STEPS
+#endif
+#ifndef STEPPER_A_MICROSTEPS
+#define STEPPER_A_MICROSTEPS STEPPER_MICROSTEPS
+#endif
+#ifndef STEPPER_Z_MICROSTEPS
+#define STEPPER_Z_MICROSTEPS STEPPER_MICROSTEPS
+#endif
+#ifndef STEPPER_Z_REVERSE
+#define STEPPER_Z_REVERSE 0
+#endif
+#ifndef STEPPER_A_REVERSE
+#define STEPPER_A_REVERSE 0
+#endif
+#ifndef TRANSFORMER_COUNT
+#define TRANSFORMER_COUNT 3
+#endif
+
+#define STEPPER_Z_STEPS_COUNT (int32_t(STEPPER_Z_STEPS) * STEPPER_Z_MICROSTEPS)
+#define STEPPER_A_STEPS_COUNT (int32_t(STEPPER_A_STEPS) * STEPPER_A_MICROSTEPS)
 #ifdef GS_FAST_PROFILE
 #define SPEED_LIMIT 600
 #else
@@ -64,16 +87,9 @@ https://cxem.net/arduino/arduino245.php
 #define EEPROM_SETTINGS_ADDR 0x00
 #define EEPROM_WINDINGS_ADDR 0x10
 #define EEPROM_WINDINGS_CLASTER (sizeof(Winding) * WINDING_COUNT + 1)
-#ifndef TRANSFORMER_COUNT
-#define TRANSFORMER_COUNT 3
-#endif
+
 #define WINDING_COUNT 3
-#ifndef STEPPER_Z_REVERSE
-#define STEPPER_Z_REVERSE 0
-#endif
-#ifndef STEPPER_A_REVERSE
-#define STEPPER_A_REVERSE 0
-#endif
+
 
 Winding params[WINDING_COUNT];
 
@@ -156,8 +172,8 @@ MainMenu menu(menuItems, LENGTH(menuItems), lcd);
 MainScreen screen(lcd);
 
 
-GStepper2<STEPPER2WIRE> shaftStepper(STEPPER_STEPS_COUNT, STEPPER_STEP_Z, STEPPER_DIR_Z, STEPPER_EN);
-GStepper2<STEPPER2WIRE> layerStepper(STEPPER_STEPS_COUNT, STEPPER_STEP_A, STEPPER_DIR_A, STEPPER_EN);
+GStepper2<STEPPER2WIRE> shaftStepper(STEPPER_Z_STEPS_COUNT, STEPPER_STEP_Z, STEPPER_DIR_Z, STEPPER_EN);
+GStepper2<STEPPER2WIRE> layerStepper(STEPPER_A_STEPS_COUNT, STEPPER_STEP_A, STEPPER_DIR_A, STEPPER_EN);
 GPlanner<STEPPER2WIRE, 2> planner;
 
 EncButton<EB_TICK, ENCODER_CLK, ENCODER_DT, ENCODER_SW> encoder(ENCODER_INPUT);
@@ -171,8 +187,8 @@ void setup() {
 
   layerStepper.disable();
   shaftStepper.disable();
-  layerStepper.reverse(STEPPER_Z_REVERSE);
-  shaftStepper.reverse(STEPPER_A_REVERSE);
+  layerStepper.reverse(!STEPPER_Z_REVERSE);
+  shaftStepper.reverse(!STEPPER_A_REVERSE);
   planner.addStepper(0, shaftStepper);
   planner.addStepper(1, layerStepper);
 
@@ -299,25 +315,21 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos) {
   menu.DrawQuotes(1);
   stepper.enable();
 
-  stepper.setAcceleration(STEPPER_STEPS_COUNT * settings.acceleration / 60);
-  stepper.setMaxSpeed(STEPPER_STEPS_COUNT / 2);
+  stepper.setAcceleration(STEPPER_Z_STEPS_COUNT * settings.acceleration / 60);
+  stepper.setMaxSpeed(STEPPER_Z_STEPS_COUNT / 2);
 
-  int oldPos = -pos * STEPPER_MICROSTEPS * 2;
-  stepper.setCurrent(oldPos);
-  stepper.setTarget(oldPos);
+  int o = pos; 
+  stepper.reset();
 
   do {
     stepper.tick();
     encoder.tick();
 
-    int newPos = -pos * STEPPER_MICROSTEPS * 2;
-    if (newPos != oldPos) {
-      stepper.setTarget(newPos);
-      oldPos = newPos;
-    }
-
     if (encoder.turn())
+    {
       menu.IncCurrent(encoder.dir());
+      stepper.setTargetDeg(pos-o);
+    }
 
   } while (!encoder.click() || stepper.getStatus() != 0);
 
@@ -336,7 +348,7 @@ ISR(TIMER1_COMPA_vect) {
 
 uint32_t getSpeed() {
   uint32_t p = planner.getPeriod() * speedMult;
-  return (p == 0) ? 0 : (60000000ul / (STEPPER_STEPS_COUNT * p));
+  return (p == 0) ? 0 : (60000000ul / (STEPPER_Z_STEPS_COUNT * p));
 }
 
 
@@ -361,11 +373,11 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
   shaftStepper.enable();  // Разрешение управления двигателями
   layerStepper.enable();
 
-  planner.setAcceleration(STEPPER_STEPS_COUNT * settings.acceleration / 60L);
-  planner.setMaxSpeed(STEPPER_STEPS_COUNT * w.speed / 60L);
+  planner.setAcceleration(STEPPER_Z_STEPS_COUNT * settings.acceleration / 60L);
+  planner.setMaxSpeed(STEPPER_Z_STEPS_COUNT * w.speed / 60L);
 
-  int32_t dShaft = -STEPPER_STEPS_COUNT * w.turns;
-  int32_t dLayer = -STEPPER_STEPS_COUNT * w.turns * w.step / int32_t(THREAD_PITCH) * (direction ? 1 : -1);
+  int32_t dShaft = STEPPER_Z_STEPS_COUNT * w.turns;
+  int32_t dLayer = STEPPER_A_STEPS_COUNT * w.turns * w.step / int32_t(THREAD_PITCH) * (direction ? 1 : -1);
   int32_t p[] = { dShaft, dLayer };
 
   planner.reset();
@@ -432,7 +444,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
     if (millis() - tmr >= 500) {
       tmr = millis();
 
-      int total_turns = (abs(shaftStepper.pos)) / STEPPER_STEPS_COUNT;
+      int total_turns = (abs(shaftStepper.pos)) / STEPPER_Z_STEPS_COUNT;
 
       screen.UpdateTurns(total_turns % w.turns + 1);
       // DebugWrite("pos", shaftStepper.pos, layerStepper.pos);
