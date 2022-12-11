@@ -397,7 +397,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
       }
 
       if (w.total_turns - current.total_turns < w.turns)
-        p[1] = -STEPPER_STEPS_COUNT * (w.total_turns - current.total_turns) * w.step / int32_t(THREAD_PITCH) * (direction ? 1 : -1);
+        p[1] = STEPPER_A_STEPS_COUNT * (w.total_turns - current.total_turns) * w.step / int32_t(THREAD_PITCH) * (direction ? 1 : -1);
 
       DebugWrite("setTarget", p[0], p[1]);
       planner.setTarget(p, RELATIVE);
