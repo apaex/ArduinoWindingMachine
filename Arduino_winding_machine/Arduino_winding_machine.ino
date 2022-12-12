@@ -336,6 +336,16 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos) {
   menu.DrawQuotes(0);
 }
 
+
+void CarriageReturn(int32_t pos) {
+  layerStepper.setTarget(pos);
+
+  do {
+    layerStepper.tick();
+  } while (layerStepper.getStatus());
+}
+
+
 double speedMult = 1;
 
 ISR(TIMER1_COMPA_vect) {
@@ -373,6 +383,8 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
   shaftStepper.enable();  // Разрешение управления двигателями
   layerStepper.enable();
 
+  layerStepper.setAcceleration(STEPPER_A_STEPS_COUNT * settings.acceleration / 60L * w.step / int32_t(THREAD_PITCH));  // скорости для возврата каретки
+  layerStepper.setMaxSpeed(STEPPER_A_STEPS_COUNT * w.speed / 60L * w.step / int32_t(THREAD_PITCH));
   planner.setAcceleration(STEPPER_Z_STEPS_COUNT * settings.acceleration / 60L);
   planner.setMaxSpeed(STEPPER_Z_STEPS_COUNT * w.speed / 60L);
 
@@ -395,15 +407,15 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
         screen.Draw();
       }
 
-      if (w.total_turns - current.total_turns < w.turns_per_level) // на последний слой считаем цель отдельно
+      if (w.total_turns - current.total_turns < w.turns_per_level)  // на последний слой считаем цель отдельно
       {
         p[0] = STEPPER_A_STEPS_COUNT * (w.total_turns - current.total_turns);
         p[1] = STEPPER_A_STEPS_COUNT * (w.total_turns - current.total_turns) * w.step / int32_t(THREAD_PITCH) * (direction ? 1 : -1);
-      }      
-      
+      }
+
       DebugWrite("setTarget", p[0] / STEPPER_Z_MICROSTEPS, p[1] / STEPPER_A_MICROSTEPS);
       planner.setTarget(p, RELATIVE);
-      
+
       ++current_layers;
       p[1] = -p[1];
 
@@ -418,7 +430,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
 
     encoder.tick();
     pedal.tick();
-    
+
     bool oldState = run;
     if (pedal.press() || pedal.release())
       run = pedal.state();
@@ -456,10 +468,15 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
 
       int total_turns = (abs(shaftStepper.pos)) / STEPPER_Z_STEPS_COUNT;
 
-      screen.UpdateTurns(total_turns+1);
+      screen.UpdateTurns(total_turns + 1);
       DebugWrite("pos", shaftStepper.pos / STEPPER_Z_MICROSTEPS, layerStepper.pos / STEPPER_A_MICROSTEPS);
       screen.PlannerStatus(planner.getStatus());
     }
+  }
+
+  if (layerStepper.pos) {
+    screen.Message(STRING_4);
+    CarriageReturn(direction ? 0 : dLayer);
   }
 
   layerStepper.disable();
