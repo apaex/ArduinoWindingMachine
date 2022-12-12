@@ -318,17 +318,16 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos) {
   stepper.setAcceleration(STEPPER_Z_STEPS_COUNT * settings.acceleration / 60);
   stepper.setMaxSpeed(STEPPER_Z_STEPS_COUNT / 2);
 
-  int o = pos; 
+  int o = pos;
   stepper.reset();
 
   do {
     stepper.tick();
     encoder.tick();
 
-    if (encoder.turn())
-    {
+    if (encoder.turn()) {
       menu.IncCurrent(encoder.dir());
-      stepper.setTargetDeg(pos-o);
+      stepper.setTargetDeg(pos - o);
     }
 
   } while (!encoder.click() || stepper.getStatus() != 0);
@@ -385,7 +384,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
   initTimer();
 
   while (1) {
-    if (planner.getStatus() == 0 && run) {
+    if (run && (planner.getStatus() == 0)) {
       DebugWrite("READY");
       if (current.total_turns >= w.total_turns)
         break;
@@ -427,13 +426,14 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
 
     if (run != oldState) {
       if (run) {
-        noInterrupts();
-        planner.resume();
-        interrupts();
-        if (planner.getStatus())
-        {
-          startTimer();
-          setPeriod(planner.getPeriod() * speedMult);
+        if (current.layers) {  // если цель не задали ещё, то не стартуем
+          noInterrupts();
+          planner.resume();
+          interrupts();
+          if (planner.getStatus()) {
+            startTimer();
+            setPeriod(planner.getPeriod() * speedMult);
+          }
         }
       } else {
         noInterrupts();
@@ -456,7 +456,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
       int total_turns = (abs(shaftStepper.pos)) / STEPPER_Z_STEPS_COUNT;
 
       screen.UpdateTurns(total_turns % w.turns + 1);
-      // DebugWrite("pos", shaftStepper.pos, layerStepper.pos);
+      DebugWrite("pos", shaftStepper.pos, layerStepper.pos);
       screen.PlannerStatus(planner.getStatus());
     }
   }
