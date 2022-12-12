@@ -24,10 +24,10 @@ void DebugWrite(T v) {
 }
 
 template<class T>
-void DebugWrite(const char *s, T v) {
+void DebugWrite(const char *st, T v) {
 #ifdef DEBUG
   TimePrint();
-  Serial.print(s);
+  Serial.print(st);
   Serial.print(": ");
   Serial.println(v);
 #endif
@@ -46,9 +46,12 @@ void DebugWrite(const char *st, int32_t x, int32_t y) {
 }
 
 template<class T>
-void DebugWrite(const T arr[], int n) {
+void DebugWrite(const char *st, const T arr[], int n) {
 #ifdef DEBUG
   TimePrint();
+  Serial.print(st);
+  Serial.print(": ");
+  
   for (int i = 0; i < n; ++i) {
     Serial.print(arr[i]);
     Serial.print(',');
