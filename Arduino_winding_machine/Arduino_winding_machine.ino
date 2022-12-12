@@ -226,10 +226,10 @@ void loop() {
       case Winding3:
         currentWinding = menu.index - Winding1;
         menu.index = TurnsSet;
-        ((IntMenuItem *)menu[TurnsSet])->value = &params[currentWinding].turns;
+        ((IntMenuItem *)menu[TurnsSet])->value = &params[currentWinding].total_turns;
         ((IntMenuItem *)menu[StepSet])->value = &params[currentWinding].step;
         ((IntMenuItem *)menu[SpeedSet])->value = &params[currentWinding].speed;
-        ((IntMenuItem *)menu[LaySet])->value = &params[currentWinding].total_turns;
+        ((IntMenuItem *)menu[LaySet])->value = &params[currentWinding].turns_per_level;
         ((BoolMenuItem *)menu[Direction])->value = &params[currentWinding].dir;
         break;
       case WindingBack:
@@ -357,7 +357,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
 
   DebugWrite("Start");
 
-  current.turns = 0;
+  current.turns_per_level = 0;
   current.total_turns = 0;
   int current_layers = 0;
   current.speed = w.speed;
@@ -376,8 +376,8 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
   planner.setAcceleration(STEPPER_Z_STEPS_COUNT * settings.acceleration / 60L);
   planner.setMaxSpeed(STEPPER_Z_STEPS_COUNT * w.speed / 60L);
 
-  int32_t dShaft = STEPPER_Z_STEPS_COUNT * w.turns;
-  int32_t dLayer = STEPPER_A_STEPS_COUNT * w.turns * w.step / int32_t(THREAD_PITCH) * (direction ? 1 : -1);
+  int32_t dShaft = STEPPER_Z_STEPS_COUNT * w.turns_per_level;
+  int32_t dLayer = STEPPER_A_STEPS_COUNT * w.turns_per_level * w.step / int32_t(THREAD_PITCH) * (direction ? 1 : -1);
   int32_t p[] = { dShaft, dLayer };
 
   planner.reset();
@@ -395,18 +395,19 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
         screen.Draw();
       }
 
-      if (w.total_turns - current.total_turns < w.turns)
+      if (w.total_turns - current.total_turns < w.turns_per_level) // на последний слой считаем цель отдельно
+      {
+        p[0] = STEPPER_A_STEPS_COUNT * (w.total_turns - current.total_turns);
         p[1] = STEPPER_A_STEPS_COUNT * (w.total_turns - current.total_turns) * w.step / int32_t(THREAD_PITCH) * (direction ? 1 : -1);
-
-      DebugWrite("setTarget", p[0], p[1]);
+      }      
+      
+      DebugWrite("setTarget", p[0] / STEPPER_Z_MICROSTEPS, p[1] / STEPPER_A_MICROSTEPS);
       planner.setTarget(p, RELATIVE);
       
       ++current_layers;
-
-
-
       p[1] = -p[1];
-      current.total_turns += w.turns;
+
+      current.total_turns += w.turns_per_level;
       direction = !direction;
 
       startTimer();
@@ -426,7 +427,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
 
     if (run != oldState) {
       if (run) {
-        if (current.layers) {  // если цель не задали ещё, то не стартуем
+        if (current_layers) {  // если цель не задали ещё, то не стартуем
           noInterrupts();
           planner.resume();
           interrupts();
@@ -455,8 +456,8 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
 
       int total_turns = (abs(shaftStepper.pos)) / STEPPER_Z_STEPS_COUNT;
 
-      screen.UpdateTurns(total_turns % w.turns + 1);
-      DebugWrite("pos", shaftStepper.pos, layerStepper.pos);
+      screen.UpdateTurns(total_turns+1);
+      DebugWrite("pos", shaftStepper.pos / STEPPER_Z_MICROSTEPS, layerStepper.pos / STEPPER_A_MICROSTEPS);
       screen.PlannerStatus(planner.getStatus());
     }
   }
@@ -470,7 +471,7 @@ void AutoWindingAll(const Winding windings[], byte n) {
 
   for (byte i = 0; i < n; ++i) {
     const Winding &w = windings[i];
-    if (!w.turns || !w.total_turns || !w.step || !w.speed) continue;
+    if (!w.turns_per_level || !w.total_turns || !w.step || !w.speed) continue;
 
     screen.Init(w);
 
