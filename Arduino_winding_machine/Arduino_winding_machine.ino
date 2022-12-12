@@ -318,17 +318,16 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos) {
   stepper.setAcceleration(STEPPER_Z_STEPS_COUNT * settings.acceleration / 60);
   stepper.setMaxSpeed(STEPPER_Z_STEPS_COUNT / 2);
 
-  int o = pos; 
+  int o = pos;
   stepper.reset();
 
   do {
     stepper.tick();
     encoder.tick();
 
-    if (encoder.turn())
-    {
+    if (encoder.turn()) {
       menu.IncCurrent(encoder.dir());
-      stepper.setTargetDeg(pos-o);
+      stepper.setTargetDeg(pos - o);
     }
 
   } while (!encoder.click() || stepper.getStatus() != 0);
@@ -422,8 +421,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
           noInterrupts();
           planner.resume();
           interrupts();
-          if (planner.getStatus())
-          {
+          if (planner.getStatus()) {
             startTimer();
             setPeriod(planner.getPeriod() * speedMult);
           }
