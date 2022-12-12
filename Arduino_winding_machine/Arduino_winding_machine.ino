@@ -384,7 +384,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
   initTimer();
 
   while (1) {
-    if (planner.getStatus() == 0 && run) {
+    if (run && (planner.getStatus() == 0)) {
       DebugWrite("READY");
       if (current.layers >= w.layers)
         break;
@@ -418,13 +418,15 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
 
     if (run != oldState) {
       if (run) {
-        noInterrupts();
-        planner.resume();
-        interrupts();
-        if (planner.getStatus())
-        {
-          startTimer();
-          setPeriod(planner.getPeriod() * speedMult);
+        if (current.layers) {  // если цель не задали ещё, то не стартуем
+          noInterrupts();
+          planner.resume();
+          interrupts();
+          if (planner.getStatus())
+          {
+            startTimer();
+            setPeriod(planner.getPeriod() * speedMult);
+          }
         }
       } else {
         noInterrupts();
@@ -447,7 +449,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
       int total_turns = (abs(shaftStepper.pos)) / STEPPER_Z_STEPS_COUNT;
 
       screen.UpdateTurns(total_turns % w.turns + 1);
-      // DebugWrite("pos", shaftStepper.pos, layerStepper.pos);
+      DebugWrite("pos", shaftStepper.pos, layerStepper.pos);
       screen.PlannerStatus(planner.getStatus());
     }
   }
