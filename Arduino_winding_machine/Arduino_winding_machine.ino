@@ -191,7 +191,7 @@ enum { ButtonLEFT,
        ButtonRIGHT,
        ButtonSELECT };
 int16_t key_signals[] = { KEYBOARD_LEFT, KEYBOARD_UP, KEYBOARD_DOWN, KEYBOARD_RIGHT, KEYBOARD_SELECT };
-AnalogKey<KEYBOARD_PIN, LENGTH(key_signals), key_signals> keys;
+AnalogKey<KEYBOARD_PIN, LENGTH(key_signals), key_signals> keyboard;
 
 
 void setup() {
@@ -352,7 +352,7 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos) {
 
 void KeyboardRead() {
   static int8_t oldKey = -1;
-  int8_t key = keys.pressed();
+  int8_t key = keyboard.pressed();
 
   if (oldKey != key) {
     switch (key) {
