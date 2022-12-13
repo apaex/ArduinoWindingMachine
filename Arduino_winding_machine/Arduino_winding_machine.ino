@@ -436,7 +436,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
   initTimer();
 
   while (1) {
-    if (run && (planner.getStatus() == 0)) {
+    if (run && !planner.getStatus()) {
       DebugWrite("READY");
       if (current.layers >= w.layers)
         break;
