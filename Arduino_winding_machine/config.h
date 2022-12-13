@@ -14,12 +14,15 @@
 #define BUZZER              10
 #define BUTTON_STOP         11
 
-#define DISPLAY_RS          14
-#define DISPLAY_EN          15
-#define DISPLAY_D4          16
-#define DISPLAY_D5          17
-#define DISPLAY_D6          18
-#define DISPLAY_D7          19
+#define DISPLAY_RS          A0
+#define DISPLAY_EN          A1
+#define DISPLAY_D4          A2
+#define DISPLAY_D5          A3
+#define DISPLAY_D6          A4
+#define DISPLAY_D7          A5
+
+#define KEYBOARD_PIN        A6           // для подключения аналоговой клавиатуры на A0 необходимо перенести вывод дисплея DISPLAY_RS на другой пин, например, на 6
+
 
 #define THREAD_PITCH        1000         // шаг резьбы вала укладчика в мкм
 
@@ -37,6 +40,12 @@
 
 #define ENCODER_TYPE        EB_FULLSTEP  // тип энкодера: EB_FULLSTEP или EB_HALFSTEP. если энкодер делает один шаг за два щелчка, нужно изменить настройку
 #define ENCODER_INPUT       INPUT        // если есть подтягивающие резисторы - ставьте INPUT, если нет - INPUT_PULLUP
+
+#define KEYBOARD_LEFT       0            // 0 
+#define KEYBOARD_UP         33           // k33
+#define KEYBOARD_DOWN       93           // 1k0
+#define KEYBOARD_RIGHT      171          // 2k0
+#define KEYBOARD_SELECT     350          // 5k2
 
 #define LANGUAGE            RU           // EN, RU
 //#define DEBUG

@@ -41,6 +41,7 @@ https://cxem.net/arduino/arduino245.php
 #include <LiquidCrystal.h>
 #endif
 #include <EncButton.h>
+#include <AnalogKey.h>
 #include <GyverPlanner.h>
 #include <GyverStepper2.h>
 #include "LiquidCrystalCyr.h"
@@ -82,6 +83,9 @@ https://cxem.net/arduino/arduino245.php
 #define SPEED_LIMIT 260
 #endif
 #define SPEED_INC 10
+#define STEPPER_Z_MANUAL_SPEED 45
+#define STEPPER_A_MANUAL_SPEED 45
+
 #define EEPROM_SETTINGS_VERSION 2
 #define EEPROM_WINDINGS_VERSION 2
 #define EEPROM_SETTINGS_ADDR 0x00
@@ -181,6 +185,15 @@ EncButton<EB_TICK, BUTTON_STOP> pedal;
 
 Buzzer buzzer(BUZZER);
 
+enum { ButtonLEFT,
+       ButtonUP,
+       ButtonDOWN,
+       ButtonRIGHT,
+       ButtonSELECT };
+int16_t key_signals[] = { KEYBOARD_LEFT, KEYBOARD_UP, KEYBOARD_DOWN, KEYBOARD_RIGHT, KEYBOARD_SELECT };
+AnalogKey<KEYBOARD_PIN, LENGTH(key_signals), key_signals> keys;
+
+
 void setup() {
   Serial.begin(9600);
   LoadSettings();
@@ -202,6 +215,7 @@ void setup() {
 
 void loop() {
   encoder.tick();
+  KeyboardRead();
 
   if (encoder.turn()) {
     menu.IncIndex(encoder.dir());  // Если позиция энкодера изменена, то меняем menu.index и выводим экран
@@ -336,6 +350,44 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos) {
   menu.DrawQuotes(0);
 }
 
+
+void KeyboardRead() {
+  static int8_t oldKey = -1;
+  int8_t key = keys.pressed();
+
+  if (oldKey != key) {
+    switch (key) {
+      case ButtonLEFT:
+        layerStepper.enable();
+        layerStepper.setSpeedDeg(STEPPER_A_MANUAL_SPEED);
+        break;
+      case ButtonRIGHT:
+        layerStepper.enable();
+        layerStepper.setSpeedDeg(-STEPPER_A_MANUAL_SPEED);
+        break;
+      case ButtonUP:
+        shaftStepper.enable();
+        shaftStepper.setSpeedDeg(STEPPER_Z_MANUAL_SPEED);
+        break;
+      case ButtonDOWN:
+        shaftStepper.enable();
+        shaftStepper.setSpeedDeg(-STEPPER_Z_MANUAL_SPEED);
+        break;
+      case ButtonSELECT: break;
+      default:
+        layerStepper.brake();
+        shaftStepper.brake();
+        layerStepper.disable();
+        shaftStepper.disable();
+    }
+    oldKey = key;
+  }
+
+  if (layerStepper.getStatus())
+    layerStepper.tick();
+  if (shaftStepper.getStatus())
+    shaftStepper.tick();
+}
 
 void CarriageReturn(int32_t pos) {
   layerStepper.setTarget(pos);
@@ -511,8 +563,11 @@ void AutoWindingAll(const Winding windings[], byte n) {
 void WaitButton() {
   do {
     encoder.tick();
+    KeyboardRead();
   } while (!encoder.click());
 }
+
+
 
 void LoadSettings() {
   int p = EEPROM_SETTINGS_ADDR;
