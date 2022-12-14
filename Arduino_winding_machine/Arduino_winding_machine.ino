@@ -413,7 +413,7 @@ uint32_t getSpeed() {
 }
 
 
-void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма автоматической намотки
+void AutoWinding(const Winding &w, bool &direction, bool rc)  // Подпрограмма автоматической намотки
 {
   Winding current;  // Текущий виток и слой при автонамотке
 
@@ -528,7 +528,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
 
   if (layerStepper.pos) {
     screen.Message(STRING_4);
-    CarriageReturn(direction ? 0 : dLayer);
+    CarriageReturn(rc ? dLayer : 0);
   }
 
   layerStepper.disable();
@@ -536,7 +536,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
 }
 
 void AutoWindingAll(const Winding windings[], byte n) {
-  bool direction = windings[0].dir;
+  bool direction = windings[0].dir;  // не используем
 
   for (byte i = 0; i < n; ++i) {
     const Winding &w = windings[i];
@@ -551,7 +551,8 @@ void AutoWindingAll(const Winding windings[], byte n) {
       WaitButton();
     }
 
-    AutoWinding(w, direction);
+    direction = windings[i].dir;  // пока берем текущее направление. Можно убрать параметр
+    AutoWinding(w, direction, (i + 1 < n) ? !windings[i + 1].dir : !windings[0].dir);
   }
 
   screen.Message(STRING_1);  // "AUTOWINDING DONE"
