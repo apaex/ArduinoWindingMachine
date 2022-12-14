@@ -33,10 +33,10 @@
 
 #define STEPPER_Z_STEPS       200          // число шагов двигателя катушки на 1 оборот
 #define STEPPER_Z_MICROSTEPS  16           // делитель на плате драйвера двигателя катушки
-#define STEPPER_Z_REVERSE     0            // обратить направление вращения для двигателя катушки (1 - да, 0 - нет)
+#define STEPPER_Z_REVERSE     1            // обратить направление вращения для двигателя катушки (1 - да, 0 - нет)
 #define STEPPER_A_STEPS       200          // число шагов двигателя укладчика на 1 оборот
 #define STEPPER_A_MICROSTEPS  16           // делитель на плате драйвера двигателя укладчика
-#define STEPPER_A_REVERSE     1            // обратить направление вращения для двигателя укладчика (1 - да, 0 - нет)
+#define STEPPER_A_REVERSE     0            // обратить направление вращения для двигателя укладчика (1 - да, 0 - нет)
 
 #define ENCODER_TYPE        EB_HALFSTEP  // тип энкодера: EB_FULLSTEP или EB_HALFSTEP. если энкодер делает один шаг за два щелчка, нужно изменить настройку
 #define ENCODER_INPUT       INPUT        // если есть подтягивающие резисторы - ставьте INPUT, если нет - INPUT_PULLUP
