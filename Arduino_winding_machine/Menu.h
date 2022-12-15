@@ -96,10 +96,10 @@ class SetMenuItem : public MenuItem {
 public:
   const char *format;  // Формат значения при вводе переменной
   uint8_t *value;
-  const uint8_t **items;
+  const uint8_t *items;
   uint8_t nItems;
 
-  SetMenuItem(byte screen_, byte num_, const char *text_, const char *format_, uint8_t *value_, const uint8_t **items_, uint8_t nItems_)
+  SetMenuItem(byte screen_, byte num_, const char *text_, const char *format_, uint8_t *value_, const uint8_t items_[], uint8_t nItems_)
     : MenuItem(screen_, num_, text_), format(format_), value(value_), items(items_), nItems(nItems_) {}
 
   virtual void GetValue(char *s) const {

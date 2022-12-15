@@ -24,8 +24,8 @@
          |__A6_A7________|
 
 
-https://cxem.net/arduino/arduino235.php
-https://cxem.net/arduino/arduino245.php
+  https://cxem.net/arduino/arduino235.php
+  https://cxem.net/arduino/arduino245.php
 
 */
 
@@ -84,7 +84,7 @@ https://cxem.net/arduino/arduino245.php
 #endif
 #define SPEED_INC 10
 #define STEPPER_Z_MANUAL_SPEED 180
-#define STEPPER_A_MANUAL_SPEED (180 * 1000 / THREAD_PITCH)
+#define STEPPER_A_MANUAL_SPEED ((int)(180L * 1000 / THREAD_PITCH))
 
 #define EEPROM_SETTINGS_VERSION 2
 #define EEPROM_WINDINGS_VERSION 2
@@ -130,7 +130,7 @@ enum menu_states {
 
 const char *boolSet[] = { STRING_OFF, STRING_ON };
 const char *dirSet[] = { "<<<", ">>>" };
-const uint8_t *stepSet[] = { 1, 10, 100 };
+const uint8_t stepSet[] = { 1, 10, 100 };
 
 MenuItem *menuItems[] = {
   new MenuItem(0, 0, MENU_01),
@@ -189,7 +189,8 @@ enum { ButtonLEFT,
        ButtonUP,
        ButtonDOWN,
        ButtonRIGHT,
-       ButtonSELECT };
+       ButtonSELECT
+     };
 int16_t key_signals[] = { KEYBOARD_LEFT, KEYBOARD_UP, KEYBOARD_DOWN, KEYBOARD_RIGHT, KEYBOARD_SELECT };
 AnalogKey<KEYBOARD_PIN, LENGTH(key_signals), key_signals> keyboard;
 

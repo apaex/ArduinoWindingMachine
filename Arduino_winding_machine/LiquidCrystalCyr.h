@@ -16,7 +16,7 @@
 #define GEN_COUNT (FONT_CHAR_COUNT + 8)  // ещё на 8 пользовательских символов храним номер генератора
 
 void pgm_read_8byte(const byte *data, void *buf) {
-  uint32_t *buf_ = buf;
+  uint32_t *buf_ = (uint32_t *)buf;
 
   buf_[0] = pgm_read_dword(data + 0);
   buf_[1] = pgm_read_dword(data + 4);
@@ -91,7 +91,7 @@ public:
       }
       ++_col;
     }
-    LCD_CLASS::write((byte)c);
+    return LCD_CLASS::write((byte)c);
   }
 
   void printAt(uint8_t col, uint8_t row, char ch) {
@@ -189,7 +189,7 @@ private:
 
   byte createUserChar(byte c) {
     if (!customChars_[c])
-      return;
+      return c;
 
     byte lcd_c = get_char_cell(_gen[c]);
 

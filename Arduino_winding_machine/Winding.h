@@ -3,10 +3,10 @@
 #include "EEPROM.h"
 
 struct Winding {
-  uint16_t turns = 0;
-  uint16_t step = 0;
-  uint16_t speed = 30;
-  uint16_t layers = 0;
+  int16_t turns = 0;
+  int16_t step = 0;
+  int16_t speed = 30;
+  int16_t layers = 0;
   bool dir = 1;
 };
 
@@ -32,7 +32,7 @@ struct Settings {
   uint8_t layerStep = 1;
   int shaftPos = 0;
   int layerPos = 0;
-  uint16_t acceleration = 30;
+  int16_t acceleration = 30;
   int8_t currentTransformer = 0;
 };
 
