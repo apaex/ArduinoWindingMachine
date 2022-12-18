@@ -77,11 +77,13 @@
 
 #define STEPPER_Z_STEPS_COUNT (float(STEPPER_Z_STEPS) * STEPPER_Z_MICROSTEPS)
 #define STEPPER_A_STEPS_COUNT (float(STEPPER_A_STEPS) * STEPPER_A_MICROSTEPS)
+#define STEPPER_SPEED_LIMIT 18000
 #ifdef GS_FAST_PROFILE
-#define SPEED_LIMIT 600
+#define PLANNER_SPEED_LIMIT 37000
 #else
-#define SPEED_LIMIT 260
+#define PLANNER_SPEED_LIMIT 14000
 #endif
+#define SPEED_LIMIT (int32_t(PLANNER_SPEED_LIMIT) * 60 / STEPPER_Z_STEPS_COUNT )
 #define SPEED_INC 10
 #define STEPPER_Z_MANUAL_SPEED 360
 #define STEPPER_A_MANUAL_SPEED ((int)(360L * 1000 / THREAD_PITCH))
@@ -331,7 +333,7 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos) {
   stepper.enable();
 
   stepper.setAcceleration(STEPPER_Z_STEPS_COUNT * settings.acceleration / 60);
-  stepper.setMaxSpeed(STEPPER_Z_STEPS_COUNT / 2);
+  stepper.setMaxSpeed(constrain(STEPPER_Z_STEPS_COUNT / 2, 1, STEPPER_SPEED_LIMIT));
 
   int o = pos;
   stepper.reset();
@@ -427,7 +429,7 @@ void AutoWinding(const Winding &w, bool &direction)  // Подпрограмма
   layerStepper.enable();
 
   planner.setAcceleration(STEPPER_Z_STEPS_COUNT * settings.acceleration / 60L);
-  planner.setMaxSpeed(STEPPER_Z_STEPS_COUNT * w.speed / 60L);
+  planner.setMaxSpeed(constrain(STEPPER_Z_STEPS_COUNT * w.speed / 60L, 1, PLANNER_SPEED_LIMIT));
 
   int32_t dShaft = STEPPER_Z_STEPS_COUNT * w.turns;
   int32_t dLayer = STEPPER_A_STEPS_COUNT * w.turns * w.step / int32_t(THREAD_PITCH) * (direction ? 1 : -1);
