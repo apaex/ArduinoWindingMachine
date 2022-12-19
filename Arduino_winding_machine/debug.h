@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef DEBUG
+
 #include <HardwareSerial.h>
 
 void TimePrint() {
@@ -17,24 +19,19 @@ void TimePrint() {
 
 template<class T>
 void DebugWrite(T v) {
-#ifdef DEBUG
   TimePrint();
   Serial.println(v);
-#endif
 }
 
 template<class T>
 void DebugWrite(const char *st, T v) {
-#ifdef DEBUG
   TimePrint();
   Serial.print(st);
   Serial.print(": ");
   Serial.println(v);
-#endif
 }
 
 void DebugWrite(const char *st, int32_t x, int32_t y) {
-#ifdef DEBUG
   TimePrint();
   Serial.print(st);
   Serial.print("(");
@@ -42,12 +39,10 @@ void DebugWrite(const char *st, int32_t x, int32_t y) {
   Serial.print(',');
   Serial.print(y);
   Serial.println(")");
-#endif
 }
 
 template<class T>
 void DebugWrite(const char *st, const T arr[], int n) {
-#ifdef DEBUG
   TimePrint();
   Serial.print(st);
   Serial.print(": ");
@@ -57,5 +52,19 @@ void DebugWrite(const char *st, const T arr[], int n) {
     Serial.print(',');
   }
   Serial.println("");
-#endif
 }
+
+#else
+
+template<class T>
+void DebugWrite(T) {}
+
+template<class T>
+void DebugWrite(const char *, T) {}
+
+void DebugWrite(const char *, int32_t, int32_t) {}
+
+template<class T>
+void DebugWrite(const char *, const T[], int) {}
+
+#endif

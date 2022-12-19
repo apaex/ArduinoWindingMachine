@@ -82,7 +82,7 @@ public:
 
   virtual size_t write(uint8_t c) {
     if (!_CGRAM_write) {
-      if (c >= 0 && c <= 0x07) {
+      if (c <= 0x07) {
         c = createUserChar(c);
       } else if (c >= 0xc0 && c < 0xc0 + CHAR_MAP_COUNT) {
         c = char_map[c - 0xc0];

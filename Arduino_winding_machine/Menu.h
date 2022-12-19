@@ -22,7 +22,7 @@ public:
   virtual void GetValue(char *s) const {
     s[0] = 0;
   }
-  virtual void IncValue(int8_t inc, bool cycle = false) {}
+  virtual void IncValue(int8_t, bool) {}
 };
 
 class BoolMenuItem : public MenuItem {
@@ -36,7 +36,7 @@ public:
   virtual void GetValue(char *s) const {
     strcpy(s, items[*value]);
   }
-  virtual void IncValue(int8_t, bool cycle) {
+  virtual void IncValue(int8_t, bool) {
     *value = !*value;
   }
 };
