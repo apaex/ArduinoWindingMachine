@@ -354,6 +354,9 @@ void MoveTo(GStepper2<STEPPER2WIRE> &stepper, int &pos) {
 }
 
 void KeyboardRead() {
+  if (KEYBOARD_PIN == 0 || KEYBOARD_PIN == A6)
+    return;
+
   static int8_t oldKey = -1;
   int8_t key = keyboard.pressed();
 

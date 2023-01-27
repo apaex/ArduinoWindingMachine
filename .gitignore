@@ -4,3 +4,5 @@ Arduino_winding_machine/build/arduino.avr.uno/Arduino_winding_machine.ino.with_b
 Arduino_winding_machine/build/arduino.avr.uno/Arduino_winding_machine.ino.hex
 Arduino_winding_machine/build/arduino.avr.uno/Arduino_winding_machine.ino.elf
 Arduino_winding_machine/build/arduino.avr.uno/Arduino_winding_machine.ino.eep
+.vscode/c_cpp_properties.json
+.vscode/arduino.json
