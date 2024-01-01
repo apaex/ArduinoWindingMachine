@@ -29,10 +29,10 @@
 
 Перед первой сборкой установите все нужные библиотеки из менеджера библиотек Arduino IDE [[как установить](https://alexgyver.ru/lessons/library-using/)]
 
-* LiquidCrystal 1.0.7 или новее либо LiquidCrystal_I2C 1.1.2 или новее, в зависимости от подключения дисплея
-* GyverStepper **2.6.4** или новее
-* EnсButton **2.0.0** или новее
-* AnalogKey 1.1.0 или новее
+* LiquidCrystal 1.0.7 либо LiquidCrystal_I2C 1.1.2, в зависимости от подключения дисплея
+* GyverStepper **2.6.4**
+* EnсButton **2.0.0**
+* AnalogKey 1.1.0
 
 ### Настройки в коде
 
