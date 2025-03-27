@@ -6,16 +6,16 @@
 #define EN 1
 #define RU 2
 
-const char PROGMEM LINE1_FORMAT[] = "T%03d/%03d %03drpm";
-const char PROGMEM LINE2_FORMAT[] = "L%02d/%02d %d.%03dmm";
-const char PROGMEM LINE4_FORMAT[] = "%03d";
-const char PROGMEM LINE5_FORMAT[] = "%02d";
+const char PROGMEM LINE1_FORMAT[] = "T%04d/%04d %03drpm";
+const char PROGMEM LINE2_FORMAT[] = "L%03d/%03d %d.%03dmm";
+const char PROGMEM LINE4_FORMAT[] = "%04d";
+const char PROGMEM LINE5_FORMAT[] = "%03d";
 const char PROGMEM LINE6_FORMAT[] = "%03d";
 
 const char PROGMEM MENU_FORMAT_02[] = "%d";
 const char PROGMEM MENU_FORMAT_06[] = "% 4dT";
-const char PROGMEM MENU_FORMAT_10[] = "%03d";
-const char PROGMEM MENU_FORMAT_13[] = "%02d";
+const char PROGMEM MENU_FORMAT_10[] = "%04d";
+const char PROGMEM MENU_FORMAT_13[] = "%03d";
 const char PROGMEM MENU_FORMAT_11[] = "%d.%03d";
 const char PROGMEM MENU_FORMAT_17[] = "%+04d";
 

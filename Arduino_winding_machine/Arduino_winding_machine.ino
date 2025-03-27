@@ -146,8 +146,8 @@ MenuItem *menuItems[] = {
   new MenuItem(1, 3, MENU_15),
   new MenuItem(1, 4, MENU_09),
 
-  new IntMenuItem(2, 0, MENU_10, MENU_FORMAT_10, NULL, 1, 999),
-  new IntMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 99),
+  new IntMenuItem(2, 0, MENU_10, MENU_FORMAT_10, NULL, 1, 9999),
+  new IntMenuItem(2, 1, MENU_13, MENU_FORMAT_13, NULL, 1, 999),
   new FloatMenuItem(2, 2, MENU_11, MENU_FORMAT_11, NULL, 5, 9995, 5),
   new IntMenuItem(2, 3, MENU_12, MENU_FORMAT_10, NULL, SPEED_INC, SPEED_LIMIT, SPEED_INC),
   new BoolMenuItem(2, 4, MENU_14, NULL, dirSet),
