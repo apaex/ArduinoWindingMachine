@@ -31,7 +31,7 @@
 
 * LiquidCrystal 1.0.7 либо LiquidCrystal_I2C 1.1.2, в зависимости от подключения дисплея
 * GyverStepper **2.6.4**
-* EnсButton **2.0.0**
+* EncButton **2.0.0**
 * AnalogKey 1.1.0
 
 ### Настройки в коде
