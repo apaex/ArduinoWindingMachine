@@ -205,7 +205,7 @@ private:
     return (lcd.nCols > 16) ? 2 : 1;
   }
   byte GetValueCol() const {
-    return (lcd.nCols > 16) ? 12 : 10;
+    return ((lcd.nCols > 16) ? 12 : 10) - 1;
   }
 
   void DrawItem(MenuItem *m, byte row) {
